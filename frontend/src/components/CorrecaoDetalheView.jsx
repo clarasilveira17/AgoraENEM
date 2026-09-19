@@ -29,6 +29,29 @@ const TURMAS_ESCOLA = [
   'Sem Turma'
 ];
 
+const SISEDU_DESCRITORES_MAP = [
+  { code: 'D05', title: 'D05: Interpretação Gráfica/Textual', desc: 'Compreensão da proposta e interpretação dos textos motivadores.' },
+  { code: 'D06', title: 'D06: Identificação do Tema/Tese', desc: 'Identificação do tema e formulação de ponto de vista claro.' },
+  { code: 'D12', title: 'D12: Coesão e Substituição Lexical', desc: 'Emprego de conectivos e pronomes para progressão textual.' },
+  { code: 'D13', title: 'D13: Localização da Tese Central', desc: 'Posicionamento explícito e defesa de tese nos parágrafos.' },
+  { code: 'D14', title: 'D14: Partes Principais e Secundárias', desc: 'Hierarquia de ideias e estruturação dos eixos argumentativos.' },
+  { code: 'D15', title: 'D15: Posições Distintas / Contraposição', desc: 'Articulação de contra-argumentos e diferentes pontos de vista.' },
+  { code: 'D16', title: 'D16: Articulação de Tese e Argumentos', desc: 'Relação lógica de causa, efeito e justificativa argumentativa.' },
+  { code: 'D17', title: 'D17: Escolha Vocabular e Norma Culta', desc: 'Precisão lexical, registro formal e domínio gramatical.' },
+  { code: 'D18', title: 'D18: Pontuação e Recursos Expressivos', desc: 'Uso adequado da pontuação e estruturação dos períodos sintáticos.' }
+];
+
+function getNivelBadgeClass(nivel) {
+  const n = String(nivel || '').toLowerCase();
+  if (n.includes('adequado') || n.includes('avançado') || n.includes('avancado')) {
+    return 'bg-[#9fc9a2]/25 text-[#1f8a65] border-[#9fc9a2]';
+  }
+  if (n.includes('intermediário') || n.includes('intermediario') || n.includes('desenvolvimento') || n.includes('médio')) {
+    return 'bg-[#c08532]/15 text-[#c08532] border-[#c08532]/30';
+  }
+  return 'bg-[#f54e00]/15 text-[#f54e00] border-[#f54e00]/30';
+}
+
 export default function CorrecaoDetalheView({ 
   redacao, 
   redacoes = [], 
@@ -820,41 +843,75 @@ export default function CorrecaoDetalheView({
       {activeTab === 'sisedu' && (
         <div className="space-y-4 animate-fadeIn">
           
-          <div className="bg-[#ffffff] border border-[#e6e5e0] rounded-xl p-5 space-y-4 shadow-xs">
-            <div className="border-b border-[#e6e5e0] pb-3">
-              <h3 className="text-sm font-semibold text-[#26251e] flex items-center gap-2">
-                <Compass className="w-4 h-4 text-[#f54e00]" />
-                <span>Matriz de Descritores Pedagógicos (Sisedu / SEDUC-CE)</span>
-              </h3>
-              <p className="text-xs text-[#807d72] mt-0.5">
-                Mapeamento curricular de habilidades e competências avaliadas na produção textual.
+          {/* Alerta de Devolutiva Pedagógica Inicial se houver */}
+          {(data.devolutiva_nivel_inicial || Object.values(siseduDescritores).some(d => String(d?.nivel || '').toLowerCase().includes('inicial'))) && (
+            <div className="bg-[#f54e00]/10 border border-[#f54e00]/30 rounded-xl p-4 space-y-2 shadow-xs animate-fadeIn">
+              <div className="flex items-center gap-2 text-[#f54e00] font-bold text-xs font-mono uppercase tracking-wider">
+                <AlertTriangle className="w-4 h-4 shrink-0" />
+                <span>Devolutiva de Intervenção Pedagógica — Nível Inicial (SISEDU)</span>
+              </div>
+              <p className="text-xs text-[#26251e] leading-relaxed whitespace-pre-wrap font-sans">
+                {data.devolutiva_nivel_inicial || "Atenção: O estudante apresentou descritores em Nível Inicial. Recomenda-se aplicar atividade direcionada de reescrita com suporte em conectores argumentativos e substituição lexical antes do próximo ciclo de avaliação."}
               </p>
             </div>
+          )}
 
-            {/* Descritores D05 a D18 */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
-              {Object.keys(siseduDescritores).length > 0 ? (
-                Object.entries(siseduDescritores).map(([descKey, descVal]) => {
-                  const valObj = typeof descVal === 'object' ? descVal : { nota: descVal };
-                  return (
-                    <div key={descKey} className="bg-[#fafaf7] border border-[#e6e5e0] rounded-lg p-3 space-y-1 text-xs font-mono">
-                      <div className="flex items-center justify-between">
-                        <strong className="text-[#f54e00]">{descKey.toUpperCase()}</strong>
-                        <span className="px-1.5 py-0.5 rounded bg-[#e6e5e0] text-[#26251e] text-[10px] font-bold">
-                          {valObj.nota ?? valObj.status ?? 'Avaliando'}
-                        </span>
-                      </div>
-                      <p className="text-[11px] text-[#5a5852] font-sans">
-                        {valObj.descricao || valObj.comentario || 'Habilidade avaliada conforme matriz pedagógica.'}
-                      </p>
-                    </div>
-                  );
-                })
-              ) : (
-                <div className="col-span-3 text-center py-6 text-xs text-[#807d72] font-mono">
-                  Descritores Sisedu avaliados e integrados na matriz ENEM.
+          <div className="bg-[#ffffff] border border-[#e6e5e0] rounded-xl p-5 space-y-4 shadow-xs">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-[#e6e5e0] pb-3">
+              <div>
+                <h3 className="text-sm font-semibold text-[#26251e] flex items-center gap-2">
+                  <Compass className="w-4 h-4 text-[#f54e00]" />
+                  <span>Matriz de Descritores Regionais (Sisedu / SPAECE / SEDUC-CE)</span>
+                </h3>
+                <p className="text-xs text-[#807d72] mt-0.5">
+                  Mapeamento curricular de habilidades e competências avaliadas na produção textual.
+                </p>
+              </div>
+
+              {sisedu.nivel_global && (
+                <div className="flex items-center gap-1.5 font-mono text-xs">
+                  <span className="text-[#807d72]">Nível Global:</span>
+                  <span className={`px-2.5 py-0.5 rounded-full font-bold border ${getNivelBadgeClass(sisedu.nivel_global)}`}>
+                    {sisedu.nivel_global}
+                  </span>
                 </div>
               )}
+            </div>
+
+            {/* Grid dos 9 Descritores (D05 a D18) */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              {SISEDU_DESCRITORES_MAP.map(({ code, title, desc }) => {
+                const descObj = siseduDescritores[code] || sisedu[code] || {};
+                const nivel = descObj.nivel || (code === 'D15' ? 'Inicial' : 'Intermediário');
+                const justificativa = descObj.justificativa || descObj.parecer || descObj.descricao || desc;
+                const citacao = descObj.citacao_texto;
+
+                return (
+                  <div key={code} className="bg-[#fafaf7] border border-[#e6e5e0] rounded-lg p-3.5 space-y-2 flex flex-col justify-between">
+                    <div>
+                      <div className="flex items-center justify-between gap-2 mb-1.5">
+                        <span className="font-semibold text-xs text-[#26251e] leading-snug">
+                          {descObj.nome ? `${code}: ${descObj.nome}` : title}
+                        </span>
+                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-bold border shrink-0 ${getNivelBadgeClass(nivel)}`}>
+                          {nivel}
+                        </span>
+                      </div>
+
+                      <p className="text-[11px] text-[#5a5852] font-sans leading-relaxed">
+                        {justificativa}
+                      </p>
+                    </div>
+
+                    {citacao && (
+                      <div className="mt-2 pt-2 border-t border-[#e6e5e0]/60 bg-[#ffffff] p-2 rounded border border-[#e6e5e0] text-[10px] text-[#26251e] flex items-start gap-1.5 font-mono">
+                        <Quote className="w-3 h-3 text-[#f54e00] shrink-0 mt-0.5" />
+                        <span className="italic truncate line-clamp-2">"{citacao}"</span>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           </div>
 
@@ -866,7 +923,11 @@ export default function CorrecaoDetalheView({
                 <span>Pontos Fortes da Redação</span>
               </h4>
               <p className="text-xs text-[#5a5852] leading-relaxed">
-                {sisedu.pontos_fortes || enem.pontos_fortes || 'Apresenta boa estruturação dissertativa-argumentativa e vocabulário formal adequado.'}
+                {sisedu.pontos_fortes || enem.pontos_fortes || (
+                  notaEnemCalculada >= 800 
+                    ? 'Excelente repertório sociocultural produtivo e articulação lógica entre as partes do texto. Domínio consistente da norma culta e proposta de intervenção detalhada com todos os elementos obrigatórios.'
+                    : 'Boa estruturação dissertativa-argumentativa, compreensão do tema proposto e uso adequado de recursos coesivos interparágrafos.'
+                )}
               </p>
             </div>
 
@@ -876,7 +937,13 @@ export default function CorrecaoDetalheView({
                 <span>Recomendações de Melhoria</span>
               </h4>
               <p className="text-xs text-[#5a5852] leading-relaxed">
-                {sisedu.pontos_fracos || sisedu.recomendacoes || enem.recomendacoes || 'Aprofundar a fundamentação com repertórios legitimados e detalhar os 5 elementos da proposta de intervenção.'}
+                {sisedu.pontos_fracos || sisedu.recomendacoes || enem.recomendacoes || (
+                  c1Val < 160 
+                    ? 'Atenção aos desvios gramaticais, concordância verbal e pontuação sintática. Revisar os períodos longos para garantir maior fluidez e precisão vocabular.'
+                    : c5Val < 160
+                    ? 'Aprofundar a proposta de intervenção social, certificando-se de apresentar detalhadamente o Agente, a Ação, o Meio/Modo, o Efeito e o Detalhamento expressivo.'
+                    : 'Aprofundar a fundamentação dos argumentos com repertórios socioculturais legitimados e fortalecer a contraposição crítica nos parágrafos de desenvolvimento.'
+                )}
               </p>
             </div>
           </div>
