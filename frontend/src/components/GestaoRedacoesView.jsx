@@ -37,6 +37,7 @@ export default function GestaoRedacoesView({
   const fileInputRef = useRef(null);
 
   // Lista de estudantes para autocompletar
+  const [showStudentDropdown, setShowStudentDropdown] = useState(false);
   const [estudantesList, setEstudantesList] = useState([]);
 
   useEffect(() => {
@@ -55,6 +56,15 @@ export default function GestaoRedacoesView({
     loadStudents();
     return () => { isMounted = false; };
   }, []);
+
+  const filteredStudentSuggestions = useMemo(() => {
+    if (!manualName || !manualName.trim() || manualName.trim().length < 2) return [];
+    const q = manualName.toLowerCase().trim();
+    return estudantesList.filter(e => 
+      (e.nome || '').toLowerCase().includes(q) ||
+      (e.email || '').toLowerCase().includes(q)
+    ).slice(0, 5);
+  }, [estudantesList, manualName]);
 
   const handleFilesSelected = (e) => {
     const files = Array.from(e.target.files || []);
