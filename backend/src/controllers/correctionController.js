@@ -139,12 +139,12 @@ export async function handleCorrection(req, res) {
               user_id, nome_aluno, turma_aluno, nome_detectado, data_captura,
               tipo_input, imagem_base64, texto_digitado, is_synced,
               extracted_data, nota_final, status_validacao, validado_por, data_validacao
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?, 'VALIDADA', ?, CURRENT_TIMESTAMP)
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?, ?, ?, ?)
           `);
           const info = stmt.run(
-            userId,
-            finalStudentName,
-            finalTurma,
+            resolved.user_id,
+            resolved.nome_aluno,
+            resolved.turma_aluno,
             isNameDetected ? 1 : 0,
             dataCaptura,
             tipoInput,
@@ -152,7 +152,9 @@ export async function handleCorrection(req, res) {
             texto_digitado || null,
             JSON.stringify(extractedData),
             notaTotalEnem,
-            validadoPor
+            statusValidacao,
+            validadoPor,
+            dataValidacao
           );
           if (!savedCloudId) {
             savedCloudId = info.lastInsertRowid;
@@ -171,9 +173,10 @@ export async function handleCorrection(req, res) {
         extracted: {
           ...extractedData,
           id: savedCloudId || id,
-          aluno: finalStudentName,
-          turma: finalTurma,
-          nota_final: notaTotalEnem
+          aluno: resolved.nome_aluno,
+          turma: resolved.turma_aluno,
+          nota_final: notaTotalEnem,
+          status_validacao: statusValidacao
         },
         processed_at: new Date().toISOString()
       });

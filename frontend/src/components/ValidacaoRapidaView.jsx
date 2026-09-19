@@ -20,10 +20,10 @@ export default function ValidacaoRapidaView({
   const [isLoadingEstudantes, setIsLoadingEstudantes] = useState(false);
   const [viewMode, setViewMode] = useState('esteira'); // 'esteira' | 'tabela'
   
-  // Métricas de validação manual real do professor
+  // Métricas de validação manual/automática
   const totalCount = redacoes.length;
   const conferidasCount = useMemo(() => {
-    return redacoes.filter(r => Boolean(r.data_validacao || r.validado_por)).length;
+    return redacoes.filter(r => (r.status_validacao === 'VALIDADA' && Boolean(r.user_id)) || Boolean(r.data_validacao || r.validado_por)).length;
   }, [redacoes]);
   const pendentesCount = totalCount - conferidasCount;
   const percentualConcluido = totalCount > 0 ? Math.round((conferidasCount / totalCount) * 100) : 0;
@@ -74,7 +74,7 @@ export default function ValidacaoRapidaView({
   // Lista filtrada de redações
   const filteredRedacoes = useMemo(() => {
     return redacoes.filter(r => {
-      const isConferida = Boolean(r.data_validacao || r.validado_por);
+      const isConferida = (r.status_validacao === 'VALIDADA' && Boolean(r.user_id)) || Boolean(r.data_validacao || r.validado_por);
       
       if (filterType === 'pendentes' && isConferida) return false;
       if (filterType === 'conferidas' && !isConferida) return false;
@@ -282,7 +282,7 @@ export default function ValidacaoRapidaView({
   };
 
   const currentImageBase64 = currentRedacao ? imagesCache[currentRedacao.id] : null;
-  const isCurrentConferida = currentRedacao ? Boolean(currentRedacao.data_validacao || currentRedacao.validado_por) : false;
+  const isCurrentConferida = currentRedacao ? ((currentRedacao.status_validacao === 'VALIDADA' && Boolean(currentRedacao.user_id)) || Boolean(currentRedacao.data_validacao || currentRedacao.validado_por)) : false;
 
   // Aluno correspondente selecionado
   const selectedStudentObj = useMemo(() => {
@@ -521,7 +521,7 @@ export default function ValidacaoRapidaView({
                 <div className="flex items-center gap-1.5 overflow-x-auto pb-1.5 custom-scrollbar">
                   <span className="text-[10px] font-mono text-[#807d72] shrink-0 mr-1">Ir para:</span>
                   {filteredRedacoes.map((r, idx) => {
-                    const isConf = Boolean(r.data_validacao || r.validado_por);
+                    const isConf = (r.status_validacao === 'VALIDADA' && Boolean(r.user_id)) || Boolean(r.data_validacao || r.validado_por);
                     const isCurrent = idx === currentIndex;
                     return (
                       <button
