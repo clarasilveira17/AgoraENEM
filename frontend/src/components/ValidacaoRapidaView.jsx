@@ -63,8 +63,9 @@ export default function ValidacaoRapidaView({
     async function loadStudents() {
       setIsLoadingEstudantes(true);
       try {
-        const list = await authService.fetchEstudantes();
-        if (isMounted) setEstudantes(list || []);
+        const fetchFn = authService.fetchEstudantes ? authService.fetchEstudantes.bind(authService) : authService.getEstudantes.bind(authService);
+        const list = await fetchFn();
+        if (isMounted) setEstudantes(Array.isArray(list) ? list : []);
       } catch (err) {
         console.warn('Erro ao carregar estudantes para validação rápida:', err);
       } finally {

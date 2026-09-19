@@ -57,8 +57,9 @@ export default function GestaoRedacoesView({
   useEffect(() => {
     let isMounted = true;
     if (isAdmin) {
-      authService.fetchEstudantes().then(list => {
-        if (isMounted && list) setEstudantes(list);
+      const fetchFn = authService.fetchEstudantes ? authService.fetchEstudantes.bind(authService) : authService.getEstudantes.bind(authService);
+      fetchFn().then(list => {
+        if (isMounted && Array.isArray(list)) setEstudantes(list);
       }).catch(() => {});
     }
     return () => { isMounted = false; };

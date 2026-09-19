@@ -83,6 +83,10 @@ export const authService = {
     return data.estudantes || [];
   },
 
+  async fetchEstudantes() {
+    return this.getEstudantes();
+  },
+
   async createEstudante(studentData) {
     const token = this.getToken();
     if (!token) throw new Error('É necessário estar autenticado como Admin.');
