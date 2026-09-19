@@ -5,11 +5,13 @@ import jwt from 'jsonwebtoken';
 import { JWT_SECRET } from '../middleware/authMiddleware.js';
 
 export async function handleCorrection(req, res) {
-  const { documents, redacoes } = req.body;
-  const itemsToProcess = redacoes || documents;
+  let itemsToProcess = req.body?.redacoes || req.body?.documents;
+  if (!itemsToProcess && (req.body?.texto_digitado || req.body?.imagem_base64)) {
+    itemsToProcess = [req.body];
+  }
 
-  if (!itemsToProcess || !Array.isArray(itemsToProcess)) {
-    return res.status(400).json({ error: 'Payload must contain a "redacoes" array.' });
+  if (!itemsToProcess || !Array.isArray(itemsToProcess) || itemsToProcess.length === 0) {
+    return res.status(400).json({ error: 'Payload must contain a "redacoes" array or essay fields.' });
   }
 
   console.log(`[CorrectionController] Recebida solicitação em lote para avaliar ${itemsToProcess.length} redação(ões)...`);
