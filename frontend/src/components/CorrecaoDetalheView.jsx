@@ -60,7 +60,7 @@ export default function CorrecaoDetalheView({
   const [statusValidacao, setStatusValidacao] = useState(redacao?.status_validacao || 'VALIDADA');
 
   // Customização do PDF Oficial
-  const [customEscola, setCustomEscola] = useState('Secretaria da Educação do Ceará • SEDUC-CE');
+  const [customEscola, setCustomEscola] = useState('Projeto Ágora Escolar • Ensino Médio');
   const [customProfessor, setCustomProfessor] = useState('Professor(a) Avaliador(a)');
   const [customRecado, setCustomRecado] = useState('');
   const [showSisedu, setShowSisedu] = useState(true);
@@ -848,7 +848,7 @@ export default function CorrecaoDetalheView({
               <div>
                 <h3 className="text-sm font-semibold text-[#26251e] flex items-center gap-2">
                   <Compass className="w-4 h-4 text-[#f54e00]" />
-                  <span>Matriz de Descritores Regionais (Sisedu / SPAECE / SEDUC-CE)</span>
+                  <span>Matriz de Descritores Regionais (Sisedu / SPAECE)</span>
                 </h3>
                 <p className="text-xs text-[#807d72] mt-0.5">
                   Mapeamento curricular de habilidades e competências avaliadas na produção textual.

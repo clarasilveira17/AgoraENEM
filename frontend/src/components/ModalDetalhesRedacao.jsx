@@ -25,7 +25,7 @@ export default function ModalDetalhesRedacao({ redacao, onClose, onUpdated }) {
   const [statusValidacao, setStatusValidacao] = useState(redacao?.status_validacao || 'VALIDADA');
 
   // Customization state for PDF layout & organization
-  const [customEscola, setCustomEscola] = useState('Secretaria da Educação do Ceará • SEDUC-CE');
+  const [customEscola, setCustomEscola] = useState('Projeto Ágora Escolar • Ensino Médio');
   const [customProfessor, setCustomProfessor] = useState('Professor(a) Avaliador(a)');
   const [customRecado, setCustomRecado] = useState('');
   const [showSisedu, setShowSisedu] = useState(true);
@@ -805,7 +805,7 @@ export default function ModalDetalhesRedacao({ redacao, onClose, onUpdated }) {
                           type="text"
                           value={customEscola}
                           onChange={(e) => setCustomEscola(e.target.value)}
-                          placeholder="Ex: Secretaria da Educação do Ceará • SEDUC"
+                          placeholder="Ex: Projeto Ágora Escolar • EEMTI"
                           className="w-full bg-[#ffffff] border border-[#e6e5e0] rounded px-2.5 py-1.5 text-xs text-[#26251e] focus:outline-none focus:border-[#26251e]"
                         />
                       </div>

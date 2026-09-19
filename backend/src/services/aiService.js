@@ -54,7 +54,7 @@ export function cleanAndParseJSON(rawText) {
 export async function agenteAvaliadorUnificado(imagemBase64, textoDigitado, nomeFornecido, turmaFornecida, apiKey) {
   const genAI = new GoogleGenerativeAI(apiKey);
 
-  const systemInstruction = `Você é um perito em transcrição paleográfica e um avaliador educacional sênior especialista na Matriz do ENEM e Descritores do SISEDU/SPAECE (Projeto Ágora Escolar - SEDUC CE).
+  const systemInstruction = `Você é um perito em transcrição paleográfica e um avaliador educacional sênior especialista na Matriz do ENEM e Descritores do SISEDU/SPAECE (Projeto Ágora Escolar).
 
 SUA MISSÃO EM 1 ÚNICA EXECUÇÃO:
 1. **TRANSCRIÇÃO 100% INTEGRAL ("texto_transcrito"):** Se uma imagem de redação manuscrita for fornecida, transcreva 100% do texto palavra por palavra, preservando a estrutura de parágrafos. NUNCA resuma, NUNCA omita frases e NUNCA use reticências (...) para abreviar. Se for texto digitado, preserve-o integralmente no campo "texto_transcrito".

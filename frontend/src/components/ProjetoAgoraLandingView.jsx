@@ -61,7 +61,7 @@ export default function ProjetoAgoraLandingView({ onOpenLoginModal }) {
             </div>
             <h3 className="text-base font-semibold text-[#26251e]">1. Matriz ENEM (C1-C5)</h3>
             <p className="text-xs text-[#5a5852] leading-relaxed">
-              Avaliação de 0 a 200 pontos nas 5 competências oficiais do MEC com citação textual obrigatória de trechos do aluno.
+              Avaliação de 0 a 200 pontos nas 5 competências do ENEM com citação textual obrigatória de trechos do aluno.
             </p>
           </div>
 

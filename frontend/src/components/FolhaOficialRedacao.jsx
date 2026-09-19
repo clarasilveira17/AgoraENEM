@@ -2,15 +2,7 @@ import React from 'react';
 import { ShieldCheck, Sparkles } from 'lucide-react';
 
 /**
- * Componente da Folha Oficial de Avaliação e Redação (Documento Oficial Ágora ENEM / SEDUC-CE).
- * 
- * DICA PARA O DESENVOLVEDOR:
- * Você pode editar este HTML/CSS diretamente no código. O Vite atualizará a prévia
- * instantaneamente (Hot Reload) e o PDF gerado será 100% idêntico a esta estrutura!
- * 
- * Estrutura:
- * - Página 1: Cabeçalho Oficial, Card do Aluno + Nota Hero, Matriz ENEM (5 Competências), Matriz SISEDU (D05-D18) ou Recado Pedagógico.
- * - Página 2: Transcrição Fiel Pautada da Redação (Linhas 01 a 25), Selo de Autenticidade Digital SHA-256 e Assinatura do Professor.
+ * Componente da Folha Oficial de Avaliação e Redação (Documento Oficial Projeto Ágora Escolar).
  */
 export default function FolhaOficialRedacao({
   redacao,
@@ -21,7 +13,7 @@ export default function FolhaOficialRedacao({
   siseduDescritores = {},
   sisedu = {},
   fullTextContent = '',
-  customEscola = 'Secretaria da Educação do Ceará • SEDUC-CE',
+  customEscola = 'Projeto Ágora Escolar • Ensino Médio',
   customProfessor = 'Professor(a) Avaliador(a)',
   customRecado = '',
   showSisedu = true,
@@ -151,7 +143,7 @@ export default function FolhaOficialRedacao({
             zIndex: 0
           }}>
             <span style={{ fontSize: '32px', fontWeight: 900, fontFamily: monoFont, letterSpacing: '8px', color: '#0f172a', textTransform: 'uppercase', textAlign: 'center', lineHeight: 1.3 }}>
-              SEDUC • ÁGORA ENEM<br />DOCUMENTO OFICIAL
+              PROJETO ÁGORA ESCOLAR<br />AVALIAÇÃO DE REDAÇÃO
             </span>
           </div>
         )}
@@ -183,7 +175,7 @@ export default function FolhaOficialRedacao({
                   Ágora ENEM — Ficha Oficial de Avaliação
                 </h1>
                 <p style={{ fontSize: '8.5px', fontWeight: 600, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.8px', margin: '3px 0 0 0', fontFamily: sansFont }}>
-                  {customEscola || 'Secretaria da Educação do Ceará • Sistema Preditivo (ENEM x SISEDU)'}
+                  {customEscola || 'Projeto Ágora Escolar • Sistema de Avaliação Textual'}
                 </p>
               </div>
             </div>
@@ -263,7 +255,7 @@ export default function FolhaOficialRedacao({
                 }} />
               </div>
               <span style={{ fontSize: '7px', color: '#64748b', marginTop: '3px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                Escala Oficial MEC
+                Escala ENEM (0-1000)
               </span>
             </div>
           </div>
@@ -274,7 +266,7 @@ export default function FolhaOficialRedacao({
               <h3 style={{ fontSize: '10px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.6px', color: '#0f172a', margin: 0, borderLeft: '3px solid #0f172a', paddingLeft: '6px' }}>
                 1. Matriz de Competências do ENEM (0 a 200 pontos cada)
               </h3>
-              <span style={{ fontSize: '7.5px', fontFamily: monoFont, color: '#64748b', textTransform: 'uppercase' }}>Pesos Oficiais MEC</span>
+              <span style={{ fontSize: '7.5px', fontFamily: monoFont, color: '#64748b', textTransform: 'uppercase' }}>Matriz de Competências</span>
             </div>
 
             <table style={{ width: '100%', textAlign: 'left', borderCollapse: 'collapse', fontSize: '8.5px', marginTop: '3px' }}>
@@ -320,7 +312,7 @@ export default function FolhaOficialRedacao({
                 <h3 style={{ fontSize: '10px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.6px', color: '#0f172a', margin: 0, borderLeft: '3px solid #047857', paddingLeft: '6px' }}>
                   2. Matriz de Descritores Regionais SISEDU / SPAECE (D05 a D18)
                 </h3>
-                <span style={{ fontSize: '7.5px', fontFamily: monoFont, color: '#64748b', textTransform: 'uppercase' }}>Matriz Estadual SEDUC</span>
+                <span style={{ fontSize: '7.5px', fontFamily: monoFont, color: '#64748b', textTransform: 'uppercase' }}>Rubricas Qualitativas</span>
               </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '5px', marginTop: '5px' }}>
@@ -371,7 +363,7 @@ export default function FolhaOficialRedacao({
 
         {/* Rodapé Página 1 */}
         <div style={{ paddingTop: '6px', borderTop: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontFamily: monoFont, fontSize: '7.5px', color: '#64748b' }}>
-          <div>Sistema Ágora ENEM • {customEscola || 'Secretaria da Educação do Ceará'} • Documento Oficial</div>
+          <div>Sistema Ágora ENEM • {customEscola || 'Projeto Ágora Escolar'} • Ficha de Avaliação</div>
           <div style={{ fontWeight: 700, color: '#0f172a' }}>Página 01 de 02</div>
         </div>
       </div>
@@ -415,7 +407,7 @@ export default function FolhaOficialRedacao({
             zIndex: 0
           }}>
             <span style={{ fontSize: '32px', fontWeight: 900, fontFamily: monoFont, letterSpacing: '8px', color: '#0f172a', textTransform: 'uppercase', textAlign: 'center', lineHeight: 1.3 }}>
-              SEDUC • ÁGORA ENEM<br />DOCUMENTO OFICIAL
+              PROJETO ÁGORA ESCOLAR<br />AVALIAÇÃO DE REDAÇÃO
             </span>
           </div>
         )}
@@ -469,11 +461,11 @@ export default function FolhaOficialRedacao({
                 AUTENTICAÇÃO DIGITAL DA AVALIAÇÃO
               </div>
               <p style={{ fontSize: '7px', fontFamily: sansFont, color: '#475569', lineHeight: 1.25, margin: '3px 0 5px 0' }}>
-                Documento emitido pelo Agente Ágora ENEM e validado pedagogicamente com base nas diretrizes oficiais do MEC e da SEDUC-CE.
+                Documento emitido pelo Sistema Ágora ENEM e validado pedagogicamente pelo corpo docente.
               </p>
               <div style={{ paddingTop: '3px', fontSize: '7px', color: '#64748b', borderTop: '1px solid #f1f5f9', display: 'flex', flexDirection: 'column', gap: '1px' }}>
                 <div>CÓDIGO HASH: <strong style={{ color: '#0f172a' }}>{authHash}</strong></div>
-                <div>CHAVE DE VALIDAÇÃO: <strong style={{ color: '#0f172a' }}>AGORA-2026-MEC-SEDUC-CE</strong></div>
+                <div>CHAVE DE VALIDAÇÃO: <strong style={{ color: '#0f172a' }}>AGORA-2026-AVAL-ENEM</strong></div>
               </div>
             </div>
 
@@ -497,7 +489,7 @@ export default function FolhaOficialRedacao({
 
         {/* Rodapé Página 2 */}
         <div style={{ paddingTop: '6px', borderTop: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontFamily: monoFont, fontSize: '7.5px', color: '#64748b' }}>
-          <div>Sistema Ágora ENEM • {customEscola || 'Secretaria da Educação do Ceará'} • Anexo II de Transcrição</div>
+          <div>Sistema Ágora ENEM • {customEscola || 'Projeto Ágora Escolar'} • Anexo II de Transcrição</div>
           <div style={{ fontWeight: 700, color: '#0f172a' }}>Página 02 de 02</div>
         </div>
       </div>

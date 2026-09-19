@@ -465,7 +465,7 @@ export default function DashboardView({ redacoes, rankingRedacoes = [], isLoadin
               {isAdmin ? 'Diagnóstico Escolar de Descritores SISEDU (D05 - D18)' : 'Seu Desempenho nos Descritores SISEDU'}
             </h3>
             <p className="text-xs text-[#807d72]">
-              Acompanhamento de proficiência qualitativa em Língua Portuguesa e Produção Textual (SEDUC-CE).
+              Acompanhamento de proficiência qualitativa em Língua Portuguesa e Produção Textual (Projeto Ágora).
             </p>
           </div>
 
