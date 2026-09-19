@@ -85,9 +85,8 @@ export default function Sidebar({ activeView, setActiveView, isMobileMenuOpen, s
     {
       title: 'Gestão de Redações',
       items: [
-        { id: 'novo', label: 'Nova Correção (Lote)', icon: PlusCircle },
-        { id: 'validacao', label: 'Validar Alunos & Turmas', icon: UserCheck, badge: unidentifiedCount },
-        { id: 'tabela', label: 'Banco de Redações', icon: Database }
+        { id: 'tabela', label: 'Envio & Banco de Redações', icon: Database },
+        { id: 'validacao', label: 'Validar Alunos & Turmas', icon: UserCheck, badge: unidentifiedCount }
       ]
     },
     {
@@ -107,7 +106,7 @@ export default function Sidebar({ activeView, setActiveView, isMobileMenuOpen, s
     {
       title: 'Desempenho',
       items: [
-        { id: 'tabela', label: 'Minhas Redações Avaliadas', icon: GraduationCap }
+        { id: 'tabela', label: 'Enviar & Minhas Redações', icon: GraduationCap }
       ]
     }
   ];

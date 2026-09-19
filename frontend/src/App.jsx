@@ -2,8 +2,7 @@ import React, { useState, useEffect } from 'react';
 import Sidebar from './components/Sidebar';
 import Header from './components/Header';
 import DashboardView from './components/DashboardView';
-import UploaderView from './components/UploaderView';
-import RedacoesTableView from './components/RedacoesTableView';
+import GestaoRedacoesView from './components/GestaoRedacoesView';
 import ConfigView from './components/ConfigView';
 import RankingView from './components/RankingView';
 import ValidacaoRapidaView from './components/ValidacaoRapidaView';
@@ -240,8 +239,18 @@ function AppContent() {
                 />
               )}
 
-              {activeView === 'novo' && (
-                <UploaderView onRedacaoSaved={handleRedacaoSaved} />
+              {(activeView === 'novo' || activeView === 'tabela' || activeView === 'sem_nome') && (
+                <GestaoRedacoesView
+                  redacoes={redacoes}
+                  isLoading={isLoadingRedacoes}
+                  filterTab={activeView === 'sem_nome' ? 'sem_nome' : filterTab}
+                  setFilterTab={setFilterTab}
+                  onSelectRedacao={(r) => setSelectedRedacao(r)}
+                  onDeleteRedacao={handleDeleteRedacao}
+                  onRedacaoSaved={handleRedacaoSaved}
+                  searchQuery={searchQuery}
+                  setSearchQuery={setSearchQuery}
+                />
               )}
 
               {activeView === 'validacao' && (
@@ -250,18 +259,6 @@ function AppContent() {
                   onSelectRedacao={(r) => setSelectedRedacao(r)}
                   onRedacaoUpdated={handleRedacaoUpdated}
                   onRefresh={() => loadRedacoes(true)}
-                />
-              )}
-
-              {(activeView === 'tabela' || activeView === 'sem_nome') && (
-                <RedacoesTableView
-                  redacoes={redacoes}
-                  isLoading={isLoadingRedacoes}
-                  filterTab={activeView === 'sem_nome' ? 'sem_nome' : filterTab}
-                  setFilterTab={setFilterTab}
-                  onSelectRedacao={(r) => setSelectedRedacao(r)}
-                  onDeleteRedacao={handleDeleteRedacao}
-                  searchQuery={searchQuery}
                 />
               )}
 
