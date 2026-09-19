@@ -7,15 +7,8 @@ export default function RedacoesTableView({ redacoes, isLoading = false, filterT
   const { isAdmin, isEstudante } = useAuth();
   const [selectedTurma, setSelectedTurma] = useState('todas');
 
-  // Lista única de turmas presentes nas redações (canônica oficial)
-  const turmasList = useMemo(() => {
-    const present = new Set();
-    redacoes.forEach(r => {
-      const t = normalizeTurma(r.turma_aluno || r.extracted_data?.turma);
-      if (t && t.trim()) present.add(t.trim());
-    });
-    return TURMAS_ESCOLA.filter(t => present.has(t));
-  }, [redacoes]);
+  // Lista de todas as turmas oficiais da escola (19 turmas)
+  const turmasList = TURMAS_ESCOLA;
 
   const filteredRedacoes = useMemo(() => {
     return redacoes.filter((item) => {

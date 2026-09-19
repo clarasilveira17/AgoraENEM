@@ -58,7 +58,11 @@ export async function agenteAvaliadorUnificado(imagemBase64, textoDigitado, nome
 
 SUA MISSÃO EM 1 ÚNICA EXECUÇÃO:
 1. **TRANSCRIÇÃO 100% INTEGRAL ("texto_transcrito"):** Se uma imagem de redação manuscrita for fornecida, transcreva 100% do texto palavra por palavra, preservando a estrutura de parágrafos. NUNCA resuma, NUNCA omita frases e NUNCA use reticências (...) para abreviar. Se for texto digitado, preserve-o integralmente no campo "texto_transcrito".
-2. **IDENTIFICAÇÃO DO ALUNO:** Se o nome do aluno ou turma não forem fornecidos, tente identificá-los no cabeçalho/margem da folha nos campos "aluno" e "turma". Se não houver nome legível, defina como null.
+2. **IDENTIFICAÇÃO SINCERA DO ALUNO ("confianca_identificacao" e "motivo_incerteza_identificacao"):** Se o nome do aluno ou turma não forem fornecidos, tente identificá-los no cabeçalho/margem da folha. Seja 100% SINCERO quanto à certeza da leitura:
+   - "ALTA": Nome completo e legível com clareza cristalina sem qualquer dúvida.
+   - "MEDIA": Caligrafia difícil, nome abreviado, primeiro nome apenas ou letra duvidosa.
+   - "BAIXA": Nome ilegível, rasurado, cortado ou ausente na folha.
+   Forneça a justificativa sincera no campo "motivo_incerteza_identificacao".
 3. **MATRIZ ENEM (Notas de 0 a 200 em múltiplos de 40: 0, 40, 80, 120, 160, 200 por competência):**
    - Competência 1: Domínio da modalidade escrita formal.
    - Competência 2: Compreensão do tema e aplicação de repertório sociocultural.
@@ -82,6 +86,8 @@ FORMATO DE SAÍDA OBRIGATÓRIO (JSON estrito):
 {
   "aluno": "${nomeFornecido || 'Nome do Aluno ou null'}",
   "turma": "${turmaFornecida || 'Turma do Aluno ou null'}",
+  "confianca_identificacao": "ALTA",
+  "motivo_incerteza_identificacao": "Nome e turma perfeitamente legíveis no cabeçalho",
   "texto_transcrito": "Texto integral transcrito palavra por palavra...",
   "devolutiva_nivel_inicial": "Diretriz pedagógica de intervenção para os pontos em Nível Inicial...",
   "avaliacoes": {

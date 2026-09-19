@@ -154,15 +154,8 @@ export default function GestaoRedacoesView({
   const [selectedTurma, setSelectedTurma] = useState('todas');
   const [localSearch, setLocalSearch] = useState(searchQuery || '');
 
-  // Turmas presentes no banco (filtradas e ordenadas pela lista canônica oficial)
-  const turmasList = useMemo(() => {
-    const present = new Set();
-    redacoes.forEach(r => {
-      const t = normalizeTurma(r.turma_aluno || r.extracted_data?.turma);
-      if (t && t.trim()) present.add(t.trim());
-    });
-    return TURMAS_ESCOLA.filter(t => present.has(t));
-  }, [redacoes]);
+  // Turmas Oficiais da Escola (todas as 19 turmas da Lista Geral dos Alunos)
+  const turmasList = TURMAS_ESCOLA;
 
   // Lista filtrada do banco
   const filteredRedacoes = useMemo(() => {

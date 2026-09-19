@@ -677,6 +677,40 @@ export default function ValidacaoRapidaView({
                 {/* ======================================================= */}
                 {/* 1. O QUE A IA DETECTOU + BOTÃO DE 1-CLIQUE              */}
                 {/* ======================================================= */}
+                {/* Diagnóstico de Sinceridade e Certeza da IA */}
+                {(() => {
+                  const conf = currentRedacao.extracted_data?.confianca_identificacao || (currentRedacao.user_id ? 'ALTA' : 'MEDIA');
+                  const motivo = currentRedacao.extracted_data?.motivo_incerteza_identificacao || (conf === 'ALTA' ? 'Nome e turma perfeitamente legíveis no cabeçalho.' : 'A IA identificou possíveis dúvidas na caligrafia ou abreviação do nome.');
+                  const isHigh = conf === 'ALTA';
+                  const isMed = conf === 'MEDIA';
+
+                  return (
+                    <div className={`p-3.5 rounded-lg border space-y-2 ${
+                      isHigh
+                        ? 'bg-emerald-50/70 border-emerald-300 text-emerald-950'
+                        : isMed
+                        ? 'bg-amber-50/80 border-amber-300 text-amber-950'
+                        : 'bg-rose-50/80 border-rose-300 text-rose-950'
+                    }`}>
+                      <div className="flex items-center justify-between text-xs font-mono font-bold">
+                        <span className="flex items-center gap-1.5">
+                          <Sparkles className={`w-3.5 h-3.5 ${isHigh ? 'text-emerald-600' : isMed ? 'text-amber-600' : 'text-rose-600'}`} />
+                          Diagnóstico de Certeza da IA:
+                        </span>
+                        <span className={`px-2 py-0.5 rounded text-[10px] uppercase font-mono font-bold ${
+                          isHigh ? 'bg-emerald-200 text-emerald-900' : isMed ? 'bg-amber-200 text-amber-900' : 'bg-rose-200 text-rose-900'
+                        }`}>
+                          Certeza {conf}
+                        </span>
+                      </div>
+                      <p className="text-[11px] leading-relaxed">
+                        {motivo}
+                      </p>
+                    </div>
+                  );
+                })()}
+
+                {/* 1. DADOS CAPTURADOS PELA IA */}
                 <div className="bg-[#fafaf7] border border-[#e6e5e0] p-3.5 rounded-lg space-y-2.5">
                   <div className="flex items-center justify-between text-xs font-mono">
                     <span className="text-[10px] uppercase font-bold text-[#807d72] flex items-center gap-1">

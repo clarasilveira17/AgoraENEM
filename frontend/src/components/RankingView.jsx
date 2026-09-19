@@ -25,15 +25,8 @@ export default function RankingView({ redacoes = [], onSelectRedacao }) {
     return redacoes.filter(r => r.is_synced && r.nota_final !== null && r.nota_final !== undefined);
   }, [redacoes]);
 
-  // Lista única de turmas para filtro (canônica oficial)
-  const turmasList = useMemo(() => {
-    const present = new Set();
-    validRedacoes.forEach(r => {
-      const t = normalizeTurma(r.turma_aluno || r.extracted_data?.turma);
-      if (t && t.trim()) present.add(t.trim());
-    });
-    return TURMAS_ESCOLA.filter(t => present.has(t));
-  }, [validRedacoes]);
+  // Lista de todas as turmas oficiais da escola para filtro (19 turmas)
+  const turmasList = TURMAS_ESCOLA;
 
   // Agrupamento por Aluno (Top 10 Melhores Notas com Critérios Oficiais de Desempate ENEM)
   const rankingAlunos = useMemo(() => {

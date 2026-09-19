@@ -3,6 +3,7 @@ import { supabase, isSupabaseConfigured, getNextId } from '../config/supabaseCli
 import db from '../config/db.js';
 import jwt from 'jsonwebtoken';
 import { JWT_SECRET } from '../middleware/authMiddleware.js';
+import { resolveStudent, normalizeTurma } from '../utils/turmasUtils.js';
 
 export async function handleCorrection(req, res) {
   let itemsToProcess = req.body?.redacoes || req.body?.documents;
@@ -69,33 +70,24 @@ export async function handleCorrection(req, res) {
       }
 
       // Consolidação dos dados finais avaliados
-      const finalStudentName = (nome_aluno && nome_aluno.trim()) || (extractedData.aluno && extractedData.aluno.trim()) || 'Aluno Não Identificado';
-      const finalTurma = (turma_aluno && turma_aluno.trim()) || (extractedData.turma && extractedData.turma.trim()) || 'Turma Geral';
+      const rawStudentName = (nome_aluno && nome_aluno.trim()) || (extractedData.aluno && extractedData.aluno.trim()) || '';
+      const rawTurma = (turma_aluno && turma_aluno.trim()) || (extractedData.turma && extractedData.turma.trim()) || '';
       const notaTotalEnem = extractedData.avaliacoes?.enem?.nota_total_enem ?? extractedData.nota_final ?? 0;
-      const isNameDetected = !!(finalStudentName && !['Aluno Não Identificado', 'Estudante Não Identificado', 'Não identificado'].includes(finalStudentName.trim()));
       const dataCaptura = item.data_captura || new Date().toISOString();
       const tipoInput = item.tipo_input || (imagem_base64 ? 'imagem' : 'texto');
 
-      let userId = item.user_id || null;
-      let validadoPor = requestingUser?.id || null;
+      // Resolução inteligente de vínculo do aluno
+      const resolved = await resolveStudent(item.user_id, rawStudentName, rawTurma);
+      const isNameDetected = Boolean(resolved.nome_aluno && !['Aluno Não Identificado', 'Estudante Não Identificado', 'Não identificado'].includes(resolved.nome_aluno));
 
-      // Se não tem user_id vinculado, procura automaticamente pelo nome do estudante no Supabase
-      if (!userId && isNameDetected && isSupabaseConfigured) {
-        try {
-          const { data: matchedUser } = await supabase
-            .from('users')
-            .select('id')
-            .ilike('nome', finalStudentName.trim())
-            .eq('role', 'ESTUDANTE')
-            .maybeSingle();
+      // Sinceridade da IA:
+      // Se a IA teve dúvida ("MEDIA" ou "BAIXA") ou não encontrou aluno no cadastro, marca como pendente para o professor conferir
+      const aiConfidence = extractedData.confianca_identificacao || (isNameDetected && resolved.user_id ? 'ALTA' : 'BAIXA');
+      const isConfident = aiConfidence === 'ALTA' && Boolean(resolved.user_id);
 
-          if (matchedUser) {
-            userId = matchedUser.id;
-          }
-        } catch (matchErr) {
-          console.warn('[CorrectionController] Match user warning:', matchErr.message);
-        }
-      }
+      const statusValidacao = isConfident ? 'VALIDADA' : 'PENDENTE_VALIDACAO';
+      const validadoPor = isConfident ? (requestingUser?.id || 1) : null;
+      const dataValidacao = isConfident ? new Date().toISOString() : null;
 
       // =========================================================================
       // PERSISTÊNCIA DIRETA NO SUPABASE (NUVEM) - SEM BUROCRACIA DE SINCRONIZAÇÃO
@@ -103,16 +95,16 @@ export async function handleCorrection(req, res) {
       let savedCloudId = null;
       if (isSupabaseConfigured) {
         try {
-          console.log(`[CorrectionController] Gravando redação diretamente no Supabase (${finalStudentName})...`);
+          console.log(`[CorrectionController] Gravando redação no Supabase (${resolved.nome_aluno} | Status: ${statusValidacao})...`);
           const nextId = await getNextId('redacoes');
 
           const { data: insertedRow, error: insErr } = await supabase
             .from('redacoes')
             .insert({
               ...(nextId ? { id: nextId } : {}),
-              user_id: userId,
-              nome_aluno: finalStudentName,
-              turma_aluno: finalTurma,
+              user_id: resolved.user_id,
+              nome_aluno: resolved.nome_aluno,
+              turma_aluno: resolved.turma_aluno,
               nome_detectado: isNameDetected ? 1 : 0,
               data_captura: dataCaptura,
               tipo_input: tipoInput,
@@ -121,9 +113,9 @@ export async function handleCorrection(req, res) {
               is_synced: 1,
               extracted_data: extractedData,
               nota_final: notaTotalEnem,
-              status_validacao: 'VALIDADA',
+              status_validacao: statusValidacao,
               validado_por: validadoPor,
-              data_validacao: new Date().toISOString()
+              data_validacao: dataValidacao
             })
             .select('id')
             .maybeSingle();

@@ -43,6 +43,78 @@ export default function DashboardView({ redacoes, rankingRedacoes = [], isLoadin
     { code: 'C5', label: 'Intervenção', avg: calcCompAvg('competencia_5'), color: '#c08532' }
   ];
 
+  // SISEDU Descritores Analytics (D05 a D18)
+  const siseduStats = useMemo(() => {
+    const descritoresConfig = [
+      { code: 'D05', label: 'Interpretação Gráfica/Textual' },
+      { code: 'D06', label: 'Identificação do Tema/Tese' },
+      { code: 'D12', label: 'Coesão e Substituição Lexical' },
+      { code: 'D13', label: 'Localização da Tese Central' },
+      { code: 'D14', label: 'Partes Principais/Secundárias' },
+      { code: 'D15', label: 'Posições Distintas / Contraposição' },
+      { code: 'D16', label: 'Articulação Tese e Argumentos' },
+      { code: 'D17', label: 'Escolha Vocabular e Norma Culta' },
+      { code: 'D18', label: 'Pontuação e Recursos Expressivos' }
+    ];
+
+    if (correctedList.length === 0) {
+      return {
+        descritores: descritoresConfig.map(d => ({ ...d, adequado: 0, intermediario: 0, inicial: 0, total: 0, pctAdequado: 0 })),
+        pctGlobalAdequado: 0,
+        pctGlobalIntermediario: 0,
+        pctGlobalInicial: 0,
+        nivelPredominante: 'Sem Dados'
+      };
+    }
+
+    let totalAdequado = 0;
+    let totalIntermediario = 0;
+    let totalInicial = 0;
+
+    const descritores = descritoresConfig.map(desc => {
+      let adq = 0, inter = 0, ini = 0;
+      correctedList.forEach(r => {
+        const dObj = r.extracted_data?.avaliacoes?.sisedu?.descritores?.[desc.code];
+        const nivel = (dObj?.nivel || '').trim().toLowerCase();
+        if (nivel.includes('adequado')) adq++;
+        else if (nivel.includes('intermediario') || nivel.includes('intermediário')) inter++;
+        else if (nivel.includes('inicial')) ini++;
+        else adq++; // default fallback se validado
+      });
+
+      const total = adq + inter + ini || correctedList.length;
+      totalAdequado += adq;
+      totalIntermediario += inter;
+      totalInicial += ini;
+
+      return {
+        ...desc,
+        adequado: adq,
+        intermediario: inter,
+        inicial: ini,
+        total,
+        pctAdequado: Math.round((adq / total) * 100)
+      };
+    });
+
+    const grandTotal = totalAdequado + totalIntermediario + totalInicial || 1;
+    const pctGlobalAdequado = Math.round((totalAdequado / grandTotal) * 100);
+    const pctGlobalIntermediario = Math.round((totalIntermediario / grandTotal) * 100);
+    const pctGlobalInicial = Math.round((totalInicial / grandTotal) * 100);
+
+    let nivelPredominante = 'Adequado';
+    if (pctGlobalInicial >= 30) nivelPredominante = 'Inicial (Atenção)';
+    else if (pctGlobalIntermediario > pctGlobalAdequado) nivelPredominante = 'Intermediário';
+
+    return {
+      descritores,
+      pctGlobalAdequado,
+      pctGlobalIntermediario,
+      pctGlobalInicial,
+      nivelPredominante
+    };
+  }, [correctedList]);
+
   // Top 3 Ranking Preview Geral da Escola (baseado no dataset completo de ranking com desempate ENEM)
   const topRanking = useMemo(() => {
     const listToRank = rankingRedacoes && rankingRedacoes.length > 0 ? rankingRedacoes : redacoes;
@@ -378,6 +450,98 @@ export default function DashboardView({ redacoes, rankingRedacoes = [], isLoadin
           </div>
         </div>
       )}
+
+      {/* ======================================================== */}
+      {/* PAINEL PEDAGÓGICO SISEDU / SPAECE (D05 a D18)            */}
+      {/* ======================================================== */}
+      <div className="bg-[#ffffff] border border-[#e6e5e0] p-4 sm:p-6 rounded-xl space-y-5 shadow-xs">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-[#e6e5e0]">
+          <div className="space-y-1">
+            <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-[#1f8a65]/10 text-[#1f8a65] border border-[#1f8a65]/20">
+              <span>SISEDU & SPAECE 2026</span>
+            </div>
+            <h3 className="text-base sm:text-lg font-semibold text-[#26251e] tracking-tight flex items-center gap-2">
+              <Award className="w-4 h-4 text-[#1f8a65]" />
+              {isAdmin ? 'Diagnóstico Escolar de Descritores SISEDU (D05 - D18)' : 'Seu Desempenho nos Descritores SISEDU'}
+            </h3>
+            <p className="text-xs text-[#807d72]">
+              Acompanhamento de proficiência qualitativa em Língua Portuguesa e Produção Textual (SEDUC-CE).
+            </p>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <div className="px-3 py-1.5 bg-[#fafaf7] border border-[#e6e5e0] rounded-lg text-xs font-mono">
+              <span className="text-[#807d72]">Nível Global: </span>
+              <span className="font-bold text-[#1f8a65]">{siseduStats.nivelPredominante}</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Resumo dos 3 Níveis SPAECE */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div className="p-3.5 bg-emerald-50/50 border border-emerald-200 rounded-lg space-y-1">
+            <div className="flex items-center justify-between text-xs text-emerald-900 font-medium">
+              <span>Nível Adequado</span>
+              <span className="font-mono font-bold">{siseduStats.pctGlobalAdequado}%</span>
+            </div>
+            <div className="w-full bg-emerald-100 h-2 rounded-full overflow-hidden">
+              <div className="bg-emerald-600 h-full rounded-full transition-all duration-500" style={{ width: `${siseduStats.pctGlobalAdequado}%` }} />
+            </div>
+            <p className="text-[10px] text-emerald-700">Domínio consolidado das habilidades</p>
+          </div>
+
+          <div className="p-3.5 bg-amber-50/50 border border-amber-200 rounded-lg space-y-1">
+            <div className="flex items-center justify-between text-xs text-amber-900 font-medium">
+              <span>Nível Intermediário</span>
+              <span className="font-mono font-bold">{siseduStats.pctGlobalIntermediario}%</span>
+            </div>
+            <div className="w-full bg-amber-100 h-2 rounded-full overflow-hidden">
+              <div className="bg-amber-500 h-full rounded-full transition-all duration-500" style={{ width: `${siseduStats.pctGlobalIntermediario}%` }} />
+            </div>
+            <p className="text-[10px] text-amber-700">Desenvolvimento parcial dos critérios</p>
+          </div>
+
+          <div className="p-3.5 bg-rose-50/50 border border-rose-200 rounded-lg space-y-1">
+            <div className="flex items-center justify-between text-xs text-rose-900 font-medium">
+              <span>Nível Inicial (Alerta)</span>
+              <span className="font-mono font-bold">{siseduStats.pctGlobalInicial}%</span>
+            </div>
+            <div className="w-full bg-rose-100 h-2 rounded-full overflow-hidden">
+              <div className="bg-rose-500 h-full rounded-full transition-all duration-500" style={{ width: `${siseduStats.pctGlobalInicial}%` }} />
+            </div>
+            <p className="text-[10px] text-rose-700">Exige intervenção e oficina pedagógica</p>
+          </div>
+        </div>
+
+        {/* Grade Analítica dos 9 Descritores */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-1">
+          {siseduStats.descritores.map((desc) => (
+            <div key={desc.code} className="bg-[#fafaf7] border border-[#e6e5e0] p-3.5 rounded-lg space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="px-2 py-0.5 rounded font-mono font-bold text-xs bg-[#26251e] text-white">
+                  {desc.code}
+                </span>
+                <span className="text-xs font-mono font-semibold text-[#1f8a65]">
+                  {desc.pctAdequado}% Adequado
+                </span>
+              </div>
+              <div className="text-xs font-semibold text-[#26251e] leading-tight">
+                {desc.label}
+              </div>
+              <div className="flex gap-1 h-1.5 rounded-full overflow-hidden bg-[#e6e5e0]">
+                <div style={{ width: `${desc.pctAdequado}%` }} className="bg-emerald-500 h-full" title="Adequado" />
+                <div style={{ width: `${Math.round((desc.intermediario / (desc.total || 1)) * 100)}%` }} className="bg-amber-400 h-full" title="Intermediário" />
+                <div style={{ width: `${Math.round((desc.inicial / (desc.total || 1)) * 100)}%` }} className="bg-rose-500 h-full" title="Inicial" />
+              </div>
+              <div className="flex items-center justify-between text-[10px] font-mono text-[#807d72] pt-0.5">
+                <span>{desc.adequado} adq</span>
+                <span>{desc.intermediario} inter</span>
+                <span className={desc.inicial > 0 ? 'text-rose-600 font-bold' : ''}>{desc.inicial} ini</span>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
 
       {/* ENEM Competencies Average Chart */}
       <div className="bg-[#ffffff] border border-[#e6e5e0] p-4 sm:p-5 rounded-xl space-y-4 shadow-xs">

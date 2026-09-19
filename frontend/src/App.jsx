@@ -12,7 +12,7 @@ import ProjetoAgoraLandingView from './components/ProjetoAgoraLandingView';
 import { clearAllLocalRedacoes } from './db/db';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { authService } from './services/authService';
-import { X, Award, Loader2 } from 'lucide-react';
+import { X, Award, Loader2, Menu } from 'lucide-react';
 
 function AppContent() {
   const { user, isAuthenticated, isAdmin, isEstudante, loading: authLoading } = useAuth();
@@ -175,7 +175,7 @@ function AppContent() {
   };
 
   const pendingCount = redacoes.filter(r => !r.is_synced).length;
-  const unidentifiedCount = redacoes.filter(r => !r.user_id || !r.nome_aluno).length;
+  const unidentifiedCount = redacoes.filter(r => r.status_validacao === 'PENDENTE_VALIDACAO' || !r.user_id || !r.nome_aluno).length;
 
   return (
     <div className="h-screen h-[100dvh] w-screen bg-[#f7f7f4] text-[#26251e] font-sans flex overflow-hidden select-none">
@@ -208,15 +208,19 @@ function AppContent() {
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col min-w-0 h-screen h-[100dvh] overflow-hidden">
         
-        {/* Enterprise Top Header */}
-        <Header
-          pendingCount={pendingCount}
-          searchQuery={searchQuery}
-          setSearchQuery={setSearchQuery}
-          isMobileMenuOpen={isMobileMenuOpen}
-          setIsMobileMenuOpen={setIsMobileMenuOpen}
-          onOpenLoginModal={() => setIsLoginModalOpen(true)}
-        />
+        {/* Mobile Hamburger Toggle Header */}
+        {isAuthenticated && (
+          <div className="md:hidden px-4 py-2.5 bg-[#f7f7f4] border-b border-[#e6e5e0] flex items-center justify-between shrink-0">
+            <button
+              onClick={() => setIsMobileMenuOpen(true)}
+              className="p-1.5 rounded-md bg-[#ffffff] border border-[#e6e5e0] text-[#26251e] flex items-center gap-2 text-xs font-medium cursor-pointer"
+            >
+              <Menu className="w-4 h-4 text-[#f54e00]" />
+              <span>Menu</span>
+            </button>
+            <span className="text-xs font-semibold text-[#26251e] font-mono">Ágora ENEM</span>
+          </div>
+        )}
 
         {/* Global Toast Feedback Notification Banner */}
         {toast && (
