@@ -1,26 +1,27 @@
 import React, { useState, useMemo } from 'react';
 import { FileText, UserX, Award, Trash2, ChevronRight, AlertTriangle, Compass, CheckCircle2, Clock, Filter, X } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { TURMAS_ESCOLA, normalizeTurma } from '../constants/turmas';
 
 export default function RedacoesTableView({ redacoes, isLoading = false, filterTab, setFilterTab, onSelectRedacao, onDeleteRedacao, searchQuery }) {
   const { isAdmin, isEstudante } = useAuth();
   const [selectedTurma, setSelectedTurma] = useState('todas');
 
-  // Lista única de turmas presentes nas redações
+  // Lista única de turmas presentes nas redações (canônica oficial)
   const turmasList = useMemo(() => {
-    const set = new Set();
+    const present = new Set();
     redacoes.forEach(r => {
-      const t = r.turma_aluno || r.extracted_data?.turma;
-      if (t && t.trim()) set.add(t.trim());
+      const t = normalizeTurma(r.turma_aluno || r.extracted_data?.turma);
+      if (t && t.trim()) present.add(t.trim());
     });
-    return Array.from(set).sort();
+    return TURMAS_ESCOLA.filter(t => present.has(t));
   }, [redacoes]);
 
   const filteredRedacoes = useMemo(() => {
     return redacoes.filter((item) => {
       const ext = item.extracted_data || {};
       const aluno = item.nome_aluno || ext.aluno || '';
-      const turma = item.turma_aluno || ext.turma || '';
+      const turma = normalizeTurma(item.turma_aluno || ext.turma || '');
       const idStr = String(item.id);
 
       // Filtro por turma
@@ -35,8 +36,8 @@ export default function RedacoesTableView({ redacoes, isLoading = false, filterT
 
       if (!matchesSearch) return false;
 
-      if (filterTab === 'identificadas') return item.nome_detectado && item.nome_aluno;
-      if (filterTab === 'sem_nome') return !item.nome_detectado || !item.nome_aluno;
+      if (filterTab === 'identificadas') return item.user_id && item.nome_aluno;
+      if (filterTab === 'sem_nome') return !item.user_id || !item.nome_aluno;
       if (filterTab === 'excelentes') return item.nota_final >= 800;
       if (filterTab === 'baixas') return item.is_synced && item.nota_final < 600;
 

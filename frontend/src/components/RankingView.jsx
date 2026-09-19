@@ -5,6 +5,7 @@ import {
   Flame, CheckCircle2, User, ArrowUpRight, Lock
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { TURMAS_ESCOLA, normalizeTurma } from '../constants/turmas';
 
 export default function RankingView({ redacoes = [], onSelectRedacao }) {
   const { user, isAdmin } = useAuth();
@@ -24,14 +25,14 @@ export default function RankingView({ redacoes = [], onSelectRedacao }) {
     return redacoes.filter(r => r.is_synced && r.nota_final !== null && r.nota_final !== undefined);
   }, [redacoes]);
 
-  // Lista única de turmas para filtro
+  // Lista única de turmas para filtro (canônica oficial)
   const turmasList = useMemo(() => {
-    const set = new Set();
+    const present = new Set();
     validRedacoes.forEach(r => {
-      const t = r.turma_aluno || r.extracted_data?.turma;
-      if (t && t.trim()) set.add(t.trim());
+      const t = normalizeTurma(r.turma_aluno || r.extracted_data?.turma);
+      if (t && t.trim()) present.add(t.trim());
     });
-    return Array.from(set).sort();
+    return TURMAS_ESCOLA.filter(t => present.has(t));
   }, [validRedacoes]);
 
   // Agrupamento por Aluno (Top 10 Melhores Notas com Critérios Oficiais de Desempate ENEM)

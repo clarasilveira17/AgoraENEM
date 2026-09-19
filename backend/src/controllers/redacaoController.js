@@ -1,5 +1,117 @@
 import db from '../config/db.js';
 import { supabase, isSupabaseConfigured, getNextId } from '../config/supabaseClient.js';
+import { TURMAS_ESCOLA, normalizeTurma, normalizeStr, MANUAL_OCR_NAME_MAP } from '../utils/turmasUtils.js';
+
+/**
+ * Resolução e blindagem de vínculo de estudante e turma oficial
+ */
+export async function resolveStudent(userId, rawNome, rawTurma) {
+  let finalUserId = userId ? Number(userId) : null;
+  let finalNome = (rawNome || '').trim();
+  let finalTurma = normalizeTurma(rawTurma || '');
+
+  // 1. Se user_id já foi passado, busca dados oficiais
+  if (finalUserId) {
+    if (isSupabaseConfigured) {
+      const { data: u } = await supabase.from('users').select('id, nome, turma').eq('id', finalUserId).maybeSingle();
+      if (u) {
+        return {
+          user_id: u.id,
+          nome_aluno: u.nome,
+          turma_aluno: normalizeTurma(u.turma || finalTurma)
+        };
+      }
+    } else if (db) {
+      const u = db.prepare('SELECT id, nome, turma FROM users WHERE id = ?').get(finalUserId);
+      if (u) {
+        return {
+          user_id: u.id,
+          nome_aluno: u.nome,
+          turma_aluno: normalizeTurma(u.turma || finalTurma)
+        };
+      }
+    }
+  }
+
+  // 2. Normalização de OCR
+  if (MANUAL_OCR_NAME_MAP[finalNome]) {
+    finalNome = MANUAL_OCR_NAME_MAP[finalNome];
+  }
+
+  const normTarget = normalizeStr(finalNome);
+  if (!normTarget || normTarget.length < 3) {
+    return {
+      user_id: finalUserId,
+      nome_aluno: finalNome || 'Aluno Não Identificado',
+      turma_aluno: finalTurma || 'Sem Turma'
+    };
+  }
+
+  // 3. Match inteligente contra banco de alunos cadastrados
+  if (isSupabaseConfigured) {
+    const { data: users } = await supabase.from('users').select('id, nome, turma').eq('role', 'ESTUDANTE');
+    if (users && users.length > 0) {
+      let matched = users.find(u => normalizeStr(u.nome) === normTarget);
+      if (!matched) {
+        const candidates = users.filter(u => {
+          const uNorm = normalizeStr(u.nome);
+          return uNorm.includes(normTarget) || normTarget.includes(uNorm);
+        });
+        if (candidates.length === 1) {
+          matched = candidates[0];
+        } else if (candidates.length > 1) {
+          const normT = normalizeStr(finalTurma);
+          matched = candidates.find(c => {
+            const cT = normalizeStr(c.turma);
+            return normT.length > 1 && (cT.includes(normT) || normT.includes(cT.substring(0, 3)));
+          }) || candidates[0];
+        }
+      }
+      if (matched) {
+        return {
+          user_id: matched.id,
+          nome_aluno: matched.nome,
+          turma_aluno: normalizeTurma(matched.turma || finalTurma)
+        };
+      }
+    }
+  } else if (db) {
+    try {
+      const users = db.prepare("SELECT id, nome, turma FROM users WHERE role = 'ESTUDANTE'").all();
+      if (users && users.length > 0) {
+        let matched = users.find(u => normalizeStr(u.nome) === normTarget);
+        if (!matched) {
+          const candidates = users.filter(u => {
+            const uNorm = normalizeStr(u.nome);
+            return uNorm.includes(normTarget) || normTarget.includes(uNorm);
+          });
+          if (candidates.length === 1) {
+            matched = candidates[0];
+          } else if (candidates.length > 1) {
+            const normT = normalizeStr(finalTurma);
+            matched = candidates.find(c => {
+              const cT = normalizeStr(c.turma);
+              return normT.length > 1 && (cT.includes(normT) || normT.includes(cT.substring(0, 3)));
+            }) || candidates[0];
+          }
+        }
+        if (matched) {
+          return {
+            user_id: matched.id,
+            nome_aluno: matched.nome,
+            turma_aluno: normalizeTurma(matched.turma || finalTurma)
+          };
+        }
+      }
+    } catch (e) {}
+  }
+
+  return {
+    user_id: finalUserId,
+    nome_aluno: finalNome || 'Aluno Não Identificado',
+    turma_aluno: finalTurma || 'Sem Turma'
+  };
+}
 
 // POST /api/redacoes/sync-legacy
 // Migrates legacy IndexedDB local evaluations to central cloud DB (Supabase/SQLite)
@@ -15,7 +127,8 @@ export const syncLegacyRedacoes = async (req, res) => {
 
     if (isSupabaseConfigured) {
       for (const item of redacoes) {
-        const nomeAluno = item.nome_aluno || item.nomeAluno || 'Aluno Não Identificado';
+        const rawNome = item.nome_aluno || item.nomeAluno || 'Aluno Não Identificado';
+        const rawTurma = item.turma_aluno || item.turmaAluno || 'Turma Geral';
         const dataCaptura = item.data_captura || item.dataCaptura || new Date().toISOString();
 
         let extractedDataObj = {};
@@ -29,50 +142,44 @@ export const syncLegacyRedacoes = async (req, res) => {
         const imagemBase64 = item.imagem_base64 || item.imagemBase64 || null;
         const textoDigitado = item.texto_digitado || item.textoDigitado || null;
         const tipoInput = item.tipo_input || item.tipoInput || 'imagem';
-        const turmaAluno = item.turma_aluno || item.turmaAluno || 'Turma Geral';
-        const nomeDetectado = item.nome_detectado ? 1 : 0;
+        const nomeDetectado = 1;
         const statusValidacao = item.status_validacao || 'VALIDADA';
-        const validadoPor = req.user?.id || null;
-        const dataValidacao = new Date().toISOString();
+        const validadoPor = req.user?.id || 1;
+        const dataValidacao = item.data_validacao || new Date().toISOString();
+
+        const resolved = await resolveStudent(item.user_id, rawNome, rawTurma);
 
         const { data: existing } = await supabase
           .from('redacoes')
           .select('id')
-          .eq('nome_aluno', nomeAluno)
+          .eq('nome_aluno', resolved.nome_aluno)
           .eq('data_captura', dataCaptura)
           .maybeSingle();
 
         if (existing) {
           await supabase.from('redacoes').update({
+            user_id: resolved.user_id,
+            nome_aluno: resolved.nome_aluno,
+            turma_aluno: resolved.turma_aluno,
             extracted_data: extractedDataObj,
             nota_final: notaFinal,
             status_validacao: statusValidacao,
             imagem_base64: imagemBase64,
             texto_digitado: textoDigitado,
+            validado_por: validadoPor,
+            data_validacao: dataValidacao,
             is_synced: 1
           }).eq('id', existing.id);
           insertedCount++;
           continue;
         }
 
-        let userId = item.user_id || null;
-        if (!userId && nomeAluno && nomeAluno.trim().length >= 3) {
-          const { data: matchedUser } = await supabase
-            .from('users')
-            .select('id')
-            .ilike('nome', nomeAluno.trim())
-            .eq('role', 'ESTUDANTE')
-            .maybeSingle();
-
-          if (matchedUser) userId = matchedUser.id;
-        }
-
         const nextId = await getNextId('redacoes');
         const { error: insErr } = await supabase.from('redacoes').insert({
           ...(nextId ? { id: nextId } : {}),
-          user_id: userId,
-          nome_aluno: nomeAluno,
-          turma_aluno: turmaAluno,
+          user_id: resolved.user_id,
+          nome_aluno: resolved.nome_aluno,
+          turma_aluno: resolved.turma_aluno,
           nome_detectado: nomeDetectado,
           data_captura: dataCaptura,
           tipo_input: tipoInput,
@@ -407,31 +514,21 @@ export const createRedacao = async (req, res) => {
       status_validacao
     } = req.body;
 
-    let targetUserId = user_id || null;
     const initialStatus = status_validacao || (req.user?.role === 'ADMIN' ? 'VALIDADA' : 'PENDENTE_VALIDACAO');
-    const validadoPor = initialStatus === 'VALIDADA' ? req.user?.id : null;
+    const validadoPor = initialStatus === 'VALIDADA' ? (req.user?.id || 1) : null;
     const dataValidacao = initialStatus === 'VALIDADA' ? new Date().toISOString() : null;
 
+    const resolved = await resolveStudent(user_id, nome_aluno, turma_aluno);
+
     if (isSupabaseConfigured) {
-      if (!targetUserId && nome_aluno && nome_aluno.trim().length >= 3) {
-        const { data: matched } = await supabase
-          .from('users')
-          .select('id')
-          .ilike('nome', nome_aluno.trim())
-          .eq('role', 'ESTUDANTE')
-          .maybeSingle();
-
-        if (matched) targetUserId = matched.id;
-      }
-
       const nextId = await getNextId('redacoes');
       const { data, error } = await supabase
         .from('redacoes')
         .insert({
           ...(nextId ? { id: nextId } : {}),
-          user_id: targetUserId,
-          nome_aluno: nome_aluno || 'Aluno Não Identificado',
-          turma_aluno: turma_aluno || 'Geral',
+          user_id: resolved.user_id,
+          nome_aluno: resolved.nome_aluno,
+          turma_aluno: resolved.turma_aluno,
           nome_detectado: 1,
           tipo_input: tipo_input || 'imagem',
           imagem_base64: imagem_base64 || null,
@@ -451,18 +548,11 @@ export const createRedacao = async (req, res) => {
       return res.status(201).json({
         message: 'Redação registrada com sucesso!',
         id: data.id,
-        status_validacao: initialStatus
+        status_validacao: initialStatus,
+        user_id: resolved.user_id,
+        nome_aluno: resolved.nome_aluno,
+        turma_aluno: resolved.turma_aluno
       });
-    }
-
-    if (!targetUserId && nome_aluno && nome_aluno.trim().length >= 3) {
-      const cleanName = nome_aluno.trim();
-      const matched = db.prepare(`
-        SELECT id FROM users 
-        WHERE LOWER(TRIM(nome)) = LOWER(TRIM(?)) AND role = 'ESTUDANTE'
-      `).get(cleanName);
-
-      if (matched) targetUserId = matched.id;
     }
 
     const extractedDataStr = typeof extracted_data === 'string'
@@ -476,9 +566,9 @@ export const createRedacao = async (req, res) => {
         status_validacao, validado_por, data_validacao
       ) VALUES (?, ?, ?, 1, CURRENT_TIMESTAMP, ?, ?, ?, 1, ?, ?, ?, ?, ?)
     `).run(
-      targetUserId,
-      nome_aluno || 'Aluno Não Identificado',
-      turma_aluno || 'Geral',
+      resolved.user_id,
+      resolved.nome_aluno,
+      resolved.turma_aluno,
       tipo_input || 'imagem',
       imagem_base64 || null,
       texto_digitado || null,
@@ -492,7 +582,10 @@ export const createRedacao = async (req, res) => {
     res.status(201).json({
       message: 'Redação registrada com sucesso!',
       id: result.lastInsertRowid,
-      status_validacao: initialStatus
+      status_validacao: initialStatus,
+      user_id: resolved.user_id,
+      nome_aluno: resolved.nome_aluno,
+      turma_aluno: resolved.turma_aluno
     });
   } catch (error) {
     console.error('[Create Redacao Error]:', error);
@@ -506,34 +599,17 @@ export const vincularAlunoRedacao = async (req, res) => {
     const { id } = req.params;
     const { user_id, nome_aluno, turma_aluno } = req.body;
 
+    const resolved = await resolveStudent(user_id, nome_aluno, turma_aluno);
+    const validadoPor = req.user?.id || 1;
+    const dataValidacao = new Date().toISOString();
+
     if (isSupabaseConfigured) {
-      let finalUserId = user_id || null;
-      let finalNomeAluno = nome_aluno || null;
-      let finalTurmaAluno = turma_aluno || null;
-
-      if (user_id) {
-        const { data: st } = await supabase
-          .from('users')
-          .select('id, nome, turma')
-          .eq('id', user_id)
-          .maybeSingle();
-
-        if (st) {
-          finalUserId = st.id;
-          finalNomeAluno = st.nome;
-          finalTurmaAluno = st.turma || finalTurmaAluno;
-        }
-      }
-
-      const validadoPor = req.user?.id || 1;
-      const dataValidacao = new Date().toISOString();
-
       const { error } = await supabase
         .from('redacoes')
         .update({
-          user_id: finalUserId,
-          nome_aluno: finalNomeAluno,
-          turma_aluno: finalTurmaAluno,
+          user_id: resolved.user_id,
+          nome_aluno: resolved.nome_aluno,
+          turma_aluno: resolved.turma_aluno,
           nome_detectado: 1,
           status_validacao: 'VALIDADA',
           validado_por: validadoPor,
@@ -544,10 +620,10 @@ export const vincularAlunoRedacao = async (req, res) => {
       if (error) throw error;
 
       return res.status(200).json({
-        message: `Redação ID #${id} vinculada ao aluno ${finalNomeAluno} com sucesso!`,
-        user_id: finalUserId,
-        nome_aluno: finalNomeAluno,
-        turma_aluno: finalTurmaAluno,
+        message: `Redação ID #${id} vinculada ao aluno ${resolved.nome_aluno} com sucesso!`,
+        user_id: resolved.user_id,
+        nome_aluno: resolved.nome_aluno,
+        turma_aluno: resolved.turma_aluno,
         status_validacao: 'VALIDADA',
         validado_por: validadoPor,
         data_validacao: dataValidacao
@@ -559,43 +635,25 @@ export const vincularAlunoRedacao = async (req, res) => {
       return res.status(404).json({ error: 'Redação não encontrada.' });
     }
 
-    let student = null;
-    if (user_id) {
-      student = db.prepare("SELECT id, nome, turma FROM users WHERE id = ? AND role = 'ESTUDANTE'").get(user_id);
-    } else if (nome_aluno) {
-      student = db.prepare("SELECT id, nome, turma FROM users WHERE LOWER(TRIM(nome)) = LOWER(TRIM(?)) AND role = 'ESTUDANTE'").get(nome_aluno.trim());
-    }
-
-    const finalUserId = student ? student.id : (user_id || null);
-    const finalNomeAluno = student ? student.nome : (nome_aluno || redacao.nome_aluno);
-    const finalTurmaAluno = student ? student.turma : (turma_aluno || redacao.turma_aluno);
-    const validadoPor = req.user?.id || 1;
-    const dataValidacao = new Date().toISOString();
-
     db.prepare(`
-      UPDATE redacoes
-      SET user_id = ?,
-          nome_aluno = ?,
-          turma_aluno = ?,
-          nome_detectado = 1,
-          status_validacao = 'VALIDADA',
-          validado_por = ?,
-          data_validacao = ?
+      UPDATE redacoes 
+      SET user_id = ?, nome_aluno = ?, turma_aluno = ?, nome_detectado = 1,
+          status_validacao = 'VALIDADA', validado_por = ?, data_validacao = ?
       WHERE id = ?
-    `).run(finalUserId, finalNomeAluno, finalTurmaAluno, validadoPor, dataValidacao, id);
+    `).run(resolved.user_id, resolved.nome_aluno, resolved.turma_aluno, validadoPor, dataValidacao, id);
 
     res.status(200).json({
-      message: `Redação ID #${id} vinculada ao aluno ${finalNomeAluno} com sucesso!`,
-      user_id: finalUserId,
-      nome_aluno: finalNomeAluno,
-      turma_aluno: finalTurmaAluno,
+      message: `Redação ID #${id} vinculada com sucesso!`,
+      user_id: resolved.user_id,
+      nome_aluno: resolved.nome_aluno,
+      turma_aluno: resolved.turma_aluno,
       status_validacao: 'VALIDADA',
       validado_por: validadoPor,
       data_validacao: dataValidacao
     });
   } catch (error) {
-    console.error('[Vincular Aluno Error]:', error);
-    res.status(500).json({ error: 'Erro ao vincular redação ao aluno.' });
+    console.error('[Vincular Redacao Error]:', error);
+    res.status(500).json({ error: 'Erro ao vincular aluno à redação.' });
   }
 };
 

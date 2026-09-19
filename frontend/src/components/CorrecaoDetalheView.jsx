@@ -14,20 +14,7 @@ import { updateNomeAluno } from '../db/db';
 import { useAuth } from '../context/AuthContext';
 import { authService } from '../services/authService';
 import FolhaOficialRedacao from './FolhaOficialRedacao';
-
-const TURMAS_ESCOLA = [
-  '2° A - MANHÃ',
-  '2° B - MANHÃ',
-  '2° C - MANHÃ',
-  '3° A - MANHÃ',
-  '3° B - MANHÃ',
-  '3° C - MANHÃ',
-  '3° D - MANHÃ',
-  '3° E - TARDE',
-  '3° F - TARDE',
-  '3° G - TARDE',
-  'Sem Turma'
-];
+import { TURMAS_ESCOLA, normalizeTurma } from '../constants/turmas';
 
 const SISEDU_DESCRITORES_MAP = [
   { code: 'D05', title: 'D05: Interpretação Gráfica/Textual', desc: 'Compreensão da proposta e interpretação dos textos motivadores.' },

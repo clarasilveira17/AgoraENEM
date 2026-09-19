@@ -8,20 +8,7 @@ import {
 } from 'lucide-react';
 import { authService } from '../services/authService';
 import { db } from '../db/db';
-
-const TURMAS_ESCOLA = [
-  '2° A - MANHÃ',
-  '2° B - MANHÃ',
-  '2° C - MANHÃ',
-  '3° A - MANHÃ',
-  '3° B - MANHÃ',
-  '3° C - MANHÃ',
-  '3° D - MANHÃ',
-  '3° E - TARDE',
-  '3° F - TARDE',
-  '3° G - TARDE',
-  'Sem Turma'
-];
+import { TURMAS_ESCOLA, normalizeTurma } from '../constants/turmas';
 
 export default function ValidacaoRapidaView({ 
   redacoes = [], 
@@ -33,8 +20,16 @@ export default function ValidacaoRapidaView({
   const [isLoadingEstudantes, setIsLoadingEstudantes] = useState(false);
   const [viewMode, setViewMode] = useState('esteira'); // 'esteira' | 'tabela'
   
-  // Filtros: por padrão abre em 'pendentes' de conferência manual
-  const [filterType, setFilterType] = useState('pendentes'); // 'pendentes' | 'conferidas' | 'todas'
+  // Métricas de validação manual real do professor
+  const totalCount = redacoes.length;
+  const conferidasCount = useMemo(() => {
+    return redacoes.filter(r => Boolean(r.data_validacao || r.validado_por)).length;
+  }, [redacoes]);
+  const pendentesCount = totalCount - conferidasCount;
+  const percentualConcluido = totalCount > 0 ? Math.round((conferidasCount / totalCount) * 100) : 0;
+
+  // Filtros: se houver pendentes abre em 'pendentes', se tudo conferido abre em 'todas'
+  const [filterType, setFilterType] = useState(pendentesCount > 0 ? 'pendentes' : 'todas'); // 'pendentes' | 'conferidas' | 'todas'
   const [selectedTurmaFilter, setSelectedTurmaFilter] = useState('todas');
   const [searchQuery, setSearchQuery] = useState('');
   
@@ -76,14 +71,6 @@ export default function ValidacaoRapidaView({
     return () => { isMounted = false; };
   }, []);
 
-  // Métricas de validação manual real do professor
-  const totalCount = redacoes.length;
-  const conferidasCount = useMemo(() => {
-    return redacoes.filter(r => Boolean(r.data_validacao || r.validado_por)).length;
-  }, [redacoes]);
-  const pendentesCount = totalCount - conferidasCount;
-  const percentualConcluido = totalCount > 0 ? Math.round((conferidasCount / totalCount) * 100) : 0;
-
   // Lista filtrada de redações
   const filteredRedacoes = useMemo(() => {
     return redacoes.filter(r => {
@@ -92,8 +79,8 @@ export default function ValidacaoRapidaView({
       if (filterType === 'pendentes' && isConferida) return false;
       if (filterType === 'conferidas' && !isConferida) return false;
       
-      const turma = (r.turma_aluno || r.extracted_data?.turma || '').toLowerCase();
-      if (selectedTurmaFilter !== 'todas' && turma !== selectedTurmaFilter.toLowerCase()) {
+      const turma = normalizeTurma(r.turma_aluno || r.extracted_data?.turma || '');
+      if (selectedTurmaFilter !== 'todas' && turma.toLowerCase() !== selectedTurmaFilter.toLowerCase()) {
         return false;
       }
 
@@ -101,7 +88,7 @@ export default function ValidacaoRapidaView({
         const q = searchQuery.toLowerCase();
         const nome = (r.nome_aluno || r.extracted_data?.aluno || '').toLowerCase();
         const idStr = String(r.id);
-        return nome.includes(q) || turma.includes(q) || idStr.includes(q);
+        return nome.includes(q) || turma.toLowerCase().includes(q) || idStr.includes(q);
       }
 
       return true;

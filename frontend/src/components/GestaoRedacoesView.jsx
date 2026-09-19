@@ -8,20 +8,7 @@ import {
 import { processRedacoesCloud } from '../services/cloudCorrectionService';
 import { authService } from '../services/authService';
 import { useAuth } from '../context/AuthContext';
-
-const TURMAS_ESCOLA = [
-  '2° A - MANHÃ',
-  '2° B - MANHÃ',
-  '2° C - MANHÃ',
-  '3° A - MANHÃ',
-  '3° B - MANHÃ',
-  '3° C - MANHÃ',
-  '3° D - MANHÃ',
-  '3° E - TARDE',
-  '3° F - TARDE',
-  '3° G - TARDE',
-  'Sem Turma'
-];
+import { TURMAS_ESCOLA, normalizeTurma } from '../constants/turmas';
 
 export default function GestaoRedacoesView({ 
   redacoes = [], 
@@ -49,138 +36,107 @@ export default function GestaoRedacoesView({
   const [feedback, setFeedback] = useState(null);
   const fileInputRef = useRef(null);
 
-  // Lista de estudantes para autocomplete no envio
-  const [estudantes, setEstudantes] = useState([]);
-  const [studentSearch, setStudentSearch] = useState('');
-  const [showStudentDropdown, setShowStudentDropdown] = useState(false);
+  // Lista de estudantes para autocompletar
+  const [estudantesList, setEstudantesList] = useState([]);
 
   useEffect(() => {
     let isMounted = true;
-    if (isAdmin) {
-      const fetchFn = authService.fetchEstudantes ? authService.fetchEstudantes.bind(authService) : authService.getEstudantes.bind(authService);
-      fetchFn().then(list => {
-        if (isMounted && Array.isArray(list)) setEstudantes(list);
-      }).catch(() => {});
+    async function loadStudents() {
+      try {
+        const fetchFn = authService.fetchEstudantes ? authService.fetchEstudantes.bind(authService) : authService.getEstudantes.bind(authService);
+        const list = await fetchFn();
+        if (isMounted && Array.isArray(list)) {
+          setEstudantesList(list);
+        }
+      } catch (e) {
+        console.warn('Erro ao carregar estudantes para autocompletar:', e);
+      }
     }
+    loadStudents();
     return () => { isMounted = false; };
-  }, [isAdmin]);
+  }, []);
 
-  const filteredStudentSuggestions = useMemo(() => {
-    if (!manualName.trim()) return [];
-    const q = manualName.toLowerCase().trim();
-    return estudantes.filter(e => 
-      (e.nome || '').toLowerCase().includes(q) ||
-      (e.email || '').toLowerCase().includes(q)
-    ).slice(0, 5);
-  }, [estudantes, manualName]);
+  const handleFilesSelected = (e) => {
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
+    setSelectedFiles(prev => [...prev, ...files]);
+  };
+
+  const removeFile = (index) => {
+    setSelectedFiles(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const handleStartProcessing = async () => {
+    if (mode === 'imagem' && selectedFiles.length === 0) {
+      setFeedback({ type: 'error', message: 'Selecione ao menos uma imagem de redação.' });
+      return;
+    }
+    if (mode === 'texto' && (!typedText || typedText.trim().length < 50)) {
+      setFeedback({ type: 'error', message: 'O texto da redação deve conter ao menos 50 caracteres.' });
+      return;
+    }
+
+    setIsProcessing(true);
+    setProgressText('Inicializando motor de inteligência artificial...');
+    setFeedback(null);
+
+    try {
+      if (mode === 'imagem') {
+        const results = await processRedacoesCloud(
+          selectedFiles,
+          (progress) => {
+            setProgressText(progress.status || `Processando ${progress.current || 1} de ${progress.total || selectedFiles.length}...`);
+          },
+          {
+            usuarioId: isEstudante && user ? user.id : null,
+            nomePadrao: isEstudante && user ? user.nome : (manualName || null),
+            turmaPadrao: isEstudante && user?.turma ? user.turma : (manualTurma || null)
+          }
+        );
+
+        setFeedback({
+          type: 'success',
+          message: `${results.length} redação(ões) processada(s) e integradas com sucesso!`
+        });
+        setSelectedFiles([]);
+        if (fileInputRef.current) fileInputRef.current.value = '';
+      } else {
+        const resultado = await authService.avaliarTexto({
+          texto: typedText,
+          nome_aluno: isEstudante && user ? user.nome : (manualName || 'Estudante'),
+          turma_aluno: isEstudante && user?.turma ? user.turma : (manualTurma || 'Geral'),
+          user_id: isEstudante && user ? user.id : null
+        });
+
+        setFeedback({
+          type: 'success',
+          message: 'Redação avaliada e salva no banco de dados com sucesso!'
+        });
+        setTypedText('');
+        setManualName('');
+        setManualTurma('');
+      }
+      if (onRedacaoSaved) onRedacaoSaved();
+    } catch (error) {
+      setFeedback({
+        type: 'error',
+        message: `Erro ao processar: ${error.message || 'Erro desconhecido'}`
+      });
+    } finally {
+      setIsProcessing(false);
+      setProgressText('');
+    }
+  };
+
+  // Aliases for backwards compatibility with existing JSX
+  const handleFileSelect = handleFilesSelected;
+  const handleRemoveFile = removeFile;
+  const handleSaveImages = handleStartProcessing;
+  const handleSaveTypedText = handleStartProcessing;
 
   // Contadores de texto ao vivo
   const wordCount = typedText.trim() ? typedText.trim().split(/\s+/).length : 0;
   const lineCount = typedText.trim() ? typedText.split('\n').length : 0;
-
-  const handleFileSelect = (event) => {
-    const files = Array.from(event.target.files || []);
-    if (files.length === 0) return;
-
-    const filePromises = files.map((file) => {
-      return new Promise((resolve) => {
-        const reader = new FileReader();
-        reader.onload = (e) => {
-          resolve({
-            name: file.name,
-            size: (file.size / 1024).toFixed(1) + ' KB',
-            base64: e.target?.result
-          });
-        };
-        reader.readAsDataURL(file);
-      });
-    });
-
-    Promise.all(filePromises).then((newFiles) => {
-      setSelectedFiles((prev) => [...prev, ...newFiles]);
-    });
-  };
-
-  const handleRemoveFile = (index) => {
-    setSelectedFiles((prev) => prev.filter((_, i) => i !== index));
-  };
-
-  const handleSaveImages = async () => {
-    if (selectedFiles.length === 0) return;
-    setIsProcessing(true);
-    setFeedback(null);
-    setProgressText('Iniciando envio e avaliação...');
-
-    try {
-      const itemsToSave = selectedFiles.map((f) => ({
-        imagem_base64: f.base64,
-        tipo_input: 'imagem',
-        nome_manual: manualName.trim() || null,
-        turma_manual: manualTurma.trim() || null
-      }));
-
-      const res = await processRedacoesCloud(itemsToSave, (cur, total) => {
-        setProgressText(`Avaliando ${cur} de ${total} com IA...`);
-      });
-
-      setFeedback({
-        type: 'success',
-        message: res.message || `${selectedFiles.length} redação(ões) enviada(s) e avaliada(s) com sucesso!`
-      });
-
-      setSelectedFiles([]);
-      if (!isEstudante) {
-        setManualName('');
-        setManualTurma('');
-      }
-      if (fileInputRef.current) fileInputRef.current.value = '';
-      if (onRedacaoSaved) onRedacaoSaved();
-    } catch (error) {
-      setFeedback({
-        type: 'error',
-        message: `Erro na avaliação: ${error.message || 'Falha ao processar redação.'}`
-      });
-    } finally {
-      setIsProcessing(false);
-      setProgressText('');
-    }
-  };
-
-  const handleSaveTypedText = async () => {
-    if (!typedText.trim()) return;
-    setIsProcessing(true);
-    setFeedback(null);
-    setProgressText('Avaliando texto com IA...');
-
-    try {
-      const res = await processRedacoesCloud([{
-        texto_digitado: typedText.trim(),
-        tipo_input: 'texto',
-        nome_manual: manualName.trim() || null,
-        turma_manual: manualTurma.trim() || null
-      }]);
-
-      setFeedback({
-        type: 'success',
-        message: res.message || 'Redação digitada avaliada e salva com sucesso!'
-      });
-
-      setTypedText('');
-      if (!isEstudante) {
-        setManualName('');
-        setManualTurma('');
-      }
-      if (onRedacaoSaved) onRedacaoSaved();
-    } catch (error) {
-      setFeedback({
-        type: 'error',
-        message: `Erro na avaliação: ${error.message || 'Falha ao processar redação.'}`
-      });
-    } finally {
-      setIsProcessing(false);
-      setProgressText('');
-    }
-  };
 
   // ==========================================
   // ESTADO DA COLUNA DO BANCO (DIREITA)
@@ -188,14 +144,14 @@ export default function GestaoRedacoesView({
   const [selectedTurma, setSelectedTurma] = useState('todas');
   const [localSearch, setLocalSearch] = useState(searchQuery || '');
 
-  // Turmas presentes no banco
+  // Turmas presentes no banco (filtradas e ordenadas pela lista canônica oficial)
   const turmasList = useMemo(() => {
-    const set = new Set();
+    const present = new Set();
     redacoes.forEach(r => {
-      const t = r.turma_aluno || r.extracted_data?.turma;
-      if (t && t.trim()) set.add(t.trim());
+      const t = normalizeTurma(r.turma_aluno || r.extracted_data?.turma);
+      if (t && t.trim()) present.add(t.trim());
     });
-    return Array.from(set).sort();
+    return TURMAS_ESCOLA.filter(t => present.has(t));
   }, [redacoes]);
 
   // Lista filtrada do banco
@@ -203,7 +159,7 @@ export default function GestaoRedacoesView({
     return redacoes.filter((item) => {
       const ext = item.extracted_data || {};
       const aluno = item.nome_aluno || ext.aluno || '';
-      const turma = item.turma_aluno || ext.turma || '';
+      const turma = normalizeTurma(item.turma_aluno || ext.turma || '');
       const idStr = String(item.id);
 
       // Filtro por turma
@@ -220,7 +176,7 @@ export default function GestaoRedacoesView({
       if (!matchesSearch) return false;
 
       const isConferida = Boolean(item.data_validacao || item.validado_por);
-      const hasName = Boolean(item.nome_detectado && item.nome_aluno);
+      const hasName = Boolean(item.user_id && item.nome_aluno);
 
       if (filterTab === 'identificadas') return hasName;
       if (filterTab === 'sem_nome') return !hasName;
@@ -235,8 +191,8 @@ export default function GestaoRedacoesView({
 
   // Métricas rápidas
   const totalBanco = redacoes.length;
-  const comNomeCount = redacoes.filter(r => r.nome_aluno && r.user_id).length;
-  const semNomeCount = totalBanco - comNomeCount;
+  const semNomeCount = redacoes.filter(r => !r.nome_aluno || !r.user_id).length;
+  const comNomeCount = totalBanco - semNomeCount;
   const conferidasCount = redacoes.filter(r => Boolean(r.data_validacao || r.validado_por)).length;
   
   const mediaNotas = useMemo(() => {
