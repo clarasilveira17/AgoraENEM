@@ -6,7 +6,7 @@ import GestaoRedacoesView from './components/GestaoRedacoesView';
 import ConfigView from './components/ConfigView';
 import RankingView from './components/RankingView';
 import ValidacaoRapidaView from './components/ValidacaoRapidaView';
-import ModalDetalhesRedacao from './components/ModalDetalhesRedacao';
+import CorrecaoDetalheView from './components/CorrecaoDetalheView';
 import LoginView from './components/LoginView';
 import ProjetoAgoraLandingView from './components/ProjetoAgoraLandingView';
 import { clearAllLocalRedacoes } from './db/db';
@@ -17,14 +17,21 @@ import { X, Award, Loader2 } from 'lucide-react';
 function AppContent() {
   const { user, isAuthenticated, isAdmin, isEstudante, loading: authLoading } = useAuth();
   
-  // Initialize activeView from URL Hash (e.g. #tabela, #dashboard, #ranking, #novo, #validacao, #config)
-  const getInitialView = () => {
-    const hash = window.location.hash.replace('#', '');
+  // Parse Hash URL to support #correcao/42 or regular views
+  const parseHash = () => {
+    const raw = window.location.hash.replace('#', '').trim();
+    if (raw.startsWith('correcao/') || raw.startsWith('redacao/')) {
+      const parts = raw.split('/');
+      return { view: 'correcao', id: parts[1] || null };
+    }
     const validViews = ['dashboard', 'ranking', 'novo', 'validacao', 'tabela', 'sem_nome', 'config'];
-    return validViews.includes(hash) ? hash : 'dashboard';
+    return { view: validViews.includes(raw) ? raw : 'dashboard', id: null };
   };
 
-  const [activeView, setActiveView] = useState(getInitialView);
+  const initialRoute = parseHash();
+  const [activeView, setActiveView] = useState(initialRoute.view);
+  const [currentCorrecaoId, setCurrentCorrecaoId] = useState(initialRoute.id);
+  const [previousView, setPreviousView] = useState('dashboard');
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
@@ -37,17 +44,31 @@ function AppContent() {
   const [filterTab, setFilterTab] = useState('todas');
 
   const handleSetActiveView = (view) => {
+    if (activeView !== 'correcao') {
+      setPreviousView(activeView);
+    }
     setActiveView(view);
+    setCurrentCorrecaoId(null);
+    setSelectedRedacao(null);
     window.location.hash = `#${view}`;
+  };
+
+  const handleSelectRedacao = (r) => {
+    if (!r) return;
+    if (activeView !== 'correcao') {
+      setPreviousView(activeView);
+    }
+    setSelectedRedacao(r);
+    setCurrentCorrecaoId(String(r.id));
+    setActiveView('correcao');
+    window.location.hash = `#correcao/${r.id}`;
   };
 
   useEffect(() => {
     const handleHashChange = () => {
-      const hash = window.location.hash.replace('#', '');
-      const validViews = ['dashboard', 'ranking', 'novo', 'tabela', 'sem_nome', 'config'];
-      if (validViews.includes(hash)) {
-        setActiveView(hash);
-      }
+      const route = parseHash();
+      setActiveView(route.view);
+      setCurrentCorrecaoId(route.id);
     };
     window.addEventListener('hashchange', handleHashChange);
     return () => window.removeEventListener('hashchange', handleHashChange);
@@ -129,10 +150,28 @@ function AppContent() {
     }
   };
 
+  // Sincroniza a redação ativa quando a URL for #correcao/:id ou ao carregar
+  useEffect(() => {
+    if (activeView === 'correcao' && currentCorrecaoId) {
+      const found = redacoes.find(r => String(r.id) === String(currentCorrecaoId)) ||
+                    rankingRedacoes.find(r => String(r.id) === String(currentCorrecaoId));
+      if (found) {
+        setSelectedRedacao(found);
+      } else {
+        authService.fetchRedacaoById(currentCorrecaoId).then(data => {
+          if (data) setSelectedRedacao(data);
+        }).catch(() => {});
+      }
+    }
+  }, [activeView, currentCorrecaoId, redacoes, rankingRedacoes]);
+
   const handleRedacaoUpdated = (updated) => {
     if (!updated || !updated.id) return;
     setRedacoes(prev => prev.map(r => String(r.id) === String(updated.id) ? { ...r, ...updated } : r));
     setRankingRedacoes(prev => prev.map(r => String(r.id) === String(updated.id) ? { ...r, ...updated } : r));
+    if (selectedRedacao && String(selectedRedacao.id) === String(updated.id)) {
+      setSelectedRedacao(prev => ({ ...prev, ...updated }));
+    }
   };
 
   const pendingCount = redacoes.filter(r => !r.is_synced).length;
@@ -225,8 +264,8 @@ function AppContent() {
                   redacoes={redacoes}
                   rankingRedacoes={rankingRedacoes}
                   isLoading={isLoadingRedacoes}
-                  onSelectRedacao={(r) => setSelectedRedacao(r)}
-                  onNavigateToUpload={() => handleSetActiveView('novo')}
+                  onSelectRedacao={handleSelectRedacao}
+                  onNavigateToUpload={() => handleSetActiveView('tabela')}
                   onNavigateToRanking={() => handleSetActiveView('ranking')}
                   onNavigateToSemNome={() => handleSetActiveView('validacao')}
                 />
@@ -235,7 +274,7 @@ function AppContent() {
               {activeView === 'ranking' && (
                 <RankingView
                   redacoes={rankingRedacoes.length > 0 ? rankingRedacoes : redacoes}
-                  onSelectRedacao={(r) => setSelectedRedacao(r)}
+                  onSelectRedacao={handleSelectRedacao}
                 />
               )}
 
@@ -245,7 +284,7 @@ function AppContent() {
                   isLoading={isLoadingRedacoes}
                   filterTab={activeView === 'sem_nome' ? 'sem_nome' : filterTab}
                   setFilterTab={setFilterTab}
-                  onSelectRedacao={(r) => setSelectedRedacao(r)}
+                  onSelectRedacao={handleSelectRedacao}
                   onDeleteRedacao={handleDeleteRedacao}
                   onRedacaoSaved={handleRedacaoSaved}
                   searchQuery={searchQuery}
@@ -256,9 +295,19 @@ function AppContent() {
               {activeView === 'validacao' && (
                 <ValidacaoRapidaView
                   redacoes={redacoes}
-                  onSelectRedacao={(r) => setSelectedRedacao(r)}
+                  onSelectRedacao={handleSelectRedacao}
                   onRedacaoUpdated={handleRedacaoUpdated}
                   onRefresh={() => loadRedacoes(true)}
+                />
+              )}
+
+              {activeView === 'correcao' && (
+                <CorrecaoDetalheView
+                  redacao={selectedRedacao}
+                  redacoes={rankingRedacoes.length > 0 ? rankingRedacoes : redacoes}
+                  onBack={() => handleSetActiveView(previousView || 'dashboard')}
+                  onNavigateToRedacao={handleSelectRedacao}
+                  onRedacaoUpdated={handleRedacaoUpdated}
                 />
               )}
 
@@ -285,18 +334,6 @@ function AppContent() {
             <LoginView onLoginSuccess={() => setIsLoginModalOpen(false)} />
           </div>
         </div>
-      )}
-
-      {/* Detail Modal */}
-      {selectedRedacao && (
-        <ModalDetalhesRedacao
-          redacao={selectedRedacao}
-          onClose={() => setSelectedRedacao(null)}
-          onUpdated={() => {
-            loadRedacoes();
-            setSelectedRedacao(null);
-          }}
-        />
       )}
 
     </div>
