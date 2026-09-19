@@ -208,6 +208,11 @@ function AppContent() {
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col min-w-0 h-screen h-[100dvh] overflow-hidden">
         
+        {/* Top Header on Landing Page for Visitors / Login */}
+        {!isAuthenticated && (
+          <Header onOpenLoginModal={() => setIsLoginModalOpen(true)} />
+        )}
+
         {/* Mobile Hamburger Toggle Header */}
         {isAuthenticated && (
           <div className="md:hidden px-4 py-2.5 bg-[#f7f7f4] border-b border-[#e6e5e0] flex items-center justify-between shrink-0">

@@ -1,3 +1,6 @@
+import db from '../config/db.js';
+import { supabase, isSupabaseConfigured } from '../config/supabaseClient.js';
+
 /**
  * Turmas Oficiais da Escola (Conforme Lista Geral dos Alunos.xlsx)
  */
@@ -88,3 +91,114 @@ export const MANUAL_OCR_NAME_MAP = {
   'Francisca Hedwiges': 'FRANCISCA HEDWIGES SILVA DE ARAUJO',
   'Evely Loviny Santos Pessoa': 'EVELY LAVINY SANTOS PESSOA'
 };
+
+/**
+ * Resolução e blindagem de vínculo de estudante e turma oficial
+ */
+export async function resolveStudent(userId, rawNome, rawTurma) {
+  let finalUserId = userId ? Number(userId) : null;
+  let finalNome = (rawNome || '').trim();
+  let finalTurma = normalizeTurma(rawTurma || '');
+
+  // 1. Se user_id já foi passado, busca dados oficiais
+  if (finalUserId) {
+    if (isSupabaseConfigured) {
+      const { data: u } = await supabase.from('users').select('id, nome, turma').eq('id', finalUserId).maybeSingle();
+      if (u) {
+        return {
+          user_id: u.id,
+          nome_aluno: u.nome,
+          turma_aluno: normalizeTurma(u.turma || finalTurma)
+        };
+      }
+    } else if (db) {
+      const u = db.prepare('SELECT id, nome, turma FROM users WHERE id = ?').get(finalUserId);
+      if (u) {
+        return {
+          user_id: u.id,
+          nome_aluno: u.nome,
+          turma_aluno: normalizeTurma(u.turma || finalTurma)
+        };
+      }
+    }
+  }
+
+  // 2. Normalização de OCR
+  if (MANUAL_OCR_NAME_MAP[finalNome]) {
+    finalNome = MANUAL_OCR_NAME_MAP[finalNome];
+  }
+
+  const normTarget = normalizeStr(finalNome);
+  if (!normTarget || normTarget.length < 3) {
+    return {
+      user_id: finalUserId,
+      nome_aluno: finalNome || 'Aluno Não Identificado',
+      turma_aluno: finalTurma || 'Sem Turma'
+    };
+  }
+
+  // 3. Match inteligente contra banco de alunos cadastrados
+  if (isSupabaseConfigured) {
+    const { data: users } = await supabase.from('users').select('id, nome, turma').eq('role', 'ESTUDANTE');
+    if (users && users.length > 0) {
+      let matched = users.find(u => normalizeStr(u.nome) === normTarget);
+      if (!matched) {
+        const candidates = users.filter(u => {
+          const uNorm = normalizeStr(u.nome);
+          return uNorm.includes(normTarget) || normTarget.includes(uNorm);
+        });
+        if (candidates.length === 1) {
+          matched = candidates[0];
+        } else if (candidates.length > 1) {
+          const normT = normalizeStr(finalTurma);
+          matched = candidates.find(c => {
+            const cT = normalizeStr(c.turma);
+            return normT.length > 1 && (cT.includes(normT) || normT.includes(cT.substring(0, 3)));
+          }) || candidates[0];
+        }
+      }
+      if (matched) {
+        return {
+          user_id: matched.id,
+          nome_aluno: matched.nome,
+          turma_aluno: normalizeTurma(matched.turma || finalTurma)
+        };
+      }
+    }
+  } else if (db) {
+    try {
+      const users = db.prepare("SELECT id, nome, turma FROM users WHERE role = 'ESTUDANTE'").all();
+      if (users && users.length > 0) {
+        let matched = users.find(u => normalizeStr(u.nome) === normTarget);
+        if (!matched) {
+          const candidates = users.filter(u => {
+            const uNorm = normalizeStr(u.nome);
+            return uNorm.includes(normTarget) || normTarget.includes(uNorm);
+          });
+          if (candidates.length === 1) {
+            matched = candidates[0];
+          } else if (candidates.length > 1) {
+            const normT = normalizeStr(finalTurma);
+            matched = candidates.find(c => {
+              const cT = normalizeStr(c.turma);
+              return normT.length > 1 && (cT.includes(normT) || normT.includes(cT.substring(0, 3)));
+            }) || candidates[0];
+          }
+        }
+        if (matched) {
+          return {
+            user_id: matched.id,
+            nome_aluno: matched.nome,
+            turma_aluno: normalizeTurma(matched.turma || finalTurma)
+          };
+        }
+      }
+    } catch (e) {}
+  }
+
+  return {
+    user_id: finalUserId,
+    nome_aluno: finalNome || 'Aluno Não Identificado',
+    turma_aluno: finalTurma || 'Sem Turma'
+  };
+}
