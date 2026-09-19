@@ -166,48 +166,49 @@ export default function FolhaOficialRedacao({
               border: '1px solid #000000',
               borderRadius: '6px',
               backgroundColor: '#ffffff',
-              padding: '10px 16px',
+              padding: '12px 16px 14px 16px',
               display: 'grid',
               gridTemplateColumns: '1fr 180px',
               gap: '14px',
               alignItems: 'center',
-              marginTop: '10px'
+              marginTop: '10px',
+              boxSizing: 'border-box'
             }}>
               <div>
-                <div style={{ fontSize: '8px', textTransform: 'uppercase', color: '#4b5563', fontFamily: monoFont, fontWeight: 'bold', lineHeight: '1.2' }}>
+                <div style={{ fontSize: '8px', textTransform: 'uppercase', color: '#4b5563', fontFamily: monoFont, fontWeight: 'bold', lineHeight: '1.4' }}>
                   ESTUDANTE:
                 </div>
-                <div style={{ fontSize: '16px', color: '#000000', fontWeight: 'bold', margin: '2px 0 8px 0', lineHeight: '1.3' }}>
+                <div style={{ fontSize: '16.5px', color: '#000000', fontWeight: 'bold', margin: '3px 0 8px 0', lineHeight: '1.3' }}>
                   {studentNameDisplay}
                 </div>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px', fontSize: '9px', fontFamily: monoFont, lineHeight: '1.3' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px', fontSize: '9px', fontFamily: monoFont, lineHeight: '1.4' }}>
                   <div>
-                    <span style={{ fontSize: '7.5px', color: '#4b5563', display: 'block' }}>Turma:</span>
-                    <strong style={{ color: '#000000', fontSize: '9.5px' }}>{turmaDisplay}</strong>
+                    <span style={{ fontSize: '7.5px', color: '#4b5563', display: 'block', lineHeight: '1.3' }}>Turma:</span>
+                    <strong style={{ color: '#000000', fontSize: '9.5px', lineHeight: '1.3' }}>{turmaDisplay}</strong>
                   </div>
                   <div>
-                    <span style={{ fontSize: '7.5px', color: '#4b5563', display: 'block' }}>Data Lançamento:</span>
-                    <strong style={{ color: '#000000', fontSize: '9.5px' }}>{dataLancamentoStr}</strong>
+                    <span style={{ fontSize: '7.5px', color: '#4b5563', display: 'block', lineHeight: '1.3' }}>Data Lançamento:</span>
+                    <strong style={{ color: '#000000', fontSize: '9.5px', lineHeight: '1.3' }}>{dataLancamentoStr}</strong>
                   </div>
                   <div>
-                    <span style={{ fontSize: '7.5px', color: '#4b5563', display: 'block' }}>Entrada:</span>
-                    <strong style={{ color: '#000000', fontSize: '9.5px' }}>{redacao.imagem_base64 ? 'Imagem OCR' : 'Texto Digitado'}</strong>
+                    <span style={{ fontSize: '7.5px', color: '#4b5563', display: 'block', lineHeight: '1.3' }}>Entrada:</span>
+                    <strong style={{ color: '#000000', fontSize: '9.5px', lineHeight: '1.3' }}>{redacao.imagem_base64 ? 'Imagem OCR' : 'Texto Digitado'}</strong>
                   </div>
                 </div>
               </div>
 
               {/* Score Hero Widget */}
               <div style={{ borderLeft: '1px solid #000000', paddingLeft: '14px', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-                <div style={{ fontSize: '8px', fontWeight: 'bold', textTransform: 'uppercase', color: '#374151', fontFamily: monoFont, lineHeight: '1.2' }}>
+                <div style={{ fontSize: '8px', fontWeight: 'bold', textTransform: 'uppercase', color: '#374151', fontFamily: monoFont, lineHeight: '1.3' }}>
                   NOTA FINAL ENEM
                 </div>
-                <div style={{ display: 'flex', alignItems: 'baseline', gap: '3px', margin: '2px 0' }}>
-                  <span style={{ fontSize: '30px', fontWeight: 'bold', fontFamily: monoFont, color: '#000000', lineHeight: '1.2' }}>
+                <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'center', gap: '3px', margin: '3px 0' }}>
+                  <span style={{ fontSize: '32px', fontWeight: 'bold', fontFamily: monoFont, color: '#000000', lineHeight: '1.1' }}>
                     {notaTotal}
                   </span>
-                  <span style={{ fontSize: '11px', fontFamily: monoFont, color: '#4b5563' }}>/ 1000</span>
+                  <span style={{ fontSize: '11.5px', fontFamily: monoFont, color: '#4b5563', lineHeight: '1.1' }}>/ 1000</span>
                 </div>
-                <div style={{ fontSize: '7.5px', color: '#6b7280', textTransform: 'uppercase', fontFamily: monoFont, lineHeight: '1.2' }}>
+                <div style={{ fontSize: '7.5px', color: '#6b7280', textTransform: 'uppercase', fontFamily: monoFont, lineHeight: '1.3' }}>
                   Escala ENEM (0-1000)
                 </div>
               </div>
@@ -215,72 +216,127 @@ export default function FolhaOficialRedacao({
 
             {/* Seção 1: Matriz ENEM (5 Competências) */}
             <div style={{ marginTop: '10px' }}>
-              <div style={{ borderBottom: '1.5px solid #000000', paddingBottom: '3px', marginBottom: '6px' }}>
-                <div style={{ fontSize: '10.5px', fontWeight: 'bold', textTransform: 'uppercase', color: '#000000', fontFamily: monoFont, lineHeight: '1.3' }}>
+              <div style={{ borderBottom: '1.5px solid #000000', paddingBottom: '6px', marginBottom: '8px' }}>
+                <div style={{ fontSize: '10.5px', fontWeight: 'bold', textTransform: 'uppercase', color: '#000000', fontFamily: monoFont, lineHeight: '1.4' }}>
                   1. MATRIZ DE COMPETÊNCIAS DO ENEM (0 A 200 PONTOS CADA)
                 </div>
               </div>
 
-              <table style={{ width: '100%', textAlign: 'left', borderCollapse: 'collapse', border: '1px solid #000000', fontSize: '8.5px' }}>
-                <thead>
-                  <tr style={{ backgroundColor: '#f9fafb', borderBottom: '1px solid #000000', fontFamily: monoFont, fontSize: '8px', textTransform: 'uppercase', fontWeight: 'bold' }}>
-                    <th style={{ padding: '6px 8px', width: '22%', borderRight: '1px solid #000000', verticalAlign: 'top' }}>COMPETÊNCIA</th>
-                    <th style={{ padding: '6px 4px', textAlign: 'center', width: '9%', borderRight: '1px solid #000000', verticalAlign: 'top' }}>NOTA</th>
-                    <th style={{ padding: '6px 8px', width: '34%', borderRight: '1px solid #000000', verticalAlign: 'top' }}>CITAÇÃO DIRETA DO TEXTO</th>
-                    <th style={{ padding: '6px 8px', width: '35%', verticalAlign: 'top' }}>PARECER PEDAGÓGICO</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {enemCompetenciasMap.map(({ key, title }) => {
-                    const comp = enem[key] || { nota: 0, citacao_texto: '', justificativa: 'Não avaliado' };
-                    const cleanCitacao = clean(comp.citacao_texto);
-                    const cleanParecer = clean(comp.justificativa);
+              {/* Grid puro de alta fidelidade imune ao bug de baseline do html2canvas */}
+              <div style={{ width: '100%', border: '1px solid #000000', borderRadius: '4px', overflow: 'hidden', backgroundColor: '#ffffff', boxSizing: 'border-box' }}>
+                {/* Cabeçalho da Tabela */}
+                <div style={{
+                  display: 'grid',
+                  gridTemplateColumns: '22% 9% 34% 35%',
+                  backgroundColor: '#f9fafb',
+                  borderBottom: '1px solid #000000',
+                  fontFamily: monoFont,
+                  fontSize: '8px',
+                  textTransform: 'uppercase',
+                  fontWeight: 'bold'
+                }}>
+                  <div style={{ padding: '7px 8px 9px 8px', borderRight: '1px solid #000000' }}>COMPETÊNCIA</div>
+                  <div style={{ padding: '7px 4px 9px 4px', textAlign: 'center', borderRight: '1px solid #000000' }}>NOTA</div>
+                  <div style={{ padding: '7px 8px 9px 8px', borderRight: '1px solid #000000' }}>CITAÇÃO DIRETA DO TEXTO</div>
+                  <div style={{ padding: '7px 8px 9px 8px' }}>PARECER PEDAGÓGICO</div>
+                </div>
 
-                    return (
-                      <tr key={key} style={{ verticalAlign: 'top', borderBottom: '1px solid #000000' }}>
-                        <td style={{ padding: '6px 8px 8px 8px', fontWeight: 'bold', color: '#000000', fontSize: '9px', lineHeight: '1.3', borderRight: '1px solid #000000', verticalAlign: 'top' }}>
-                          {title}
-                        </td>
-                        <td style={{ padding: '6px 4px 8px 4px', textAlign: 'center', fontFamily: monoFont, fontWeight: 'bold', fontSize: '12px', color: '#000000', borderRight: '1px solid #000000', verticalAlign: 'top' }}>
-                          {comp.nota}
-                        </td>
-                        <td style={{ padding: '6px 8px 8px 8px', fontFamily: monoFont, fontSize: '8px', fontStyle: 'italic', color: '#1f2937', lineHeight: '1.35', borderRight: '1px solid #000000', verticalAlign: 'top' }}>
-                          {cleanCitacao ? `"${cleanCitacao}"` : '—'}
-                        </td>
-                        <td style={{ padding: '6px 8px 8px 8px', lineHeight: '1.35', color: '#1f2937', fontSize: '8px', verticalAlign: 'top' }}>
-                          {cleanParecer}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
+                {/* Linhas das Competências */}
+                {enemCompetenciasMap.map(({ key, title }, idx) => {
+                  const comp = enem[key] || { nota: 0, citacao_texto: '', justificativa: 'Não avaliado' };
+                  const cleanCitacao = clean(comp.citacao_texto);
+                  const cleanParecer = clean(comp.justificativa);
+                  const isLast = idx === enemCompetenciasMap.length - 1;
+
+                  return (
+                    <div
+                      key={key}
+                      style={{
+                        display: 'grid',
+                        gridTemplateColumns: '22% 9% 34% 35%',
+                        borderBottom: isLast ? 'none' : '1px solid #000000',
+                        alignItems: 'stretch',
+                        boxSizing: 'border-box'
+                      }}
+                    >
+                      <div style={{
+                        padding: '8px 8px 12px 8px',
+                        fontWeight: 'bold',
+                        color: '#000000',
+                        fontSize: '9px',
+                        lineHeight: '1.4',
+                        borderRight: '1px solid #000000',
+                        display: 'flex',
+                        alignItems: 'flex-start'
+                      }}>
+                        {title}
+                      </div>
+
+                      <div style={{
+                        padding: '8px 4px 12px 4px',
+                        textAlign: 'center',
+                        fontFamily: monoFont,
+                        fontWeight: 'bold',
+                        fontSize: '13px',
+                        color: '#000000',
+                        borderRight: '1px solid #000000',
+                        display: 'flex',
+                        alignItems: 'flex-start',
+                        justifyContent: 'center'
+                      }}>
+                        {comp.nota}
+                      </div>
+
+                      <div style={{
+                        padding: '8px 8px 12px 8px',
+                        fontFamily: sansFont,
+                        fontSize: '8px',
+                        fontStyle: 'italic',
+                        color: '#1f2937',
+                        lineHeight: '1.4',
+                        borderRight: '1px solid #000000'
+                      }}>
+                        {cleanCitacao ? `"${cleanCitacao}"` : '—'}
+                      </div>
+
+                      <div style={{
+                        padding: '8px 8px 12px 8px',
+                        lineHeight: '1.4',
+                        color: '#1f2937',
+                        fontSize: '8px'
+                      }}>
+                        {cleanParecer}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
 
             {/* Seção 2: Rubricas Qualitativas Sisedu (Projeto Ágora Escolar) */}
             <div style={{ marginTop: '10px' }}>
-              <div style={{ borderBottom: '1.5px solid #000000', paddingBottom: '3px', marginBottom: '8px' }}>
-                <div style={{ fontSize: '10.5px', fontWeight: 'bold', textTransform: 'uppercase', color: '#000000', fontFamily: monoFont, lineHeight: '1.3' }}>
+              <div style={{ borderBottom: '1.5px solid #000000', paddingBottom: '6px', marginBottom: '8px' }}>
+                <div style={{ fontSize: '10.5px', fontWeight: 'bold', textTransform: 'uppercase', color: '#000000', fontFamily: monoFont, lineHeight: '1.4' }}>
                   2. RUBRICAS QUALITATIVAS SISEDU (PROJETO ÁGORA ESCOLAR)
                 </div>
               </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
                 {/* Box Dimensão Discursiva */}
-                <div style={{ border: '1px solid #000000', borderRadius: '6px', padding: '8px 12px', backgroundColor: '#ffffff' }}>
-                  <div style={{ fontSize: '9px', fontWeight: 'bold', fontFamily: monoFont, textTransform: 'uppercase', color: '#000000', borderBottom: '1px solid #e5e7eb', paddingBottom: '3px', marginBottom: '6px', lineHeight: '1.3' }}>
+                <div style={{ border: '1px solid #000000', borderRadius: '6px', padding: '10px 12px 14px 12px', backgroundColor: '#ffffff', boxSizing: 'border-box' }}>
+                  <div style={{ fontSize: '9px', fontWeight: 'bold', fontFamily: monoFont, textTransform: 'uppercase', color: '#000000', borderBottom: '1px solid #e5e7eb', paddingBottom: '4px', marginBottom: '8px', lineHeight: '1.4' }}>
                     DIMENSÃO DISCURSIVA
                   </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                     {rubricasDiscursiva.map((item, idx) => (
-                      <div key={idx} style={{ fontSize: '8px', lineHeight: '1.3' }}>
+                      <div key={idx} style={{ fontSize: '8px', lineHeight: '1.35' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                           <strong style={{ color: '#000000', fontSize: '8.5px' }}>{item.title}</strong>
                           <span style={{ fontFamily: monoFont, fontWeight: 'bold', fontSize: '8.5px', color: '#000000', textDecoration: 'underline' }}>
                             {item.nivel}
                           </span>
                         </div>
-                        <div style={{ color: '#374151', lineHeight: '1.25', margin: '2px 0 0 0', fontSize: '7.5px' }}>
+                        <div style={{ color: '#374151', lineHeight: '1.35', margin: '3px 0 0 0', fontSize: '7.5px' }}>
                           {item.desc}
                         </div>
                       </div>
@@ -289,20 +345,20 @@ export default function FolhaOficialRedacao({
                 </div>
 
                 {/* Box Dimensão Ético-Moral */}
-                <div style={{ border: '1px solid #000000', borderRadius: '6px', padding: '8px 12px', backgroundColor: '#ffffff' }}>
-                  <div style={{ fontSize: '9px', fontWeight: 'bold', fontFamily: monoFont, textTransform: 'uppercase', color: '#000000', borderBottom: '1px solid #e5e7eb', paddingBottom: '3px', marginBottom: '6px', lineHeight: '1.3' }}>
+                <div style={{ border: '1px solid #000000', borderRadius: '6px', padding: '10px 12px 14px 12px', backgroundColor: '#ffffff', boxSizing: 'border-box' }}>
+                  <div style={{ fontSize: '9px', fontWeight: 'bold', fontFamily: monoFont, textTransform: 'uppercase', color: '#000000', borderBottom: '1px solid #e5e7eb', paddingBottom: '4px', marginBottom: '8px', lineHeight: '1.4' }}>
                     DIMENSÃO ÉTICO-MORAL
                   </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                     {rubricasEticoMoral.map((item, idx) => (
-                      <div key={idx} style={{ fontSize: '8px', lineHeight: '1.3' }}>
+                      <div key={idx} style={{ fontSize: '8px', lineHeight: '1.35' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                           <strong style={{ color: '#000000', fontSize: '8.5px' }}>{item.title}</strong>
                           <span style={{ fontFamily: monoFont, fontWeight: 'bold', fontSize: '8.5px', color: '#000000', textDecoration: 'underline' }}>
                             {item.nivel}
                           </span>
                         </div>
-                        <div style={{ color: '#374151', lineHeight: '1.25', margin: '2px 0 0 0', fontSize: '7.5px' }}>
+                        <div style={{ color: '#374151', lineHeight: '1.35', margin: '3px 0 0 0', fontSize: '7.5px' }}>
                           {item.desc}
                         </div>
                       </div>
@@ -369,8 +425,8 @@ export default function FolhaOficialRedacao({
 
             {/* Seção 3: Transcrição Integral do Texto */}
             <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
-              <div style={{ borderBottom: '1.5px solid #000000', paddingBottom: '3px', marginBottom: '8px' }}>
-                <div style={{ fontSize: '10.5px', fontWeight: 'bold', textTransform: 'uppercase', color: '#000000', fontFamily: monoFont, lineHeight: '1.3' }}>
+              <div style={{ borderBottom: '1.5px solid #000000', paddingBottom: '6px', marginBottom: '8px' }}>
+                <div style={{ fontSize: '10.5px', fontWeight: 'bold', textTransform: 'uppercase', color: '#000000', fontFamily: monoFont, lineHeight: '1.4' }}>
                   3. TRANSCRIÇÃO INTEGRAL DO TEXTO DA REDAÇÃO (VERBATIM)
                 </div>
               </div>
@@ -379,11 +435,11 @@ export default function FolhaOficialRedacao({
               <div style={{
                 border: '1px solid #000000',
                 borderRadius: '6px',
-                padding: '14px 18px',
+                padding: '14px 18px 18px 18px',
                 backgroundColor: '#ffffff',
                 fontFamily: monoFont,
                 fontSize: '9.5px',
-                lineHeight: '1.5',
+                lineHeight: '1.6',
                 color: '#111111',
                 whiteSpace: 'pre-wrap',
                 flex: 1,
