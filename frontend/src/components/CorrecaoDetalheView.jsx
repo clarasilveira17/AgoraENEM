@@ -285,10 +285,6 @@ export default function CorrecaoDetalheView({
         useCORS: true,
         logging: false,
         backgroundColor: '#ffffff',
-        windowWidth: 794,
-        windowHeight: 1123,
-        width: 794,
-        height: 1123,
         scrollX: 0,
         scrollY: 0
       };
