@@ -125,7 +125,7 @@ export default function CorrecaoDetalheView({
   const [showSisedu, setShowSisedu] = useState(true);
   const [showWatermark, setShowWatermark] = useState(true);
   const [showSignature, setShowSignature] = useState(true);
-  const [pdfPageMode, setPdfPageMode] = useState('single'); // 'single' | 'both'
+  const [pdfPageMode, setPdfPageMode] = useState('both'); // 'single' | 'both'
   const [isCustomizingPdf, setIsCustomizingPdf] = useState(false);
 
   // Seleção e vinculação de estudante
@@ -365,7 +365,7 @@ export default function CorrecaoDetalheView({
 
       pdf.addImage(imgData1, 'PNG', 0, 0, 210, 297, undefined, 'FAST');
 
-      if (pdfPageMode === 'both' && page2El) {
+      if (page2El && page2El.style.display !== 'none' && window.getComputedStyle(page2El).display !== 'none') {
         const canvas2 = await html2canvas(page2El, canvasOptions);
         const imgData2 = canvas2.toDataURL('image/png');
         pdf.addPage('a4', 'portrait');
@@ -1140,13 +1140,36 @@ export default function CorrecaoDetalheView({
                 showSignature={showSignature}
                 pdfPageMode={pdfPageMode}
                 showPage2={pdfPageMode === 'both'}
-                idPrefix="pdf-export"
+                idPrefix="pdf-live-preview"
               />
             </div>
           </div>
 
         </div>
       )}
+
+      {/* Off-screen export container for instant 2-page PDF export and print */}
+      <div style={{ position: 'fixed', left: '-9999px', top: 0, opacity: 0, pointerEvents: 'none', zIndex: -100 }}>
+        <FolhaOficialRedacao
+          redacao={redacao}
+          manualName={manualName}
+          manualTurma={manualTurma}
+          notaEnemCalculada={notaEnemCalculada}
+          enem={enem}
+          siseduDescritores={siseduDescritores}
+          sisedu={sisedu}
+          fullTextContent={fullTextContent}
+          customEscola={customEscola}
+          customProfessor={customProfessor}
+          customRecado={customRecado}
+          showSisedu={showSisedu}
+          showWatermark={showWatermark}
+          showSignature={showSignature}
+          pdfPageMode="both"
+          showPage2={true}
+          idPrefix="pdf-export"
+        />
+      </div>
 
     </div>
   );

@@ -36,8 +36,8 @@ export default function FolhaOficialRedacao({
   showSisedu = true,
   showWatermark = false,
   showSignature = true,
-  showPage2 = false,
-  pdfPageMode = 'single', // 'single' | 'both'
+  showPage2 = true,
+  pdfPageMode = 'both', // 'single' | 'both'
   idPrefix = 'pdf-export'
 }) {
   if (!redacao) return null;
@@ -157,12 +157,15 @@ export default function FolhaOficialRedacao({
         id={`${idPrefix}-page-1`}
         className="folha-pagina folha-pagina-1"
         style={{
+          display: 'flex',
+          flexDirection: 'column',
+          justifyContent: 'space-between',
           width: '760px',
           maxWidth: '760px',
           minHeight: '1080px',
           backgroundColor: '#ffffff',
           color: '#1c1c1c',
-          padding: '20px 24px',
+          padding: '24px 28px',
           boxSizing: 'border-box',
           position: 'relative',
           fontFamily: fontSans,
@@ -426,96 +429,217 @@ export default function FolhaOficialRedacao({
           </section>
         )}
 
-        {/* SEÇÃO 3: TRANSCRIÇÃO INTEGRAL DA REDAÇÃO (SEM QUEBRA DE PALAVRAS MEIO DE FRASE) */}
-        <section style={{ marginBottom: '10px', width: '100%' }}>
+        {/* RODAPÉ DA PÁGINA 1 COM AVISO DE CONTINUAÇÃO */}
+        <footer style={{
+          borderTop: '1.5px solid #000000',
+          marginTop: 'auto',
+          paddingTop: '10px',
+          width: '100%'
+        }}>
           <div style={{
-            borderBottom: '1px solid #000000',
-            paddingBottom: '2px',
-            margin: '10px 0 6px 0',
+            fontSize: '8px',
+            color: '#444444',
             display: 'flex',
             justifyContent: 'space-between',
-            alignItems: 'baseline',
+            alignItems: 'center',
             width: '100%'
           }}>
-            <h2 style={{ fontSize: '10.5px', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.4px', color: '#000000', margin: 0 }}>
-              3. Transcrição Integral do Texto
-            </h2>
-            <span style={{ fontSize: '8px', color: '#555555', textTransform: 'uppercase', letterSpacing: '0.3px', whiteSpace: 'nowrap' }}>
-              Produção Original do Estudante
-            </span>
+            <span>© 2026 Projeto Ágora Escolar • Boletim Diagnóstico de Redação (ENEM x SISEDU)</span>
+            <span style={{ fontWeight: '700', color: '#000000' }}>Página 1 de 2 • Continua no verso (Produção Original do Estudante) ➔</span>
           </div>
+        </footer>
+      </div>
 
-          <div className="essay-box" style={{
-            border: '1px solid #000000',
-            padding: '10px 14px',
-            marginBottom: '10px',
-            width: '100%',
-            maxWidth: '100%',
-            boxSizing: 'border-box'
-          }}>
-            <div style={{ borderBottom: '1px solid #000000', paddingBottom: '4px', marginBottom: '6px' }}>
-              <span style={{ fontSize: '7.5px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.8px', color: '#555555', display: 'block' }}>
-                Tema Proposto
-              </span>
-              <div style={{ fontSize: '9.5px', fontWeight: '700', color: '#000000' }}>
-                "{temaRedacao}"
+      {/* ========================================================================= */}
+      {/* PÁGINA 2: PRODUÇÃO ORIGINAL DO ESTUDANTE & VALIDAÇÃO PEDAGÓGICA          */}
+      {/* ========================================================================= */}
+      <div
+        id={`${idPrefix}-page-2`}
+        className="folha-pagina folha-pagina-2 anexo-container"
+        style={{
+          display: isPage2Visible ? 'flex' : 'none',
+          flexDirection: 'column',
+          justifyContent: 'space-between',
+          width: '760px',
+          maxWidth: '760px',
+          minHeight: '1080px',
+          backgroundColor: '#ffffff',
+          color: '#1c1c1c',
+          padding: '24px 28px',
+          boxSizing: 'border-box',
+          position: 'relative',
+          fontFamily: fontSans,
+          fontSize: '10px',
+          lineHeight: '1.4',
+          boxShadow: '0 4px 16px rgba(0, 0, 0, 0.12)'
+        }}
+      >
+        <div>
+          {/* CABEÇALHO DA PÁGINA 2 */}
+          <header style={{ borderBottom: '2px solid #000000', paddingBottom: '8px', marginBottom: '14px', width: '100%' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', width: '100%' }}>
+              <div>
+                <h1 style={{ fontSize: '14px', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.4px', color: '#000000', margin: 0, lineHeight: '1.1' }}>
+                  PROJETO ÁGORA ESCOLAR
+                </h1>
+                <p style={{ fontSize: '9px', fontWeight: '600', color: '#555555', textTransform: 'uppercase', letterSpacing: '0.4px', margin: '2px 0 0 0' }}>
+                  Folha Oficial de Transcrição & Produção Textual do Estudante
+                </p>
+              </div>
+
+              <div style={{
+                border: '1.5px solid #000000',
+                padding: '3px 10px',
+                textAlign: 'center',
+                flexShrink: 0
+              }}>
+                <span style={{ fontSize: '8px', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.6px', color: '#000000' }}>
+                  PÁGINA 2 DE 2
+                </span>
               </div>
             </div>
 
-            <div className="essay-body" style={{
-              fontFamily: fontSerif,
-              fontSize: '9.2pt',
-              lineHeight: '1.6',
-              color: '#1c1c1c',
-              textAlign: 'left',
-              hyphens: 'none',
-              WebkitHyphens: 'none',
-              msHyphens: 'none',
+            {/* Metadados resumidos da Página 2 */}
+            <div style={{
+              width: '100%',
+              borderTop: '1px solid #000000',
+              marginTop: '6px',
+              paddingTop: '6px',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'baseline',
+              fontSize: '8.5px',
+              color: '#333333'
+            }}>
+              <div>
+                <span style={{ color: '#666666', textTransform: 'uppercase' }}>Estudante: </span>
+                <strong style={{ color: '#000000', fontSize: '9.5px' }}>{studentNameDisplay}</strong>
+              </div>
+              <div>
+                <span style={{ color: '#666666', textTransform: 'uppercase' }}>Turma: </span>
+                <strong style={{ color: '#000000' }}>{turmaDisplay}</strong>
+              </div>
+              <div>
+                <span style={{ color: '#666666', textTransform: 'uppercase' }}>Identificador: </span>
+                <strong style={{ color: '#000000' }}>{codigoRedacao}</strong>
+              </div>
+              <div>
+                <span style={{ color: '#666666', textTransform: 'uppercase' }}>Data: </span>
+                <strong style={{ color: '#000000' }}>{dataLancamentoStr}</strong>
+              </div>
+            </div>
+          </header>
+
+          {/* SEÇÃO 3: TRANSCRIÇÃO INTEGRAL DO TEXTO */}
+          <section style={{ marginBottom: '14px', width: '100%' }}>
+            <div style={{
+              borderBottom: '1.5px solid #000000',
+              paddingBottom: '3px',
+              marginBottom: '10px',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'baseline',
+              width: '100%'
+            }}>
+              <h2 style={{ fontSize: '11px', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.4px', color: '#000000', margin: 0 }}>
+                3. Transcrição Integral do Texto
+              </h2>
+              <span style={{ fontSize: '8.5px', color: '#555555', textTransform: 'uppercase', letterSpacing: '0.3px', whiteSpace: 'nowrap' }}>
+                Produção Original do Estudante
+              </span>
+            </div>
+
+            <div className="essay-box" style={{
+              border: '1px solid #000000',
+              padding: '14px 18px',
+              marginBottom: '12px',
               width: '100%',
               maxWidth: '100%',
               boxSizing: 'border-box',
-              wordBreak: 'normal',
-              overflowWrap: 'normal'
+              backgroundColor: '#ffffff'
             }}>
-              {sanitizedFullText.split('\n\n').filter(Boolean).length > 1 ? (
-                sanitizedFullText.split('\n\n').filter(Boolean).map((paragrafo, pIdx) => (
+              <div style={{ borderBottom: '1px solid #000000', paddingBottom: '6px', marginBottom: '12px' }}>
+                <span style={{ fontSize: '8px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.8px', color: '#555555', display: 'block' }}>
+                  Tema Proposto
+                </span>
+                <div style={{ fontSize: '10.5px', fontWeight: '700', color: '#000000', marginTop: '1px' }}>
+                  "{temaRedacao}"
+                </div>
+              </div>
+
+              <div className="essay-body" style={{
+                fontFamily: fontSerif,
+                fontSize: '10pt',
+                lineHeight: '1.7',
+                color: '#1c1c1c',
+                textAlign: 'left',
+                hyphens: 'none',
+                WebkitHyphens: 'none',
+                msHyphens: 'none',
+                width: '100%',
+                maxWidth: '100%',
+                boxSizing: 'border-box',
+                wordBreak: 'normal',
+                overflowWrap: 'normal'
+              }}>
+                {sanitizedFullText.split('\n\n').filter(Boolean).length > 1 ? (
+                  sanitizedFullText.split('\n\n').filter(Boolean).map((paragrafo, pIdx) => (
+                    <p
+                      key={pIdx}
+                      style={{
+                        textIndent: '2em',
+                        marginBottom: '10px',
+                        wordBreak: 'normal',
+                        overflowWrap: 'normal',
+                        hyphens: 'none',
+                        textAlign: 'left'
+                      }}
+                    >
+                      {paragrafo.trim()}
+                    </p>
+                  ))
+                ) : (
                   <p
-                    key={pIdx}
                     style={{
-                      textIndent: '1.6em',
-                      marginBottom: '6px',
+                      textIndent: '2em',
+                      marginBottom: '10px',
                       wordBreak: 'normal',
                       overflowWrap: 'normal',
                       hyphens: 'none',
                       textAlign: 'left'
                     }}
                   >
-                    {paragrafo.trim()}
+                    {sanitizedFullText}
                   </p>
-                ))
-              ) : (
-                <p
-                  style={{
-                    textIndent: '1.6em',
-                    marginBottom: '6px',
-                    wordBreak: 'normal',
-                    overflowWrap: 'normal',
-                    hyphens: 'none',
-                    textAlign: 'left'
-                  }}
-                >
-                  {sanitizedFullText}
-                </p>
-              )}
+                )}
+              </div>
             </div>
-          </div>
-        </section>
 
-        {/* RODAPÉ COM ESPAÇO CONFORTÁVEL PARA ASSINATURA MANUAL & NOTAS LEGAIS */}
+            {/* Orientações Pedagógicas / Observações do Professor */}
+            {customRecado && (
+              <div style={{
+                border: '1px solid #000000',
+                padding: '10px 14px',
+                backgroundColor: '#fafafa',
+                boxSizing: 'border-box',
+                marginBottom: '12px'
+              }}>
+                <strong style={{ fontSize: '9px', textTransform: 'uppercase', display: 'block', marginBottom: '3px', color: '#000000' }}>
+                  Orientações Pedagógicas do Avaliador:
+                </strong>
+                <p style={{ fontSize: '9px', lineHeight: '1.4', color: '#333333', margin: 0, wordBreak: 'normal', overflowWrap: 'normal' }}>
+                  {clean(customRecado)}
+                </p>
+              </div>
+            )}
+          </section>
+        </div>
+
+        {/* RODAPÉ DA PÁGINA 2 COM ASSINATURA & NOTAS LEGAIS */}
         <footer style={{
           borderTop: '1.5px solid #000000',
-          marginTop: '14px',
-          paddingTop: '8px',
+          marginTop: 'auto',
+          paddingTop: '12px',
           width: '100%'
         }}>
           {showSignature && (
@@ -525,8 +649,8 @@ export default function FolhaOficialRedacao({
               alignItems: 'center',
               justifyContent: 'center',
               textAlign: 'center',
-              marginBottom: '8px',
-              paddingTop: '15px'
+              marginBottom: '10px',
+              paddingTop: '10px'
             }}>
               <div style={{
                 width: '280px',
@@ -534,11 +658,11 @@ export default function FolhaOficialRedacao({
                 backgroundColor: '#000000',
                 marginBottom: '6px'
               }}></div>
-              <div style={{ fontSize: '9.5px', fontWeight: '700', color: '#000000' }}>
+              <div style={{ fontSize: '10px', fontWeight: '700', color: '#000000' }}>
                 {customProfessor || 'Prof. Avaliador Responsável • Banca Examinadora'}
               </div>
               <div style={{ fontSize: '8px', color: '#555555', textTransform: 'uppercase', letterSpacing: '0.4px' }}>
-                Projeto Ágora Escolar • Correção Oficial de Redação ENEM
+                Projeto Ágora Escolar • Visto de Validação Pedagógica
               </div>
             </div>
           )}
@@ -553,138 +677,7 @@ export default function FolhaOficialRedacao({
             width: '100%'
           }}>
             <span>© 2026 Projeto Ágora Escolar. Todos os direitos reservados. Uso pedagógico restrito.</span>
-            <span>Avaliação baseada na Matriz Oficial de Referência do ENEM (INEP).</span>
-          </div>
-        </footer>
-      </div>
-
-      {/* ========================================================================= */}
-      {/* PÁGINA 2 (ANEXO II): RENDERIZADA QUANDO SELECIONADO MODO DE 2 PÁGINAS       */}
-      {/* ========================================================================= */}
-      <div
-        id={`${idPrefix}-page-2`}
-        className="folha-pagina folha-pagina-2 anexo-container"
-        style={{
-          display: isPage2Visible ? 'block' : 'none',
-          width: '760px',
-          maxWidth: '760px',
-          minHeight: '1080px',
-          backgroundColor: '#ffffff',
-          color: '#1c1c1c',
-          padding: '20px 24px',
-          boxSizing: 'border-box',
-          position: 'relative',
-          fontFamily: fontSans,
-          fontSize: '10px',
-          lineHeight: '1.4',
-          boxShadow: '0 4px 16px rgba(0, 0, 0, 0.12)'
-        }}
-      >
-        <header style={{ borderBottom: '2px solid #000000', paddingBottom: '8px', marginBottom: '10px', width: '100%' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
-            <div>
-              <h2 style={{ fontSize: '13px', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.4px', color: '#000000', margin: 0 }}>
-                ANEXO II: TRANSCRIÇÃO COMPLETA & PARECER FINAL
-              </h2>
-              <p style={{ fontSize: '8.5px', color: '#555555', textTransform: 'uppercase', margin: '2px 0 0 0' }}>
-                Registro #{rawIdNum} • Estudante: <strong>{studentNameDisplay}</strong>
-              </p>
-            </div>
-            <div style={{ textAlign: 'right', fontSize: '8.5px', color: '#555555' }}>
-              Data: <strong>{dataLancamentoStr}</strong>
-            </div>
-          </div>
-        </header>
-
-        {/* Transcrição Completa Ampliada */}
-        <section style={{ marginBottom: '14px', flex: 1 }}>
-          <div style={{
-            borderBottom: '1px solid #000000',
-            paddingBottom: '2px',
-            marginBottom: '6px'
-          }}>
-            <h3 style={{ fontSize: '10px', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.4px', color: '#000000', margin: 0 }}>
-              Texto Integral da Redação (Verbatim)
-            </h3>
-          </div>
-
-          <div style={{
-            border: '1px solid #000000',
-            padding: '12px 16px',
-            backgroundColor: '#ffffff',
-            fontFamily: fontSerif,
-            fontSize: '10px',
-            lineHeight: '1.6',
-            color: '#111111',
-            textAlign: 'justify',
-            whiteSpace: 'pre-line',
-            boxSizing: 'border-box',
-            marginBottom: '10px',
-            wordBreak: 'normal',
-            overflowWrap: 'break-word'
-          }}>
-            {sanitizedFullText}
-          </div>
-
-          {customRecado && (
-            <div style={{
-              border: '1px solid #000000',
-              padding: '10px 14px',
-              backgroundColor: '#fafafa',
-              boxSizing: 'border-box'
-            }}>
-              <strong style={{ fontSize: '9px', textTransform: 'uppercase', display: 'block', marginBottom: '3px', color: '#000000' }}>
-                Orientações Pedagógicas do Avaliador:
-              </strong>
-              <p style={{ fontSize: '9px', lineHeight: '1.4', color: '#333333', margin: 0, wordBreak: 'normal', overflowWrap: 'break-word' }}>
-                {clean(customRecado)}
-              </p>
-            </div>
-          )}
-        </section>
-
-        {/* Rodapé da Página 2 */}
-        <footer style={{
-          borderTop: '1.5px solid #000000',
-          marginTop: 'auto',
-          paddingTop: '8px',
-          width: '100%'
-        }}>
-          {showSignature && (
-            <div style={{
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              justifyContent: 'center',
-              textAlign: 'center',
-              marginBottom: '8px'
-            }}>
-              <div style={{
-                width: '300px',
-                borderBottom: '1px solid #000000',
-                marginBottom: '5px',
-                height: '50px'
-              }}></div>
-              <div style={{ fontSize: '9.5px', fontWeight: '700', color: '#000000' }}>
-                {customProfessor || 'Prof. Avaliador Responsável • Banca Examinadora'}
-              </div>
-              <div style={{ fontSize: '8px', color: '#555555', textTransform: 'uppercase' }}>
-                Visto de Validação Pedagógica
-              </div>
-            </div>
-          )}
-
-          <div style={{
-            fontSize: '7.5px',
-            color: '#555555',
-            borderTop: '0.5px solid #d1d5db',
-            paddingTop: '4px',
-            display: 'flex',
-            justifyContent: 'space-between',
-            width: '100%'
-          }}>
-            <span>Documento Oficial • Projeto Ágora Escolar (ENEM x SISEDU)</span>
-            <span>Página 2 de 2</span>
+            <span>Página 2 de 2 • Avaliação baseada na Matriz Oficial de Referência do ENEM (INEP).</span>
           </div>
         </footer>
       </div>
