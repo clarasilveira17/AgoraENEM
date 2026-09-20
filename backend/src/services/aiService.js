@@ -34,15 +34,35 @@ export function cleanAndParseJSON(rawText) {
     try {
       return JSON.parse(sanitized);
     } catch (secondErr) {
-      console.warn(`[JSON Parser] Tentativa 2 de parse falhou (${secondErr.message}). Sanitizando aspas e caracteres remanescentes...`);
+      console.warn(`[JSON Parser] Tentativa 2 de parse falhou (${secondErr.message}). Sanitizando aspas internas não escapadas...`);
 
       try {
-        const ultraSanitized = sanitized
-          .replace(/[\u007F-\u009F]/g, '');
-        return JSON.parse(ultraSanitized);
+        const lines = sanitized.split('\n');
+        const fixedLines = lines.map(line => {
+          // Detect key-value string lines: "key": "value"
+          const match = line.match(/^(\s*"[a-zA-Z0-9_]+"\s*:\s*")(.*)("(?:,\s*|\s*))$/);
+          if (match) {
+            const prefix = match[1];
+            const content = match[2];
+            const suffix = match[3];
+            // Replace any unescaped quotes inside content with single quotes
+            const safeContent = content.replace(/(?<!\\)"/g, "'");
+            return prefix + safeContent + suffix;
+          }
+          return line;
+        });
+        return JSON.parse(fixedLines.join('\n'));
       } catch (thirdErr) {
-        console.error(`[JSON Parser] ❌ Falha crítica no parsing do JSON: ${thirdErr.message}`);
-        throw thirdErr;
+        console.warn(`[JSON Parser] Tentativa 3 falhou (${thirdErr.message}). Sanitizando caracteres especiais remanescentes...`);
+        try {
+          const ultraSanitized = sanitized
+            .replace(/[\u007F-\u009F]/g, '')
+            .replace(/"\s*\+\s*"/g, '');
+          return JSON.parse(ultraSanitized);
+        } catch (finalErr) {
+          console.error(`[JSON Parser] ❌ Falha crítica no parsing do JSON: ${finalErr.message}`);
+          throw finalErr;
+        }
       }
     }
   }
@@ -119,6 +139,7 @@ MISSÃO ADICIONAL:
 2. **IDENTIFICAÇÃO SINCERA:** Classifique "confianca_identificacao" em "ALTA", "MEDIA" ou "BAIXA" com base na legibilidade do cabeçalho.
 3. **CITAÇÃO DIRETA ("citacao_texto"):** Extraia sempre trecho literal do aluno como evidência para cada nota.
 4. **DEVOLUTIVA PEDAGÓGICA ("devolutiva_nivel_inicial"):** Forneça um parecer claro com pontos fortes e orientações concretas de evolução para os aspectos em Nível Inicial ou Intermediário.
+5. **SINTAXE JSON RIGOROSA:** Retorne estritamente um único objeto JSON válido. Ao citar obras, frases ou palavras dentro das strings do JSON, use sempre aspas simples '...' para nunca quebrar as aspas delimitadoras do JSON.
 
 FORMATO DE SAÍDA OBRIGATÓRIO (JSON estrito):
 {

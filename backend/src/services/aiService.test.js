@@ -22,6 +22,14 @@ describe('AI Service - JSON Cleaning & Parsing', () => {
     expect(parsed.aluno).toBe('Maria');
   });
 
+  it('should auto-repair unescaped inner double quotes in string property values', () => {
+    const raw = '{\n  "aluno": "Ana Livia",\n  "citacao_texto": "A obra "Quarto de Despejo" relata a fome",\n  "nota": 800\n}';
+    const parsed = cleanAndParseJSON(raw);
+    expect(parsed.aluno).toBe('Ana Livia');
+    expect(parsed.nota).toBe(800);
+    expect(parsed.citacao_texto).toContain('Quarto de Despejo');
+  });
+
   it('should generate valid mock ENEM evaluations when API key is missing', () => {
     const mock = getMockENEMEvaluation(1, 'Texto de teste', 'Pedro Alvares', '3º B');
     expect(mock.aluno).toBe('Pedro Alvares');
