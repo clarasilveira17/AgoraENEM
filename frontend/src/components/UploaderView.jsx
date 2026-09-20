@@ -178,7 +178,7 @@ export default function UploaderView({ onRedacaoSaved }) {
               placeholder="IA extrai se houver no cabeçalho..."
               value={manualName}
               onChange={(e) => setManualName(e.target.value)}
-              className="w-full bg-[#fafaf7] border border-[#e6e5e0] rounded-md px-3.5 py-2.5 text-xs text-[#26251e] placeholder-[#a09c92] focus:outline-none focus:ring-2 focus:ring-[#26251e] transition-colors"
+              className="w-full bg-[#fafaf7] border border-[#e6e5e0] rounded-md px-3.5 py-2.5 text-xs text-[#26251e] placeholder-[#807d72] focus:outline-none focus:ring-2 focus:ring-[#26251e] transition-colors"
             />
           </div>
 
@@ -194,7 +194,7 @@ export default function UploaderView({ onRedacaoSaved }) {
               placeholder="ex: 3º Ano A - Ensino Médio..."
               value={manualTurma}
               onChange={(e) => setManualTurma(e.target.value)}
-              className="w-full bg-[#fafaf7] border border-[#e6e5e0] rounded-md px-3.5 py-2.5 text-xs text-[#26251e] placeholder-[#a09c92] focus:outline-none focus:ring-2 focus:ring-[#26251e] transition-colors"
+              className="w-full bg-[#fafaf7] border border-[#e6e5e0] rounded-md px-3.5 py-2.5 text-xs text-[#26251e] placeholder-[#807d72] focus:outline-none focus:ring-2 focus:ring-[#26251e] transition-colors"
             />
           </div>
         </div>
@@ -254,7 +254,7 @@ export default function UploaderView({ onRedacaoSaved }) {
                         type="button"
                         onClick={() => handleRemoveFile(idx)}
                         aria-label={`Remover arquivo ${file.name}`}
-                        className="text-[#a09c92] hover:text-[#cf2d56] transition-colors p-1 cursor-pointer"
+                        className="text-[#807d72] hover:text-[#cf2d56] transition-colors p-1 cursor-pointer"
                       >
                         <Trash2 className="w-4 h-4" aria-hidden="true" />
                       </button>
@@ -306,7 +306,7 @@ export default function UploaderView({ onRedacaoSaved }) {
                 placeholder="Cole ou digite aqui o texto completo da redação do aluno para avaliação..."
                 value={typedText}
                 onChange={(e) => setTypedText(e.target.value)}
-                className="w-full bg-[#fafaf7] border border-[#e6e5e0] rounded-md p-4 text-xs font-mono text-[#26251e] placeholder-[#a09c92] focus:outline-none focus:ring-2 focus:ring-[#26251e] transition-colors custom-scrollbar"
+                className="w-full bg-[#fafaf7] border border-[#e6e5e0] rounded-md p-4 text-xs font-mono text-[#26251e] placeholder-[#807d72] focus:outline-none focus:ring-2 focus:ring-[#26251e] transition-colors custom-scrollbar"
               />
             </div>
 

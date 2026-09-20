@@ -131,7 +131,7 @@ export default function LoginView({ onLoginSuccess }) {
                 value={nome}
                 onChange={(e) => setNome(e.target.value)}
                 placeholder="Ex.: João da Silva"
-                className="w-full px-3.5 py-2.5 bg-[#ffffff] border border-[#e6e5e0] rounded-md text-sm text-[#26251e] placeholder-[#a09c92] focus:outline-none focus:ring-2 focus:ring-[#26251e] transition-colors"
+                className="w-full px-3.5 py-2.5 bg-[#ffffff] border border-[#e6e5e0] rounded-md text-sm text-[#26251e] placeholder-[#807d72] focus:outline-none focus:ring-2 focus:ring-[#26251e] transition-colors"
               />
             </div>
 
@@ -167,7 +167,7 @@ export default function LoginView({ onLoginSuccess }) {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             placeholder="seu.email@exemplo.com"
-            className="w-full px-3.5 py-2.5 bg-[#ffffff] border border-[#e6e5e0] rounded-md text-sm text-[#26251e] placeholder-[#a09c92] focus:outline-none focus:ring-2 focus:ring-[#26251e] transition-colors"
+            className="w-full px-3.5 py-2.5 bg-[#ffffff] border border-[#e6e5e0] rounded-md text-sm text-[#26251e] placeholder-[#807d72] focus:outline-none focus:ring-2 focus:ring-[#26251e] transition-colors"
           />
         </div>
 
@@ -185,7 +185,7 @@ export default function LoginView({ onLoginSuccess }) {
             value={senha}
             onChange={(e) => setSenha(e.target.value)}
             placeholder="••••••••"
-            className="w-full px-3.5 py-2.5 bg-[#ffffff] border border-[#e6e5e0] rounded-md text-sm text-[#26251e] placeholder-[#a09c92] focus:outline-none focus:ring-2 focus:ring-[#26251e] transition-colors"
+            className="w-full px-3.5 py-2.5 bg-[#ffffff] border border-[#e6e5e0] rounded-md text-sm text-[#26251e] placeholder-[#807d72] focus:outline-none focus:ring-2 focus:ring-[#26251e] transition-colors"
           />
         </div>
 

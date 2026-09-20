@@ -45,7 +45,7 @@ export default function Header({
               placeholder="Pesquisar redação ou aluno..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full bg-[#ffffff] border border-[#e6e5e0] rounded-md pl-8 sm:pl-9 pr-2.5 py-1.5 sm:py-2 text-xs text-[#26251e] placeholder-[#a09c92] focus:outline-none focus:ring-2 focus:ring-[#26251e] transition-colors"
+              className="w-full bg-[#ffffff] border border-[#e6e5e0] rounded-md pl-8 sm:pl-9 pr-2.5 py-1.5 sm:py-2 text-xs text-[#26251e] placeholder-[#807d72] focus:outline-none focus:ring-2 focus:ring-[#26251e] transition-colors"
             />
           </div>
         ) : (

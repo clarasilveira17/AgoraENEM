@@ -527,10 +527,11 @@ export default function RankingView({ redacoes = [], onSelectRedacao }) {
             <Search className="w-3.5 h-3.5 text-[#807d72] absolute left-2.5 top-1/2 -translate-y-1/2" />
             <input
               type="text"
+              aria-label="Pesquisar aluno no ranking"
               placeholder="Pesquisar por nome..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-8 pr-2.5 py-1.5 bg-[#ffffff] border border-[#e6e5e0] rounded-md text-xs text-[#26251e] placeholder-[#a09c92] focus:outline-none focus:border-[#26251e]"
+              className="w-full pl-8 pr-2.5 py-1.5 bg-[#ffffff] border border-[#e6e5e0] rounded-md text-xs text-[#26251e] placeholder-[#807d72] focus:outline-none focus:border-[#26251e]"
             />
           </div>
         </div>
@@ -645,7 +646,7 @@ export default function RankingView({ redacoes = [], onSelectRedacao }) {
                               Ver Redação <ChevronRight className="w-3 h-3 inline" />
                             </span>
                           ) : (
-                            <span className="text-[10px] text-[#a09c92] font-mono inline-flex items-center justify-center gap-1">
+                            <span className="text-[11px] text-[#5a5852] font-mono inline-flex items-center justify-center gap-1 font-medium">
                               <Lock className="w-3 h-3" /> Restrito
                             </span>
                           )}
@@ -720,7 +721,7 @@ export default function RankingView({ redacoes = [], onSelectRedacao }) {
                               Ver Redação <ChevronRight className="w-3 h-3 inline" />
                             </span>
                           ) : (
-                            <span className="text-[10px] text-[#a09c92] font-mono inline-flex items-center justify-center gap-1">
+                            <span className="text-[11px] text-[#5a5852] font-mono inline-flex items-center justify-center gap-1 font-medium">
                               <Lock className="w-3 h-3" /> Restrito
                             </span>
                           )}

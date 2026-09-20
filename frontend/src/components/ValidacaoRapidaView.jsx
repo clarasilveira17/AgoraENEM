@@ -416,10 +416,11 @@ export default function ValidacaoRapidaView({
             <Search className="w-3.5 h-3.5 text-[#807d72] absolute left-2.5 top-1/2 -translate-y-1/2" />
             <input
               type="text"
+              aria-label="Buscar redação por nome do aluno ou ID"
               placeholder="Buscar aluno ou ID..."
               value={searchQuery}
               onChange={(e) => { setSearchQuery(e.target.value); setCurrentIndex(0); }}
-              className="pl-8 pr-2.5 py-1.5 bg-[#ffffff] border border-[#e6e5e0] rounded-md text-xs text-[#26251e] placeholder-[#a09c92] focus:outline-none focus:border-[#26251e] w-40 sm:w-44 font-mono"
+              className="pl-8 pr-2.5 py-1.5 bg-[#ffffff] border border-[#e6e5e0] rounded-md text-xs text-[#26251e] placeholder-[#807d72] focus:outline-none focus:border-[#26251e] w-40 sm:w-44 font-mono"
             />
           </div>
         </div>
@@ -755,13 +756,16 @@ export default function ValidacaoRapidaView({
                     <Search className="w-3.5 h-3.5 text-[#807d72] absolute left-3 top-1/2 -translate-y-1/2" />
                     <input
                       type="text"
+                      aria-label="Digitar nome ou e-mail do aluno para vinculação"
                       placeholder="Digite o nome ou e-mail do aluno..."
                       value={studentSearch}
                       onChange={(e) => setStudentSearch(e.target.value)}
-                      className="w-full pl-9 pr-8 py-2 bg-[#ffffff] border border-[#e6e5e0] rounded-md text-xs text-[#26251e] placeholder-[#a09c92] focus:outline-none focus:border-[#26251e]"
+                      className="w-full pl-9 pr-8 py-2 bg-[#ffffff] border border-[#e6e5e0] rounded-md text-xs text-[#26251e] placeholder-[#807d72] focus:outline-none focus:border-[#26251e]"
                     />
                     {studentSearch && (
                       <button
+                        type="button"
+                        aria-label="Limpar busca de aluno"
                         onClick={() => setStudentSearch('')}
                         className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#807d72] hover:text-[#26251e] cursor-pointer"
                       >

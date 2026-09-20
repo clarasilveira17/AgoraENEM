@@ -11,7 +11,7 @@
   --color-ink: #26251e;
   --color-body: #5a5852;
   --color-muted: #807d72;
-  --color-muted-soft: #a09c92;
+  --color-muted-soft: #5a5852;
 
   --color-hairline: #e6e5e0;
   --color-hairline-soft: #efeee8;
@@ -48,6 +48,12 @@
     color: var(--color-ink);
     font-weight: 400;
     letter-spacing: -0.02em;
+  }
+
+  /* WCAG 2.2 SC 2.4.7 - Foco visivel de alto contraste para navegacao por teclado */
+  :focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
   }
 }
 

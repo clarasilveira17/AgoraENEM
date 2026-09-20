@@ -312,7 +312,7 @@ export default function GestaoRedacoesView({
                   setShowStudentDropdown(true);
                 }}
                 disabled={isEstudante}
-                className="w-full bg-[#fafaf7] border border-[#e6e5e0] rounded-md px-3 py-2 text-xs text-[#26251e] placeholder-[#a09c92] focus:outline-none focus:border-[#26251e]"
+                className="w-full bg-[#fafaf7] border border-[#e6e5e0] rounded-md px-3 py-2 text-xs text-[#26251e] placeholder-[#807d72] focus:outline-none focus:border-[#26251e]"
               />
 
               {/* Sugestões de Alunos Cadastrados */}
@@ -411,7 +411,7 @@ export default function GestaoRedacoesView({
                         <button
                           type="button"
                           onClick={() => handleRemoveFile(idx)}
-                          className="text-[#a09c92] hover:text-[#cf2d56] p-1 cursor-pointer"
+                          className="text-[#807d72] hover:text-[#cf2d56] p-1 cursor-pointer"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
                         </button>
@@ -462,7 +462,7 @@ export default function GestaoRedacoesView({
                   placeholder="Cole ou digite aqui a redação completa..."
                   value={typedText}
                   onChange={(e) => setTypedText(e.target.value)}
-                  className="w-full bg-[#fafaf7] border border-[#e6e5e0] rounded-md p-3 text-xs font-mono text-[#26251e] placeholder-[#a09c92] focus:outline-none focus:border-[#26251e] custom-scrollbar"
+                  className="w-full bg-[#fafaf7] border border-[#e6e5e0] rounded-md p-3 text-xs font-mono text-[#26251e] placeholder-[#807d72] focus:outline-none focus:border-[#26251e] custom-scrollbar"
                 />
               </div>
 
@@ -559,13 +559,14 @@ export default function GestaoRedacoesView({
               <Search className="w-3.5 h-3.5 text-[#807d72] absolute left-2.5 top-1/2 -translate-y-1/2" />
               <input
                 type="text"
+                aria-label="Pesquisar por aluno, turma ou ID"
                 placeholder="Pesquisar por aluno, turma ou ID..."
                 value={localSearch}
                 onChange={(e) => {
                   setLocalSearch(e.target.value);
                   if (setSearchQuery) setSearchQuery(e.target.value);
                 }}
-                className="w-full pl-8 pr-3 py-1.5 bg-[#fafaf7] border border-[#e6e5e0] rounded-md text-xs text-[#26251e] placeholder-[#a09c92] focus:outline-none focus:border-[#26251e] font-mono"
+                className="w-full pl-8 pr-3 py-1.5 bg-[#fafaf7] border border-[#e6e5e0] rounded-md text-xs text-[#26251e] placeholder-[#807d72] focus:outline-none focus:border-[#26251e] font-mono"
               />
             </div>
 
@@ -639,7 +640,7 @@ export default function GestaoRedacoesView({
               </div>
             ) : filteredRedacoes.length === 0 ? (
               <div className="bg-[#fafaf7] border border-[#e6e5e0] rounded-xl p-8 text-center text-[#807d72]">
-                <FileText className="w-8 h-8 mx-auto mb-2 text-[#a09c92]" />
+                <FileText className="w-8 h-8 mx-auto mb-2 text-[#807d72]" aria-hidden="true" />
                 <p className="text-xs font-semibold text-[#26251e]">Nenhuma redação encontrada</p>
                 <p className="text-[11px] text-[#807d72] mt-0.5">
                   {isAdmin ? 'Envie uma nova redação na coluna ao lado ou ajuste os filtros de busca.' : 'Você ainda não possui redações cadastradas.'}

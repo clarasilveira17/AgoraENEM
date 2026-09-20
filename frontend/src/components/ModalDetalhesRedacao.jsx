@@ -384,17 +384,19 @@ export default function ModalDetalhesRedacao({ redacao, onClose, onUpdated }) {
                 <form onSubmit={handleSaveName} className="flex flex-wrap sm:flex-nowrap items-center gap-2 w-full sm:w-auto">
                   <input
                     type="text"
+                    aria-label="Nome do aluno"
                     placeholder="Nome do aluno..."
                     value={manualName}
                     onChange={(e) => setManualName(e.target.value)}
-                    className="bg-[#ffffff] border border-[#e6e5e0] rounded-md px-3 py-1.5 text-xs text-[#26251e] placeholder-[#a09c92] focus:outline-none focus:border-[#26251e] w-full sm:w-48"
+                    className="bg-[#ffffff] border border-[#e6e5e0] rounded-md px-3 py-1.5 text-xs text-[#26251e] placeholder-[#807d72] focus:outline-none focus:border-[#26251e] w-full sm:w-48"
                   />
                   <input
                     type="text"
+                    aria-label="Turma do aluno"
                     placeholder="Turma (ex: 3º Ano A)..."
                     value={manualTurma}
                     onChange={(e) => setManualTurma(e.target.value)}
-                    className="bg-[#ffffff] border border-[#e6e5e0] rounded-md px-3 py-1.5 text-xs text-[#26251e] placeholder-[#a09c92] focus:outline-none focus:border-[#26251e] w-full sm:w-36"
+                    className="bg-[#ffffff] border border-[#e6e5e0] rounded-md px-3 py-1.5 text-xs text-[#26251e] placeholder-[#807d72] focus:outline-none focus:border-[#26251e] w-full sm:w-36"
                   />
                   <button
                     type="submit"
@@ -1096,6 +1098,7 @@ export default function ModalDetalhesRedacao({ redacao, onClose, onUpdated }) {
                     <label className="text-[11px] font-mono text-[#807d72] block mb-1">Nome Completo do Aluno:</label>
                     <input
                       type="text"
+                      aria-label="Nome completo do aluno"
                       placeholder="Ex: GUILHERME RIBAS DE SOUSA"
                       value={novoNome}
                       onChange={(e) => {
@@ -1105,7 +1108,7 @@ export default function ModalDetalhesRedacao({ redacao, onClose, onUpdated }) {
                           setNovoEmail(`${simple}@aluno.ce.gov.br`);
                         }
                       }}
-                      className="w-full px-3 py-2 bg-[#ffffff] border border-[#e6e5e0] rounded-md text-xs text-[#26251e] placeholder-[#a09c92] focus:outline-none focus:border-[#26251e]"
+                      className="w-full px-3 py-2 bg-[#ffffff] border border-[#e6e5e0] rounded-md text-xs text-[#26251e] placeholder-[#807d72] focus:outline-none focus:border-[#26251e]"
                       required
                     />
                   </div>
@@ -1115,10 +1118,11 @@ export default function ModalDetalhesRedacao({ redacao, onClose, onUpdated }) {
                       <label className="text-[11px] font-mono text-[#807d72] block mb-1">E-mail Institucional:</label>
                       <input
                         type="email"
+                        aria-label="E-mail institucional do aluno"
                         placeholder="nome.sobrenome@aluno.ce.gov.br"
                         value={novoEmail}
                         onChange={(e) => setNovoEmail(e.target.value)}
-                        className="w-full px-3 py-2 bg-[#ffffff] border border-[#e6e5e0] rounded-md text-xs text-[#26251e] placeholder-[#a09c92] focus:outline-none focus:border-[#26251e]"
+                        className="w-full px-3 py-2 bg-[#ffffff] border border-[#e6e5e0] rounded-md text-xs text-[#26251e] placeholder-[#807d72] focus:outline-none focus:border-[#26251e]"
                         required
                       />
                     </div>
@@ -1173,10 +1177,11 @@ export default function ModalDetalhesRedacao({ redacao, onClose, onUpdated }) {
                     <Search className="w-4 h-4 text-[#807d72] absolute left-3 top-1/2 -translate-y-1/2" />
                     <input
                       type="text"
+                      aria-label="Pesquisar aluno por nome ou e-mail"
                       placeholder="Pesquisar por nome ou e-mail..."
                       value={studentSearchQuery}
                       onChange={(e) => setStudentSearchQuery(e.target.value)}
-                      className="w-full pl-9 pr-3 py-2 bg-[#ffffff] border border-[#e6e5e0] rounded-md text-xs text-[#26251e] placeholder-[#a09c92] focus:outline-none focus:border-[#26251e] transition-colors"
+                      className="w-full pl-9 pr-3 py-2 bg-[#ffffff] border border-[#e6e5e0] rounded-md text-xs text-[#26251e] placeholder-[#807d72] focus:outline-none focus:border-[#26251e] transition-colors"
                     />
                   </div>
 

@@ -733,7 +733,7 @@ export default function CorrecaoDetalheView({
             <div className="bg-[#fafaf7] border border-[#e6e5e0] rounded-lg p-4 font-mono text-xs text-[#26251e] leading-relaxed max-h-[600px] overflow-y-auto custom-scrollbar whitespace-pre-wrap divide-y divide-[#e6e5e0]/40">
               {fullTextContent.split('\n').map((line, idx) => (
                 <div key={idx} className="py-1 flex items-start gap-3">
-                  <span className="text-[#a09c92] select-none font-bold text-[10px] w-6 shrink-0 text-right">
+                  <span className="text-[#5a5852] select-none font-mono font-medium text-[11px] w-6 shrink-0 text-right">
                     {String(idx + 1).padStart(2, '0')}
                   </span>
                   <span className="flex-1 font-serif text-sm text-[#26251e] leading-relaxed">

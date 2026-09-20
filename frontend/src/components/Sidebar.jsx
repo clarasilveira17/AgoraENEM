@@ -21,12 +21,17 @@ import { db } from '../db/db';
 import { useAuth } from '../context/AuthContext';
 import { useNetworkStatus } from '../hooks/useNetworkStatus';
 
-export default function Sidebar({ activeView, setActiveView, isMobileMenuOpen, setIsMobileMenuOpen, pendingCount, unidentifiedCount }) {
+export default function Sidebar({ activeView, setActiveView, isMobileMenuOpen, setIsMobileMenuOpen, pendingCount, unidentifiedCount, onToast }) {
   const { user, logout, isAdmin, isEstudante, syncLegacyToCloud } = useAuth();
   const isOnline = useNetworkStatus();
   const [isCloudSyncing, setIsCloudSyncing] = useState(false);
   const [syncFeedback, setSyncFeedback] = useState(null);
   const [syncProgress, setSyncProgress] = useState(null);
+
+  const notify = (msg, type = 'success') => {
+    if (onToast) onToast(msg, type);
+    else console.log(`[Toast ${type}]: ${msg}`);
+  };
 
   if (!user) return null; // Completely hide sidebar when unauthenticated
 
@@ -39,9 +44,10 @@ export default function Sidebar({ activeView, setActiveView, isMobileMenuOpen, s
         setSyncProgress(`Subindo ${current}/${total}...`);
       });
       setSyncFeedback(res.message);
+      notify(res.message || 'Sincronização concluída com sucesso!', 'success');
       setTimeout(() => setSyncFeedback(null), 5000);
     } catch (err) {
-      alert(err.message || 'Erro ao sincronizar com a nuvem.');
+      notify(err.message || 'Erro ao sincronizar com a nuvem.', 'error');
     } finally {
       setIsCloudSyncing(false);
       setSyncProgress(null);
@@ -52,7 +58,7 @@ export default function Sidebar({ activeView, setActiveView, isMobileMenuOpen, s
     try {
       const redacoesLocais = await db.redacoes.toArray();
       if (!redacoesLocais || redacoesLocais.length === 0) {
-        alert('Nenhuma redação encontrada no armazenamento local deste navegador.');
+        notify('Nenhuma redação encontrada no armazenamento local deste navegador.', 'warning');
         return;
       }
       const backupData = {
@@ -68,9 +74,9 @@ export default function Sidebar({ activeView, setActiveView, isMobileMenuOpen, s
       a.download = `backup-redacoes-clara-${new Date().toISOString().slice(0, 10)}.json`;
       a.click();
       URL.revokeObjectURL(url);
-      alert(`Backup concluído com sucesso! ${redacoesLocais.length} redação(ões) baixada(s).`);
+      notify(`Backup concluído com sucesso! ${redacoesLocais.length} redação(ões) baixada(s).`, 'success');
     } catch (err) {
-      alert('Erro ao baixar backup local: ' + err.message);
+      notify('Erro ao baixar backup local: ' + err.message, 'error');
     }
   };
 

@@ -1,18 +1,22 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense, lazy } from 'react';
 import Sidebar from './components/Sidebar';
 import Header from './components/Header';
-import DashboardView from './components/DashboardView';
-import GestaoRedacoesView from './components/GestaoRedacoesView';
-import ConfigView from './components/ConfigView';
-import RankingView from './components/RankingView';
-import ValidacaoRapidaView from './components/ValidacaoRapidaView';
-import CorrecaoDetalheView from './components/CorrecaoDetalheView';
 import LoginView from './components/LoginView';
-import ProjetoAgoraLandingView from './components/ProjetoAgoraLandingView';
+import ConfirmModal from './components/ConfirmModal';
+import ViewLoadingFallback from './components/ViewLoadingFallback';
 import { clearAllLocalRedacoes } from './db/db';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { authService } from './services/authService';
 import { X, Award, Loader2, Menu } from 'lucide-react';
+
+// Code-splitting via React.lazy() para otimizacao de performance e Core Web Vitals (Fase 3)
+const DashboardView = lazy(() => import('./components/DashboardView'));
+const GestaoRedacoesView = lazy(() => import('./components/GestaoRedacoesView'));
+const ConfigView = lazy(() => import('./components/ConfigView'));
+const RankingView = lazy(() => import('./components/RankingView'));
+const ValidacaoRapidaView = lazy(() => import('./components/ValidacaoRapidaView'));
+const CorrecaoDetalheView = lazy(() => import('./components/CorrecaoDetalheView'));
+const ProjetoAgoraLandingView = lazy(() => import('./components/ProjetoAgoraLandingView'));
 
 function AppContent() {
   const { user, isAuthenticated, isAdmin, isEstudante, loading: authLoading } = useAuth();
@@ -42,6 +46,13 @@ function AppContent() {
   const [selectedRedacao, setSelectedRedacao] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterTab, setFilterTab] = useState('todas');
+
+  // Estado para Modal de Confirmação Acessível (Fase 2 - Eliminação de window.confirm)
+  const [deleteModalState, setDeleteModalState] = useState({
+    isOpen: false,
+    id: null,
+    isDeleting: false
+  });
 
   const handleSetActiveView = (view) => {
     if (activeView !== 'correcao') {
@@ -130,23 +141,37 @@ function AppContent() {
     setTimeout(() => setToast(null), 4000);
   };
 
-  const handleDeleteRedacao = async (id) => {
-    if (window.confirm('Tem certeza que deseja excluir esta redação?')) {
-      // 1. Atualização Otimista Imediata (0ms): Remove o card na hora
-      const previousRedacoes = [...redacoes];
-      setRedacoes(prev => prev.filter(r => String(r.id) !== String(id) && String(r.cloud_id) !== String(id)));
-      showToast('Redação excluída com sucesso!', 'success');
+  // Solicitação de exclusão abre o ConfirmModal acessível
+  const handleDeleteRedacao = (id) => {
+    setDeleteModalState({
+      isOpen: true,
+      id,
+      isDeleting: false
+    });
+  };
 
-      try {
-        // 2. Exclui diretamente no Supabase
-        await authService.deleteCloudRedacao(id);
-        // 3. Atualiza estado de fundo silenciosamente
-        await loadRedacoes(true);
-      } catch (error) {
-        console.error('Erro ao excluir redação:', error);
-        setRedacoes(previousRedacoes);
-        showToast(`Erro ao excluir: ${error.message}`, 'error');
-      }
+  const handleConfirmDelete = async () => {
+    const id = deleteModalState.id;
+    if (!id) return;
+
+    setDeleteModalState(prev => ({ ...prev, isDeleting: true }));
+
+    // 1. Atualização Otimista Imediata (0ms)
+    const previousRedacoes = [...redacoes];
+    setRedacoes(prev => prev.filter(r => String(r.id) !== String(id) && String(r.cloud_id) !== String(id)));
+    setRankingRedacoes(prev => prev.filter(r => String(r.id) !== String(id) && String(r.cloud_id) !== String(id)));
+    showToast('Redação excluída com sucesso!', 'success');
+    setDeleteModalState({ isOpen: false, id: null, isDeleting: false });
+
+    try {
+      // 2. Exclui diretamente no Supabase
+      await authService.deleteCloudRedacao(id);
+      // 3. Atualiza estado de fundo silenciosamente
+      await loadRedacoes(true);
+    } catch (error) {
+      console.error('Erro ao excluir redação:', error);
+      setRedacoes(previousRedacoes);
+      showToast(`Erro ao excluir: ${error.message}`, 'error');
     }
   };
 
@@ -203,6 +228,7 @@ function AppContent() {
           setIsMobileMenuOpen={setIsMobileMenuOpen}
           pendingCount={pendingCount}
           unidentifiedCount={unidentifiedCount}
+          onToast={showToast}
         />
       )}
 
@@ -258,7 +284,7 @@ function AppContent() {
           </div>
         )}
 
-        {/* Page Content Body */}
+        {/* Page Content Body with Suspense Code-Splitting */}
         <main className="flex-1 p-6 overflow-y-auto custom-scrollbar">
           
           {authLoading ? (
@@ -273,9 +299,11 @@ function AppContent() {
               </div>
             </div>
           ) : !isAuthenticated ? (
-            <ProjetoAgoraLandingView onOpenLoginModal={() => setIsLoginModalOpen(true)} />
+            <Suspense fallback={<ViewLoadingFallback message="Carregando portal..." />}>
+              <ProjetoAgoraLandingView onOpenLoginModal={() => setIsLoginModalOpen(true)} />
+            </Suspense>
           ) : (
-            <>
+            <Suspense fallback={<ViewLoadingFallback message="Carregando módulo..." />}>
               {activeView === 'dashboard' && (
                 <DashboardView
                   redacoes={redacoes}
@@ -331,11 +359,24 @@ function AppContent() {
               {activeView === 'config' && (
                 <ConfigView />
               )}
-            </>
+            </Suspense>
           )}
 
         </main>
       </div>
+
+      {/* Accessible Confirmation Dialog */}
+      <ConfirmModal
+        isOpen={deleteModalState.isOpen}
+        isLoading={deleteModalState.isDeleting}
+        title="Excluir Redação Definitivamente"
+        message="Esta ação é permanente e removerá a redação, notas e análise pedagógica do banco de dados na nuvem. Deseja continuar?"
+        confirmText="Excluir Redação"
+        cancelText="Cancelar"
+        isDestructive={true}
+        onConfirm={handleConfirmDelete}
+        onCancel={() => setDeleteModalState({ isOpen: false, id: null, isDeleting: false })}
+      />
 
       {/* Login Modal */}
       {isLoginModalOpen && (

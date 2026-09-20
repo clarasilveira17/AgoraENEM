@@ -147,7 +147,7 @@ export default function RedacoesTableView({ redacoes, isLoading = false, filterT
           </div>
         ) : filteredRedacoes.length === 0 ? (
           <div className="bg-[#ffffff] border border-[#e6e5e0] rounded-xl p-8 text-center text-[#807d72]">
-            <FileText className="w-8 h-8 mx-auto mb-2 text-[#a09c92]" />
+            <FileText className="w-8 h-8 mx-auto mb-2 text-[#807d72]" aria-hidden="true" />
             {isAdmin
               ? 'Nenhuma redação encontrada para os filtros selecionados.'
               : 'Nenhuma redação validada pelo professor encontrada para a sua conta.'}
