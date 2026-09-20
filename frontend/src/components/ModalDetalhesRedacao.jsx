@@ -252,7 +252,7 @@ export default function ModalDetalhesRedacao({ redacao, onClose, onUpdated }) {
       const filename = `Boletim_Redacao_${studentNameClean}_ID${redacao.id}.pdf`;
 
       const canvasOptions = {
-        scale: 2,
+        scale: 3,
         useCORS: true,
         logging: false,
         backgroundColor: '#ffffff',
@@ -262,7 +262,7 @@ export default function ModalDetalhesRedacao({ redacao, onClose, onUpdated }) {
 
       // 1. Capture Page 1
       const canvas1 = await html2canvas(page1El, canvasOptions);
-      const imgData1 = canvas1.toDataURL('image/jpeg', 0.98);
+      const imgData1 = canvas1.toDataURL('image/png');
 
       // 2. Initialize jsPDF in A4 portrait (210mm x 297mm)
       const pdf = new jsPDF({
@@ -273,14 +273,14 @@ export default function ModalDetalhesRedacao({ redacao, onClose, onUpdated }) {
       });
 
       // Add Page 1 (Frente)
-      pdf.addImage(imgData1, 'JPEG', 0, 0, 210, 297, undefined, 'FAST');
+      pdf.addImage(imgData1, 'PNG', 0, 0, 210, 297, undefined, 'FAST');
 
       // 3. Capture Page 2 (Verso) only if explicitly rendered and visible
       if (page2El && page2El.style.display !== 'none' && window.getComputedStyle(page2El).display !== 'none') {
         const canvas2 = await html2canvas(page2El, canvasOptions);
-        const imgData2 = canvas2.toDataURL('image/jpeg', 0.98);
+        const imgData2 = canvas2.toDataURL('image/png');
         pdf.addPage('a4', 'portrait');
-        pdf.addImage(imgData2, 'JPEG', 0, 0, 210, 297, undefined, 'FAST');
+        pdf.addImage(imgData2, 'PNG', 0, 0, 210, 297, undefined, 'FAST');
       }
 
       // Save PDF

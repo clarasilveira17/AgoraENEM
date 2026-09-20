@@ -208,42 +208,43 @@ export default function FolhaOficialRedacao({
             width: '100%',
             borderTop: '1px solid #000000',
             paddingTop: '6px',
-            display: 'grid',
-            gridTemplateColumns: '2fr 1.1fr 1fr 0.9fr',
-            gap: '8px'
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'flex-start',
+            gap: '12px'
           }}>
-            <div>
-              <span style={{ fontSize: '7.5px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.4px', color: '#555555', display: 'block' }}>
+            <div style={{ flex: '2', minWidth: 0 }}>
+              <span style={{ fontSize: '7.5px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.4px', color: '#555555', display: 'block', marginBottom: '2px' }}>
                 ESTUDANTE
               </span>
-              <strong style={{ fontSize: '10px', color: '#000000', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', display: 'block' }}>
+              <strong style={{ fontSize: '10.5px', fontWeight: '800', color: '#000000', display: 'block', lineHeight: '1.2' }}>
                 {studentNameDisplay}
               </strong>
             </div>
 
-            <div>
-              <span style={{ fontSize: '7.5px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.4px', color: '#555555', display: 'block' }}>
+            <div style={{ flex: '1.1', minWidth: 0 }}>
+              <span style={{ fontSize: '7.5px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.4px', color: '#555555', display: 'block', marginBottom: '2px' }}>
                 TURMA
               </span>
-              <strong style={{ fontSize: '10px', color: '#000000', display: 'block' }}>
+              <strong style={{ fontSize: '10px', color: '#000000', display: 'block', lineHeight: '1.2' }}>
                 {turmaDisplay}
               </strong>
             </div>
 
-            <div>
-              <span style={{ fontSize: '7.5px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.4px', color: '#555555', display: 'block' }}>
+            <div style={{ flex: '1', minWidth: 0 }}>
+              <span style={{ fontSize: '7.5px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.4px', color: '#555555', display: 'block', marginBottom: '2px' }}>
                 IDENTIFICADOR
               </span>
-              <strong style={{ fontSize: '10px', color: '#000000', display: 'block' }}>
+              <strong style={{ fontSize: '10px', color: '#000000', display: 'block', lineHeight: '1.2' }}>
                 {codigoRedacao}
               </strong>
             </div>
 
-            <div>
-              <span style={{ fontSize: '7.5px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.4px', color: '#555555', display: 'block' }}>
+            <div style={{ flex: '0.9', minWidth: 0 }}>
+              <span style={{ fontSize: '7.5px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.4px', color: '#555555', display: 'block', marginBottom: '2px' }}>
                 DATA
               </span>
-              <strong style={{ fontSize: '10px', color: '#000000', display: 'block' }}>
+              <strong style={{ fontSize: '10px', color: '#000000', display: 'block', lineHeight: '1.2' }}>
                 {dataLancamentoStr}
               </strong>
             </div>
@@ -326,7 +327,7 @@ export default function FolhaOficialRedacao({
                           paddingLeft: '5px',
                           borderLeft: '1.5px solid #000000',
                           wordBreak: 'normal',
-                          overflowWrap: 'break-word'
+                          overflowWrap: 'normal'
                         }}>
                           "{cleanCitacao}"
                         </div>
@@ -335,7 +336,7 @@ export default function FolhaOficialRedacao({
                       )}
                     </td>
 
-                    <td style={{ padding: '5px 6px', verticalAlign: 'top', lineHeight: '1.3', color: '#1c1c1c', fontSize: '8.5px', wordBreak: 'normal', overflowWrap: 'break-word' }}>
+                    <td style={{ padding: '5px 6px', verticalAlign: 'top', lineHeight: '1.3', color: '#1c1c1c', fontSize: '8.5px', wordBreak: 'normal', overflowWrap: 'normal' }}>
                       {cleanParecer}
                     </td>
                   </tr>
@@ -345,7 +346,7 @@ export default function FolhaOficialRedacao({
           </table>
         </section>
 
-        {/* SEÇÃO 2: RUBRICAS ANALÍTICAS (GRID MINIMALISTA) */}
+        {/* SEÇÃO 2: RUBRICAS ANALÍTICAS (GRID MINIMALISTA TABULAR BOOKTABS) */}
         {showSisedu && (
           <section style={{ marginBottom: '8px', width: '100%' }}>
             <div style={{
@@ -365,85 +366,67 @@ export default function FolhaOficialRedacao({
               </span>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '8px', width: '100%' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '8px', width: '100%' }}>
               {/* Dimensão Discursiva */}
-              <div style={{ border: '1px solid #d1d5db', padding: '6px 10px', width: '100%', boxSizing: 'border-box' }}>
-                <div style={{
-                  fontSize: '9px',
-                  fontWeight: '800',
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.4px',
-                  borderBottom: '1px solid #000000',
-                  paddingBottom: '2px',
-                  marginBottom: '5px',
-                  display: 'flex',
-                  justifyContent: 'space-between'
-                }}>
-                  <span>Dimensão Discursiva</span>
-                  <span>Nível</span>
-                </div>
-
-                {rubricasDiscursiva.map((item, idx) => (
-                  <div key={idx} style={{ marginBottom: idx === rubricasDiscursiva.length - 1 ? 0 : '4px' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '8.5px', marginBottom: '2px' }}>
-                      <span style={{ fontWeight: '600', color: '#000000' }}>{item.title}</span>
-                      <span style={{ fontWeight: '700', color: '#1c1c1c' }}>{item.nivel}</span>
-                    </div>
-                    <div 
-                      role="progressbar" 
-                      aria-valuenow={item.percent} 
-                      aria-valuemin={0} 
-                      aria-valuemax={100} 
-                      aria-label={`${item.title}: ${item.nivel}`}
-                      style={{ width: '100%', height: '3.5px', border: '1px solid #000000', background: 'transparent', position: 'relative' }}
-                    >
-                      <div style={{ height: '100%', backgroundColor: '#000000', width: `${item.percent}%` }}></div>
-                    </div>
-                  </div>
-                ))}
+              <div style={{ border: '1px solid #000000', padding: '6px 10px', width: '100%', boxSizing: 'border-box' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '8.5px', lineHeight: '1.3' }}>
+                  <thead>
+                    <tr style={{ borderBottom: '1px solid #000000' }}>
+                      <th style={{ textAlign: 'left', fontWeight: '800', textTransform: 'uppercase', fontSize: '8px', paddingBottom: '3px', color: '#000000' }}>
+                        Dimensão Discursiva
+                      </th>
+                      <th style={{ textAlign: 'right', fontWeight: '800', textTransform: 'uppercase', fontSize: '8px', paddingBottom: '3px', color: '#000000' }}>
+                        Nível
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {rubricasDiscursiva.map((item, idx) => (
+                      <tr key={idx} style={{ borderBottom: idx === rubricasDiscursiva.length - 1 ? 'none' : '0.5px solid #e5e7eb' }}>
+                        <td style={{ padding: '4px 0', color: '#1c1c1c', fontWeight: '600' }}>{item.title}</td>
+                        <td style={{ padding: '4px 0', textAlign: 'right', fontWeight: '800', color: '#000000' }}>
+                          <span style={{ display: 'inline-block', border: '1px solid #000000', padding: '0.5px 5px', fontSize: '8px', fontWeight: '700', backgroundColor: '#fafafa' }}>
+                            {item.nivel}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
 
               {/* Dimensão Ético-Moral */}
-              <div style={{ border: '1px solid #d1d5db', padding: '6px 10px', width: '100%', boxSizing: 'border-box' }}>
-                <div style={{
-                  fontSize: '9px',
-                  fontWeight: '800',
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.4px',
-                  borderBottom: '1px solid #000000',
-                  paddingBottom: '2px',
-                  marginBottom: '5px',
-                  display: 'flex',
-                  justifyContent: 'space-between'
-                }}>
-                  <span>Dimensão Ético-Moral</span>
-                  <span>Nível</span>
-                </div>
-
-                {rubricasEticoMoral.map((item, idx) => (
-                  <div key={idx} style={{ marginBottom: idx === rubricasEticoMoral.length - 1 ? 0 : '4px' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '8.5px', marginBottom: '2px' }}>
-                      <span style={{ fontWeight: '600', color: '#000000' }}>{item.title}</span>
-                      <span style={{ fontWeight: '700', color: '#1c1c1c' }}>{item.nivel}</span>
-                    </div>
-                    <div 
-                      role="progressbar" 
-                      aria-valuenow={item.percent} 
-                      aria-valuemin={0} 
-                      aria-valuemax={100} 
-                      aria-label={`${item.title}: ${item.nivel}`}
-                      style={{ width: '100%', height: '3.5px', border: '1px solid #000000', background: 'transparent', position: 'relative' }}
-                    >
-                      <div style={{ height: '100%', backgroundColor: '#000000', width: `${item.percent}%` }}></div>
-                    </div>
-                  </div>
-                ))}
+              <div style={{ border: '1px solid #000000', padding: '6px 10px', width: '100%', boxSizing: 'border-box' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '8.5px', lineHeight: '1.3' }}>
+                  <thead>
+                    <tr style={{ borderBottom: '1px solid #000000' }}>
+                      <th style={{ textAlign: 'left', fontWeight: '800', textTransform: 'uppercase', fontSize: '8px', paddingBottom: '3px', color: '#000000' }}>
+                        Dimensão Ético-Moral
+                      </th>
+                      <th style={{ textAlign: 'right', fontWeight: '800', textTransform: 'uppercase', fontSize: '8px', paddingBottom: '3px', color: '#000000' }}>
+                        Nível
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {rubricasEticoMoral.map((item, idx) => (
+                      <tr key={idx} style={{ borderBottom: idx === rubricasEticoMoral.length - 1 ? 'none' : '0.5px solid #e5e7eb' }}>
+                        <td style={{ padding: '4px 0', color: '#1c1c1c', fontWeight: '600' }}>{item.title}</td>
+                        <td style={{ padding: '4px 0', textAlign: 'right', fontWeight: '800', color: '#000000' }}>
+                          <span style={{ display: 'inline-block', border: '1px solid #000000', padding: '0.5px 5px', fontSize: '8px', fontWeight: '700', backgroundColor: '#fafafa' }}>
+                            {item.nivel}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
             </div>
           </section>
         )}
 
-        {/* SEÇÃO 3: TRANSCRIÇÃO INTEGRAL DA REDAÇÃO (SEM WORD-BREAK BUG) */}
+        {/* SEÇÃO 3: TRANSCRIÇÃO INTEGRAL DA REDAÇÃO (SEM QUEBRA DE PALAVRAS MEIO DE FRASE) */}
         <section style={{ marginBottom: '10px', width: '100%' }}>
           <div style={{
             borderBottom: '1px solid #000000',
@@ -482,15 +465,17 @@ export default function FolhaOficialRedacao({
             <div className="essay-body" style={{
               fontFamily: fontSerif,
               fontSize: '9.2pt',
-              lineHeight: '1.5',
+              lineHeight: '1.6',
               color: '#1c1c1c',
-              textAlign: 'justify',
-              hyphens: 'auto',
+              textAlign: 'left',
+              hyphens: 'none',
+              WebkitHyphens: 'none',
+              msHyphens: 'none',
               width: '100%',
               maxWidth: '100%',
               boxSizing: 'border-box',
               wordBreak: 'normal',
-              overflowWrap: 'break-word'
+              overflowWrap: 'normal'
             }}>
               {sanitizedFullText.split('\n\n').filter(Boolean).length > 1 ? (
                 sanitizedFullText.split('\n\n').filter(Boolean).map((paragrafo, pIdx) => (
@@ -498,11 +483,11 @@ export default function FolhaOficialRedacao({
                     key={pIdx}
                     style={{
                       textIndent: '1.6em',
-                      marginBottom: '5px',
+                      marginBottom: '6px',
                       wordBreak: 'normal',
-                      overflowWrap: 'break-word',
-                      hyphens: 'auto',
-                      textAlign: 'justify'
+                      overflowWrap: 'normal',
+                      hyphens: 'none',
+                      textAlign: 'left'
                     }}
                   >
                     {paragrafo.trim()}
@@ -512,11 +497,11 @@ export default function FolhaOficialRedacao({
                 <p
                   style={{
                     textIndent: '1.6em',
-                    marginBottom: '5px',
+                    marginBottom: '6px',
                     wordBreak: 'normal',
-                    overflowWrap: 'break-word',
-                    hyphens: 'auto',
-                    textAlign: 'justify'
+                    overflowWrap: 'normal',
+                    hyphens: 'none',
+                    textAlign: 'left'
                   }}
                 >
                   {sanitizedFullText}
@@ -540,13 +525,14 @@ export default function FolhaOficialRedacao({
               alignItems: 'center',
               justifyContent: 'center',
               textAlign: 'center',
-              marginBottom: '8px'
+              marginBottom: '8px',
+              paddingTop: '15px'
             }}>
               <div style={{
-                width: '300px',
-                borderBottom: '1px solid #000000',
-                marginBottom: '5px',
-                height: '65px' // Espaço amplo para assinatura manual sem estourar 1 folha
+                width: '280px',
+                height: '1px',
+                backgroundColor: '#000000',
+                marginBottom: '6px'
               }}></div>
               <div style={{ fontSize: '9.5px', fontWeight: '700', color: '#000000' }}>
                 {customProfessor || 'Prof. Avaliador Responsável • Banca Examinadora'}

@@ -345,7 +345,7 @@ export default function CorrecaoDetalheView({
       const filename = `Boletim_Redacao_${studentNameClean}_ID${redacao.id}.pdf`;
 
       const canvasOptions = {
-        scale: 2,
+        scale: 3,
         useCORS: true,
         logging: false,
         backgroundColor: '#ffffff',
@@ -354,7 +354,7 @@ export default function CorrecaoDetalheView({
       };
 
       const canvas1 = await html2canvas(page1El, canvasOptions);
-      const imgData1 = canvas1.toDataURL('image/jpeg', 0.98);
+      const imgData1 = canvas1.toDataURL('image/png');
 
       const pdf = new jsPDF({
         orientation: 'portrait',
@@ -363,13 +363,13 @@ export default function CorrecaoDetalheView({
         compress: true
       });
 
-      pdf.addImage(imgData1, 'JPEG', 0, 0, 210, 297, undefined, 'FAST');
+      pdf.addImage(imgData1, 'PNG', 0, 0, 210, 297, undefined, 'FAST');
 
       if (pdfPageMode === 'both' && page2El) {
         const canvas2 = await html2canvas(page2El, canvasOptions);
-        const imgData2 = canvas2.toDataURL('image/jpeg', 0.98);
+        const imgData2 = canvas2.toDataURL('image/png');
         pdf.addPage('a4', 'portrait');
-        pdf.addImage(imgData2, 'JPEG', 0, 0, 210, 297, undefined, 'FAST');
+        pdf.addImage(imgData2, 'PNG', 0, 0, 210, 297, undefined, 'FAST');
       }
 
       pdf.save(filename);
@@ -484,6 +484,17 @@ export default function CorrecaoDetalheView({
           >
             {copiedLink ? <Check className="w-3.5 h-3.5 text-[#1f8a65]" /> : <Share2 className="w-3.5 h-3.5 text-[#807d72]" />}
             <span>{copiedLink ? 'Link Copiado!' : 'Copiar Link'}</span>
+          </button>
+
+          {/* Imprimir / PDF Vetorial */}
+          <button
+            type="button"
+            onClick={() => window.print()}
+            className="px-3 py-1.5 bg-[#ffffff] hover:bg-[#fafaf7] border border-[#e6e5e0] text-[#26251e] text-xs font-mono rounded-lg transition-colors cursor-pointer flex items-center gap-1.5"
+            title="Imprimir direto ou salvar como PDF nativo do navegador"
+          >
+            <Printer className="w-3.5 h-3.5 text-[#807d72]" />
+            <span>Imprimir</span>
           </button>
 
           {/* Baixar PDF Oficial */}
@@ -1061,6 +1072,16 @@ export default function CorrecaoDetalheView({
                 className="px-3 py-1.5 bg-[#fafaf7] hover:bg-[#e6e5e0] border border-[#e6e5e0] text-[#26251e] text-xs font-mono rounded-lg transition-colors cursor-pointer"
               >
                 {isCustomizingPdf ? 'Ocultar Opções' : 'Editar Cabeçalho'}
+              </button>
+
+              <button
+                type="button"
+                onClick={() => window.print()}
+                className="px-3 py-1.5 bg-[#fafaf7] hover:bg-[#e6e5e0] border border-[#e6e5e0] text-[#26251e] text-xs font-mono rounded-lg transition-colors cursor-pointer flex items-center gap-1.5"
+                title="Imprimir direto ou salvar como PDF nativo do navegador"
+              >
+                <Printer className="w-3.5 h-3.5 text-[#807d72]" />
+                <span>Imprimir</span>
               </button>
 
               <button
