@@ -279,33 +279,54 @@ export const redacaoRepository = {
     }
 
     if (db) {
-      const extractedDataStr = typeof data.extracted_data === 'string'
-        ? data.extracted_data
-        : JSON.stringify(data.extracted_data || {});
+      try {
+        let sqliteUserId = data.user_id ? Number(data.user_id) : null;
+        let sqliteValidadoPor = data.validado_por ? Number(data.validado_por) : null;
 
-      const result = db.prepare(`
-        INSERT INTO redacoes (
-          user_id, nome_aluno, turma_aluno, nome_detectado, data_captura,
-          tipo_input, imagem_base64, texto_digitado, is_synced, extracted_data, nota_final,
-          status_validacao, validado_por, data_validacao
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?, ?, ?, ?)
-      `).run(
-        data.user_id,
-        data.nome_aluno,
-        data.turma_aluno,
-        data.nome_detectado ?? 1,
-        data.data_captura || new Date().toISOString(),
-        data.tipo_input || 'imagem',
-        data.imagem_base64 || null,
-        data.texto_digitado || null,
-        extractedDataStr,
-        data.nota_final || 0,
-        data.status_validacao || 'VALIDADA',
-        data.validado_por || null,
-        data.data_validacao || null
-      );
+        // Verifica integridade referencial no SQLite antes de inserir para evitar 'FOREIGN KEY constraint failed'
+        if (sqliteUserId) {
+          const userRow = db.prepare('SELECT id FROM users WHERE id = ?').get(sqliteUserId);
+          if (!userRow) sqliteUserId = null;
+        }
 
-      if (!savedId) savedId = result.lastInsertRowid;
+        if (sqliteValidadoPor) {
+          const valRow = db.prepare('SELECT id FROM users WHERE id = ?').get(sqliteValidadoPor);
+          if (!valRow) sqliteValidadoPor = null;
+        }
+
+        const extractedDataStr = typeof data.extracted_data === 'string'
+          ? data.extracted_data
+          : JSON.stringify(data.extracted_data || {});
+
+        const result = db.prepare(`
+          INSERT INTO redacoes (
+            user_id, nome_aluno, turma_aluno, nome_detectado, data_captura,
+            tipo_input, imagem_base64, texto_digitado, is_synced, extracted_data, nota_final,
+            status_validacao, validado_por, data_validacao
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?, ?, ?, ?)
+        `).run(
+          sqliteUserId,
+          data.nome_aluno,
+          data.turma_aluno,
+          data.nome_detectado ?? 1,
+          data.data_captura || new Date().toISOString(),
+          data.tipo_input || 'imagem',
+          data.imagem_base64 || null,
+          data.texto_digitado || null,
+          extractedDataStr,
+          data.nota_final || 0,
+          data.status_validacao || 'VALIDADA',
+          sqliteValidadoPor,
+          data.data_validacao || null
+        );
+
+        if (!savedId) savedId = result.lastInsertRowid;
+      } catch (sqliteErr) {
+        console.warn('[redacaoRepository.create SQLite Warning]:', sqliteErr.message);
+        if (!savedId && !isSupabaseConfigured) {
+          throw sqliteErr;
+        }
+      }
     }
 
     return savedId;

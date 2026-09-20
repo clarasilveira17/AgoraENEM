@@ -80,7 +80,7 @@ export async function handleCorrection(req, res) {
       const isConfident = aiConfidence === 'ALTA' && Boolean(resolved.user_id);
 
       const statusValidacao = isConfident ? 'VALIDADA' : 'PENDENTE_VALIDACAO';
-      const validadoPor = isConfident ? (requestingUser?.id || 1) : null;
+      const validadoPor = isConfident ? (requestingUser?.id || null) : null;
       const dataValidacao = isConfident ? new Date().toISOString() : null;
 
       // Persistência unificada via Repositório
