@@ -197,7 +197,11 @@ export const getRedacoes = async (req, res) => {
       // Estudante só recebe suas próprias redações validadas
       if (user.role !== 'ADMIN') {
         const cleanStudentName = (user.nome || '').trim();
-        query = query.eq('status_validacao', 'VALIDADA').or(`user_id.eq.${user.id},nome_aluno.ilike.${cleanStudentName}`);
+        if (cleanStudentName) {
+          query = query.eq('status_validacao', 'VALIDADA').or(`user_id.eq.${user.id},nome_aluno.ilike."%${cleanStudentName}%"`);
+        } else {
+          query = query.eq('status_validacao', 'VALIDADA').eq('user_id', user.id);
+        }
       }
 
       const { data, error } = await query;

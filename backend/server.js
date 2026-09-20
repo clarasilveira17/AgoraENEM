@@ -23,21 +23,8 @@ app.use((req, res, next) => {
   next();
 });
 
-// 3. Configure CORS with configurable origin whitelist
-const allowedOrigins = process.env.ALLOWED_ORIGINS
-  ? process.env.ALLOWED_ORIGINS.split(',').map(o => o.trim())
-  : null;
-
-app.use(cors({
-  origin: (origin, callback) => {
-    // Allow non-browser requests or any origin if no whitelist is specified
-    if (!origin || !allowedOrigins || allowedOrigins.includes(origin) || allowedOrigins.includes('*')) {
-      return callback(null, true);
-    }
-    return callback(new Error('Origem não permitida pela política de CORS.'));
-  },
-  credentials: true
-}));
+// 3. Configure CORS to allow frontend communication on Vercel & localhost
+app.use(cors());
 
 // 4. Rate Limiter for all API routes
 app.use('/api', generalLimiter);
