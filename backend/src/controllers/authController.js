@@ -1,9 +1,18 @@
+import crypto from 'crypto';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import db from '../config/db.js';
-import { supabase, isSupabaseConfigured } from '../config/supabaseClient.js';
 import { JWT_SECRET } from '../middleware/authMiddleware.js';
 import { invalidateStudentCache } from '../utils/turmasUtils.js';
+import userRepository from '../repositories/userRepository.js';
+import logger from '../utils/logger.js';
+
+function safeCompareStrings(a, b) {
+  if (typeof a !== 'string' || typeof b !== 'string') return false;
+  const bufA = Buffer.from(a);
+  const bufB = Buffer.from(b);
+  if (bufA.length !== bufB.length) return false;
+  return crypto.timingSafeEqual(bufA, bufB);
+}
 
 // POST /api/auth/login
 export const login = async (req, res) => {
@@ -14,29 +23,8 @@ export const login = async (req, res) => {
       return res.status(400).json({ error: 'E-mail e senha são obrigatórios.' });
     }
 
-    let user = null;
     const cleanEmail = String(email).trim().toLowerCase();
-
-    if (isSupabaseConfigured) {
-      const { data, error } = await supabase
-        .from('users')
-        .select('*')
-        .ilike('email', cleanEmail)
-        .maybeSingle();
-
-      if (error) {
-        console.error('[Supabase Auth Login Error]:', error.message);
-      }
-      user = data;
-    }
-
-    if (!user && db) {
-      try {
-        user = db.prepare('SELECT * FROM users WHERE LOWER(email) = LOWER(?)').get(cleanEmail);
-      } catch (dbErr) {
-        console.warn('[DB Auth Login Fallback Warning]:', dbErr.message);
-      }
-    }
+    const user = await userRepository.findByEmail(cleanEmail);
 
     if (!user) {
       return res.status(401).json({ error: 'Credenciais inválidas. Verifique seu e-mail e senha.' });
@@ -46,7 +34,7 @@ export const login = async (req, res) => {
       return res.status(401).json({ error: 'Usuário sem senha cadastrada. Por favor, redefina sua senha com a coordenação.' });
     }
 
-    const isValidPassword = bcrypt.compareSync(String(senha), user.senha_hash);
+    const isValidPassword = await bcrypt.compare(String(senha), user.senha_hash);
     if (!isValidPassword) {
       return res.status(401).json({ error: 'Credenciais inválidas. Verifique seu e-mail e senha.' });
     }
@@ -58,6 +46,8 @@ export const login = async (req, res) => {
     };
 
     const token = jwt.sign(tokenPayload, JWT_SECRET, { expiresIn: '7d' });
+
+    logger.info(`Usuário autenticado com sucesso: ${user.email} (${user.role})`, { requestId: req.id, userId: user.id });
 
     return res.status(200).json({
       message: 'Login realizado com sucesso!',
@@ -71,7 +61,7 @@ export const login = async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('[Auth Error Login]:', error);
+    logger.error('Erro interno ao realizar login', { requestId: req.id, error });
     return res.status(500).json({ error: 'Erro interno ao realizar login.', details: error?.message });
   }
 };
@@ -89,28 +79,12 @@ export const register = async (req, res) => {
     const cleanNome = nome.trim();
     const cleanTurma = turma.trim();
 
-    if (isSupabaseConfigured) {
-      const { data: existing } = await supabase
-        .from('users')
-        .select('id')
-        .ilike('email', cleanEmail)
-        .maybeSingle();
-
-      if (existing) {
-        return res.status(400).json({ error: 'Este e-mail já está cadastrado no sistema.' });
-      }
-    } else if (db) {
-      try {
-        const existingUser = db.prepare('SELECT id FROM users WHERE LOWER(email) = LOWER(?)').get(cleanEmail);
-        if (existingUser) {
-          return res.status(400).json({ error: 'Este e-mail já está cadastrado no sistema.' });
-        }
-      } catch (dbErr) {
-        console.warn('[DB Register Check Warning]:', dbErr.message);
-      }
+    const existingUser = await userRepository.findByEmail(cleanEmail);
+    if (existingUser) {
+      return res.status(400).json({ error: 'Este e-mail já está cadastrado no sistema.' });
     }
 
-    const senhaHash = bcrypt.hashSync(senha, 10);
+    const senhaHash = await bcrypt.hash(senha, 10);
     
     // Lista estrita de domínios institucionais exclusivos de professores e gestores escolares da SEDUC/CE
     const strictTeacherDomains = [
@@ -141,7 +115,11 @@ export const register = async (req, res) => {
     } else if (role === 'ADMIN') {
       // Se solicitou papel de Professor com e-mail comum, exige chave da escola configurada no ambiente ou autorização por admin autenticado
       const isAuthorizedByAdmin = req.user?.role === 'ADMIN';
-      const isValidSchoolCode = Boolean(PROFESSOR_SECRET_KEY && codigoEscola && codigoEscola.trim() === PROFESSOR_SECRET_KEY);
+      const isValidSchoolCode = Boolean(
+        PROFESSOR_SECRET_KEY &&
+        codigoEscola &&
+        safeCompareStrings(String(codigoEscola).trim(), String(PROFESSOR_SECRET_KEY).trim())
+      );
 
       if (isAuthorizedByAdmin || isValidSchoolCode) {
         userRole = 'ADMIN';
@@ -152,47 +130,19 @@ export const register = async (req, res) => {
       }
     }
 
-    let newUser = null;
-
-    if (isSupabaseConfigured) {
-      const { data, error } = await supabase
-        .from('users')
-        .insert({
-          nome: cleanNome,
-          email: cleanEmail,
-          senha_hash: senhaHash,
-          role: userRole,
-          turma: cleanTurma
-        })
-        .select('id, nome, email, role, turma')
-        .single();
-
-      if (error) {
-        throw new Error(`Erro no Supabase Register: ${error.message}`);
-      }
-      newUser = data;
-    } else if (db) {
-      try {
-        const result = db.prepare(`
-          INSERT INTO users (nome, email, senha_hash, role, turma)
-          VALUES (?, ?, ?, ?, ?)
-        `).run(cleanNome, cleanEmail, senhaHash, userRole, cleanTurma);
-
-        newUser = {
-          id: result.lastInsertRowid,
-          nome: cleanNome,
-          email: cleanEmail,
-          role: userRole,
-          turma: cleanTurma
-        };
-      } catch (dbErr) {
-        throw new Error(`Erro no SQLite Register: ${dbErr.message}`);
-      }
-    }
+    const newUser = await userRepository.createUser({
+      nome: cleanNome,
+      email: cleanEmail,
+      senhaHash,
+      role: userRole,
+      turma: cleanTurma
+    });
 
     const token = jwt.sign({ id: newUser.id, email: newUser.email, role: newUser.role }, JWT_SECRET, { expiresIn: '7d' });
 
     invalidateStudentCache();
+
+    logger.info(`Novo usuário cadastrado: ${newUser.email} (${newUser.role})`, { requestId: req.id, userId: newUser.id });
 
     res.status(201).json({
       message: 'Cadastro realizado com sucesso!',
@@ -200,7 +150,7 @@ export const register = async (req, res) => {
       user: newUser
     });
   } catch (error) {
-    console.error('[Auth Error Register]:', error);
+    logger.error('Erro interno ao realizar cadastro', { requestId: req.id, error });
     res.status(500).json({ error: 'Erro interno ao realizar cadastro.' });
   }
 };
@@ -213,38 +163,10 @@ export const getMe = (req, res) => {
 // GET /api/auth/estudantes (Admin list of students for assignment)
 export const getEstudantes = async (req, res) => {
   try {
-    let estudantes = [];
-
-    if (isSupabaseConfigured) {
-      const { data, error } = await supabase
-        .from('users')
-        .select('id, nome, email, turma, created_at')
-        .eq('role', 'ESTUDANTE')
-        .order('nome', { ascending: true });
-
-      if (error) {
-        console.error('[Supabase GetEstudantes Error]:', error.message);
-      } else {
-        estudantes = data || [];
-      }
-    }
-
-    if (estudantes.length === 0 && db) {
-      try {
-        estudantes = db.prepare(`
-          SELECT id, nome, email, turma, created_at 
-          FROM users 
-          WHERE role = 'ESTUDANTE' 
-          ORDER BY nome ASC
-        `).all() || [];
-      } catch (dbErr) {
-        console.warn('[DB GetEstudantes Warning]:', dbErr.message);
-      }
-    }
-
+    const estudantes = await userRepository.findStudents();
     res.status(200).json({ estudantes });
   } catch (error) {
-    console.error('[Auth Error GetEstudantes]:', error);
+    logger.error('Erro ao buscar estudantes', { requestId: req.id, error });
     res.status(500).json({ error: 'Erro ao buscar estudantes.' });
   }
 };
@@ -261,44 +183,25 @@ export const createEstudante = async (req, res) => {
     const cleanEmail = email.trim().toLowerCase();
     const cleanTurma = (turma || 'Geral').trim();
     const senhaFinal = senha || 'Agora@2026';
-    const senhaHash = bcrypt.hashSync(senhaFinal, 10);
+    const senhaHash = await bcrypt.hash(senhaFinal, 10);
 
-    let newStudent = null;
-
-    if (isSupabaseConfigured) {
-      const { data, error } = await supabase
-        .from('users')
-        .upsert({
-          nome: cleanNome,
-          email: cleanEmail,
-          turma: cleanTurma,
-          role: 'ESTUDANTE',
-          senha_hash: senhaHash
-        }, { onConflict: 'email' })
-        .select('id, nome, email, turma, role')
-        .single();
-
-      if (error) {
-        console.error('[Supabase CreateEstudante Error]:', error.message);
-        return res.status(400).json({ error: 'Erro ao cadastrar estudante no Supabase: ' + error.message });
-      }
-      newStudent = data;
-    } else if (db) {
-      const info = db.prepare(`
-        INSERT INTO users (nome, email, senha_hash, role, turma)
-        VALUES (?, ?, ?, 'ESTUDANTE', ?)
-      `).run(cleanNome, cleanEmail, senhaHash, cleanTurma);
-      newStudent = { id: info.lastInsertRowid, nome: cleanNome, email: cleanEmail, turma: cleanTurma, role: 'ESTUDANTE' };
-    }
+    const newStudent = await userRepository.upsertStudent({
+      nome: cleanNome,
+      email: cleanEmail,
+      turma: cleanTurma,
+      senhaHash
+    });
 
     invalidateStudentCache();
+
+    logger.info(`Estudante provisionado pela coordenação: ${newStudent.email}`, { requestId: req.id, userId: newStudent.id });
 
     res.status(201).json({
       message: 'Estudante cadastrado com sucesso!',
       estudante: newStudent
     });
   } catch (error) {
-    console.error('[Auth CreateEstudante Error]:', error);
+    logger.error('Erro ao cadastrar estudante', { requestId: req.id, error });
     res.status(500).json({ error: 'Erro ao cadastrar estudante.' });
   }
 };

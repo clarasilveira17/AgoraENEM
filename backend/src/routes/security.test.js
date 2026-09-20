@@ -101,6 +101,27 @@ describe('Security, Performance & Robustness Suite (Fases 1, 2 e 3)', () => {
     expect(data.error).toBe('Endpoint da API não encontrado.');
   });
 
+  it('deve rejeitar lote de IA com mais de 10 redações com 400 Bad Request para proteger contra timeouts', async () => {
+    const adminToken = jwt.sign({ id: 1, role: 'ADMIN' }, JWT_SECRET);
+    const oversizedBatch = Array.from({ length: 11 }, (_, i) => ({
+      id: i + 1,
+      texto_digitado: `Redação de teste número ${i + 1}`
+    }));
+
+    const res = await fetch(`${baseUrl}/api/corrigir`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${adminToken}`
+      },
+      body: JSON.stringify({ redacoes: oversizedBatch })
+    });
+
+    expect(res.status).toBe(400);
+    const data = await res.json();
+    expect(data.error).toContain('Tamanho máximo de lote excedido');
+  });
+
   it('deve resolver estudante com suporte a cache em memória e invalidação', async () => {
     invalidateStudentCache();
     const result1 = await resolveStudent(null, 'Ana Vivian Dutra Torreira', '3A');

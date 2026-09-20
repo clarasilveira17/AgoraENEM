@@ -1,6 +1,5 @@
 import jwt from 'jsonwebtoken';
-import db from '../config/db.js';
-import { supabase, isSupabaseConfigured } from '../config/supabaseClient.js';
+import userRepository from '../repositories/userRepository.js';
 
 const getJwtSecret = () => {
   const secret = process.env.JWT_SECRET || process.env.SUPABASE_SECRET_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -22,28 +21,7 @@ export const authenticate = async (req, res, next) => {
   const token = authHeader.split(' ')[1];
   try {
     const decoded = jwt.verify(token, JWT_SECRET);
-    
-    let user = null;
-
-    if (isSupabaseConfigured) {
-      const { data, error } = await supabase
-        .from('users')
-        .select('id, nome, email, role, turma')
-        .eq('id', decoded.id)
-        .maybeSingle();
-
-      if (!error && data) {
-        user = data;
-      }
-    }
-
-    if (!user && db) {
-      try {
-        user = db.prepare('SELECT id, nome, email, role, turma FROM users WHERE id = ?').get(decoded.id);
-      } catch (dbErr) {
-        console.warn('[DB Authenticate Warning]:', dbErr.message);
-      }
-    }
+    const user = await userRepository.findById(decoded.id);
 
     if (!user) {
       return res.status(401).json({ error: 'Usuário não encontrado ou inativo.' });
@@ -72,28 +50,7 @@ export const optionalAuthenticate = async (req, res, next) => {
   const token = authHeader.split(' ')[1];
   try {
     const decoded = jwt.verify(token, JWT_SECRET);
-    let user = null;
-
-    if (isSupabaseConfigured) {
-      const { data, error } = await supabase
-        .from('users')
-        .select('id, nome, email, role, turma')
-        .eq('id', decoded.id)
-        .maybeSingle();
-
-      if (!error && data) {
-        user = data;
-      }
-    }
-
-    if (!user && db) {
-      try {
-        user = db.prepare('SELECT id, nome, email, role, turma FROM users WHERE id = ?').get(decoded.id);
-      } catch (dbErr) {
-        console.warn('[DB Optional Authenticate Warning]:', dbErr.message);
-      }
-    }
-
+    const user = await userRepository.findById(decoded.id);
     if (user) {
       req.user = user;
     }
@@ -102,4 +59,3 @@ export const optionalAuthenticate = async (req, res, next) => {
   }
   next();
 };
-

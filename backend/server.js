@@ -93,7 +93,10 @@ process.on('unhandledRejection', (reason, promise) => {
 });
 
 process.on('uncaughtException', (error) => {
-  console.error('[Process Uncaught Exception]:', error);
+  console.error('[Process Uncaught Exception Fatal]:', error);
+  if (process.env.NODE_ENV !== 'test') {
+    process.exit(1);
+  }
 });
 
 export default app;

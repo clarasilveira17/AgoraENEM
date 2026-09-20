@@ -1,9 +1,7 @@
 import { agenteAvaliadorUnificado, getMockENEMEvaluation } from '../services/aiService.js';
-import { supabase, isSupabaseConfigured } from '../config/supabaseClient.js';
-import db from '../config/db.js';
-import jwt from 'jsonwebtoken';
-import { JWT_SECRET } from '../middleware/authMiddleware.js';
-import { resolveStudent, normalizeTurma } from '../utils/turmasUtils.js';
+import { resolveStudent } from '../utils/turmasUtils.js';
+import redacaoRepository from '../repositories/redacaoRepository.js';
+import logger from '../utils/logger.js';
 
 export async function handleCorrection(req, res) {
   let itemsToProcess = req.body?.redacoes || req.body?.documents;
@@ -15,25 +13,23 @@ export async function handleCorrection(req, res) {
     return res.status(400).json({ error: 'Payload must contain a "redacoes" array or essay fields.' });
   }
 
-  console.log(`[CorrectionController] Recebida solicitação em lote para avaliar ${itemsToProcess.length} redação(ões)...`);
-
-  // Extrai usuário autenticado do cabeçalho se fornecido
-  let requestingUser = null;
-  const authHeader = req.headers.authorization;
-  if (authHeader && authHeader.startsWith('Bearer ')) {
-    try {
-      const token = authHeader.split(' ')[1];
-      const decoded = jwt.verify(token, JWT_SECRET);
-      if (decoded && decoded.id) {
-        requestingUser = decoded;
-      }
-    } catch (e) {
-      // Token inválido ou expirado, continua normalmente
-    }
+  // Limite de segurança para requisição síncrona HTTP
+  const MAX_BATCH_SIZE = 10;
+  if (itemsToProcess.length > MAX_BATCH_SIZE) {
+    return res.status(400).json({
+      error: `Tamanho máximo de lote excedido para avaliação síncrona. Envie no máximo ${MAX_BATCH_SIZE} redações por requisição para evitar timeouts de conexão.`
+    });
   }
 
+  const requestingUser = req.user || null;
   const apiKey = process.env.GEMINI_API_KEY;
   const results = [];
+
+  logger.info(`Iniciando avaliação de lote com ${itemsToProcess.length} redação(ões)`, {
+    requestId: req.id,
+    batchSize: itemsToProcess.length,
+    userId: requestingUser?.id
+  });
 
   for (let i = 0; i < itemsToProcess.length; i++) {
     const item = itemsToProcess[i];
@@ -49,10 +45,10 @@ export async function handleCorrection(req, res) {
 
       if (apiKey && apiKey.trim() !== '') {
         try {
-          console.log(`[CorrectionController] [ID ${id}] 🎓 Executando Avaliação Unificada (OCR + ENEM + Sisedu)...`);
+          logger.info(`[ID ${id}] Executando Avaliação Unificada (OCR + ENEM + Sisedu)...`, { requestId: req.id, essayId: id });
           extractedData = await agenteAvaliadorUnificado(imagem_base64, texto_digitado, nome_aluno || null, turma_aluno || null, apiKey);
         } catch (apiErr) {
-          console.error(`[CorrectionController] [ID ${id}] ❌ Erro na API Gemini: ${apiErr.message}`);
+          logger.error(`[ID ${id}] Falha na API Gemini: ${apiErr.message}`, { requestId: req.id, essayId: id, error: apiErr });
           results.push({
             id,
             status: 'error',
@@ -61,7 +57,7 @@ export async function handleCorrection(req, res) {
           continue;
         }
       } else {
-        console.log(`[CorrectionController] [ID ${id}] [MODO DEMONSTRAÇÃO] Nenhuma GEMINI_API_KEY configurada. Gerando avaliação simulada...`);
+        logger.warn(`[ID ${id}] Nenhuma GEMINI_API_KEY configurada. Gerando avaliação simulada (Modo Demonstração)...`, { requestId: req.id, essayId: id });
         extractedData = getMockENEMEvaluation(id, texto_digitado, nome_aluno, turma_aluno);
       }
 
@@ -69,7 +65,7 @@ export async function handleCorrection(req, res) {
         extractedData.texto_transcrito = texto_digitado;
       }
 
-      // Consolidação dos dados finais avaliados
+      // Consolidação dos dados avaliados
       const rawStudentName = (nome_aluno && nome_aluno.trim()) || (extractedData.aluno && extractedData.aluno.trim()) || '';
       const rawTurma = (turma_aluno && turma_aluno.trim()) || (extractedData.turma && extractedData.turma.trim()) || '';
       const notaTotalEnem = extractedData.avaliacoes?.enem?.nota_total_enem ?? extractedData.nota_final ?? 0;
@@ -80,8 +76,6 @@ export async function handleCorrection(req, res) {
       const resolved = await resolveStudent(item.user_id, rawStudentName, rawTurma);
       const isNameDetected = Boolean(resolved.nome_aluno && !['Aluno Não Identificado', 'Estudante Não Identificado', 'Não identificado'].includes(resolved.nome_aluno));
 
-      // Sinceridade da IA:
-      // Se a IA teve dúvida ("MEDIA" ou "BAIXA") ou não encontrou aluno no cadastro, marca como pendente para o professor conferir
       const aiConfidence = extractedData.confianca_identificacao || (isNameDetected && resolved.user_id ? 'ALTA' : 'BAIXA');
       const isConfident = aiConfidence === 'ALTA' && Boolean(resolved.user_id);
 
@@ -89,88 +83,31 @@ export async function handleCorrection(req, res) {
       const validadoPor = isConfident ? (requestingUser?.id || 1) : null;
       const dataValidacao = isConfident ? new Date().toISOString() : null;
 
-      // =========================================================================
-      // PERSISTÊNCIA DIRETA NO SUPABASE (NUVEM) - SEM BUROCRACIA DE SINCRONIZAÇÃO
-      // =========================================================================
-      let savedCloudId = null;
-      if (isSupabaseConfigured) {
-        try {
-          console.log(`[CorrectionController] Gravando redação no Supabase (${resolved.nome_aluno} | Status: ${statusValidacao})...`);
-
-          const { data: insertedRow, error: insErr } = await supabase
-            .from('redacoes')
-            .insert({
-              user_id: resolved.user_id,
-              nome_aluno: resolved.nome_aluno,
-              turma_aluno: resolved.turma_aluno,
-              nome_detectado: isNameDetected ? 1 : 0,
-              data_captura: dataCaptura,
-              tipo_input: tipoInput,
-              imagem_base64: imagem_base64 || null,
-              texto_digitado: texto_digitado || null,
-              is_synced: 1,
-              extracted_data: extractedData,
-              nota_final: notaTotalEnem,
-              status_validacao: statusValidacao,
-              validado_por: validadoPor,
-              data_validacao: dataValidacao
-            })
-            .select('id')
-            .maybeSingle();
-
-          if (insErr) {
-            console.error('[CorrectionController] Erro ao gravar no Supabase:', insErr.message);
-          } else if (insertedRow) {
-            savedCloudId = insertedRow.id;
-            console.log(`[CorrectionController] ✅ Redação salva no Supabase com ID ${savedCloudId}!`);
-          }
-        } catch (supabaseErr) {
-          console.error('[CorrectionController] Exceção de rede no Supabase:', supabaseErr.message);
-        }
-      }
-
-      // Persistência local no SQLite como redundância/cache
-      if (db) {
-        try {
-          const stmt = db.prepare(`
-            INSERT INTO redacoes (
-              user_id, nome_aluno, turma_aluno, nome_detectado, data_captura,
-              tipo_input, imagem_base64, texto_digitado, is_synced,
-              extracted_data, nota_final, status_validacao, validado_por, data_validacao
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?, ?, ?, ?)
-          `);
-          const info = stmt.run(
-            resolved.user_id,
-            resolved.nome_aluno,
-            resolved.turma_aluno,
-            isNameDetected ? 1 : 0,
-            dataCaptura,
-            tipoInput,
-            imagem_base64 || null,
-            texto_digitado || null,
-            JSON.stringify(extractedData),
-            notaTotalEnem,
-            statusValidacao,
-            validadoPor,
-            dataValidacao
-          );
-          if (!savedCloudId) {
-            savedCloudId = info.lastInsertRowid;
-          }
-          console.log(`[CorrectionController] Gravado no SQLite com ID ${info.lastInsertRowid}`);
-        } catch (sqliteErr) {
-          console.warn('[CorrectionController] SQLite insert warning:', sqliteErr.message);
-        }
-      }
+      // Persistência unificada via Repositório
+      const savedId = await redacaoRepository.create({
+        user_id: resolved.user_id,
+        nome_aluno: resolved.nome_aluno,
+        turma_aluno: resolved.turma_aluno,
+        nome_detectado: isNameDetected ? 1 : 0,
+        data_captura: dataCaptura,
+        tipo_input: tipoInput,
+        imagem_base64: imagem_base64 || null,
+        texto_digitado: texto_digitado || null,
+        extracted_data: extractedData,
+        nota_final: notaTotalEnem,
+        status_validacao: statusValidacao,
+        validado_por: validadoPor,
+        data_validacao: dataValidacao
+      });
 
       results.push({
         id,
-        supabase_id: savedCloudId,
-        cloud_id: savedCloudId,
+        supabase_id: savedId,
+        cloud_id: savedId,
         status: 'success',
         extracted: {
           ...extractedData,
-          id: savedCloudId || id,
+          id: savedId || id,
           aluno: resolved.nome_aluno,
           turma: resolved.turma_aluno,
           nota_final: notaTotalEnem,
@@ -180,10 +117,10 @@ export async function handleCorrection(req, res) {
       });
 
       if (i < itemsToProcess.length - 1) {
-        await new Promise(r => setTimeout(r, 1000));
+        await new Promise(r => setTimeout(r, 600));
       }
     } catch (error) {
-      console.error(`[CorrectionController] Erro ao processar redação ID ${id}:`, error.message);
+      logger.error(`Erro ao processar redação ID ${id}`, { requestId: req.id, essayId: id, error });
       results.push({
         id,
         status: 'error',
@@ -192,7 +129,7 @@ export async function handleCorrection(req, res) {
     }
   }
 
-  console.log(`[CorrectionController] Concluída avaliação e persistência de ${results.length} redação(ões).`);
+  logger.info(`Avaliação de lote finalizada com sucesso: ${results.length} processada(s)`, { requestId: req.id });
 
   return res.status(200).json({
     message: 'Redações avaliadas e gravadas no banco de dados com sucesso.',

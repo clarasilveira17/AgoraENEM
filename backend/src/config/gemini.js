@@ -13,9 +13,9 @@ export const GEMINI_MODELS = [
 ];
 
 /**
- * Helper to call Gemini API with automatic model alias fallback & retry handling
+ * Helper to call Gemini API with automatic model alias fallback, timeout & retry handling
  */
-export async function generateContentWithFallback(genAI, config, contents) {
+export async function generateContentWithFallback(genAI, config, contents, timeoutMs = 45000) {
   let lastErr = null;
 
   for (const modelName of GEMINI_MODELS) {
@@ -24,7 +24,19 @@ export async function generateContentWithFallback(genAI, config, contents) {
         ...config,
         model: modelName
       });
-      const result = await model.generateContent(contents);
+
+      const timeoutPromise = new Promise((_, reject) => {
+        const timer = setTimeout(() => {
+          reject(new Error(`[Gemini Timeout] Chamada para modelo ${modelName} excedeu limite de ${timeoutMs / 1000}s.`));
+        }, timeoutMs);
+        if (timer.unref) timer.unref();
+      });
+
+      const result = await Promise.race([
+        model.generateContent(contents),
+        timeoutPromise
+      ]);
+
       console.log(`[Gemini API] Executado com sucesso via modelo: ${modelName}`);
       return result;
     } catch (err) {
@@ -33,7 +45,8 @@ export async function generateContentWithFallback(genAI, config, contents) {
       const isRetryable = msg.includes('404') || msg.includes('not found') ||
                           msg.includes('429') || msg.includes('Quota') ||
                           msg.includes('503') || msg.includes('Service Unavailable') ||
-                          msg.includes('high demand') || msg.includes('overloaded');
+                          msg.includes('high demand') || msg.includes('overloaded') ||
+                          msg.includes('Timeout');
 
       if (isRetryable) {
         console.warn(`[Gemini Fallback] Modelo ${modelName} indisponível (${msg.substring(0, 80)}...). Alternando modelo...`);
@@ -44,3 +57,4 @@ export async function generateContentWithFallback(genAI, config, contents) {
   }
   throw lastErr;
 }
+

@@ -67,3 +67,11 @@ export const aiCorrectionLimiter = createRateLimiter({
   max: 15,
   message: 'Limite de avaliações de IA por minuto atingido para proteger sua cota. Aguarde alguns instantes antes de enviar novas redações.'
 });
+
+// Limiter restrito para Exportação de Banco de Dados (5 reqs / hora)
+export const exportDbLimiter = createRateLimiter({
+  windowMs: 60 * 60 * 1000,
+  max: 5,
+  message: 'Limite de exportações de banco de dados por hora atingido por motivos de segurança e conformidade LGPD.'
+});
+

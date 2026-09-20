@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { 
-  UserCheck, Search, Check, ChevronRight, ChevronLeft, 
+import {
+  UserCheck, Search, Check, ChevronRight, ChevronLeft,
   GraduationCap, AlertTriangle, FileText, CheckCircle2,
   Filter, ExternalLink, RefreshCw, Save, ZoomIn, ZoomOut,
   RotateCw, Maximize2, Minimize2, Image as ImageIcon, Loader2,
@@ -10,16 +10,16 @@ import { authService } from '../services/authService';
 import { db } from '../db/db';
 import { TURMAS_ESCOLA, normalizeTurma } from '../constants/turmas';
 
-export default function ValidacaoRapidaView({ 
-  redacoes = [], 
-  onSelectRedacao, 
+export default function ValidacaoRapidaView({
+  redacoes = [],
+  onSelectRedacao,
   onRedacaoUpdated,
   onRefresh
 }) {
   const [estudantes, setEstudantes] = useState([]);
   const [isLoadingEstudantes, setIsLoadingEstudantes] = useState(false);
   const [viewMode, setViewMode] = useState('esteira'); // 'esteira' | 'tabela'
-  
+
   // Métricas de validação manual/automática
   const totalCount = redacoes.length;
   const conferidasCount = useMemo(() => {
@@ -32,7 +32,7 @@ export default function ValidacaoRapidaView({
   const [filterType, setFilterType] = useState(pendentesCount > 0 ? 'pendentes' : 'todas'); // 'pendentes' | 'conferidas' | 'todas'
   const [selectedTurmaFilter, setSelectedTurmaFilter] = useState('todas');
   const [searchQuery, setSearchQuery] = useState('');
-  
+
   // Estado Esteira
   const [currentIndex, setCurrentIndex] = useState(0);
   const [selectedStudentId, setSelectedStudentId] = useState('');
@@ -45,7 +45,7 @@ export default function ValidacaoRapidaView({
   // Cache de imagens em alta definição (ID -> Base64)
   const [imagesCache, setImagesCache] = useState({});
   const [isLoadingImage, setIsLoadingImage] = useState(false);
-  
+
   // Controles de Visualização da Imagem
   const [zoomLevel, setZoomLevel] = useState(1);
   const [rotation, setRotation] = useState(0);
@@ -75,10 +75,10 @@ export default function ValidacaoRapidaView({
   const filteredRedacoes = useMemo(() => {
     return redacoes.filter(r => {
       const isConferida = (r.status_validacao === 'VALIDADA' && Boolean(r.user_id)) || Boolean(r.data_validacao || r.validado_por);
-      
+
       if (filterType === 'pendentes' && isConferida) return false;
       if (filterType === 'conferidas' && !isConferida) return false;
-      
+
       const turma = normalizeTurma(r.turma_aluno || r.extracted_data?.turma || '');
       if (selectedTurmaFilter !== 'todas' && turma.toLowerCase() !== selectedTurmaFilter.toLowerCase()) {
         return false;
@@ -155,7 +155,7 @@ export default function ValidacaoRapidaView({
         if (data?.imagem_base64) {
           setImagesCache(prev => ({ ...prev, [nextItem.id]: data.imagem_base64 }));
         }
-      }).catch(() => {});
+      }).catch(() => { });
     }
   }, [currentIndex, filteredRedacoes, imagesCache]);
 
@@ -183,7 +183,7 @@ export default function ValidacaoRapidaView({
   const filteredEstudantesOptions = useMemo(() => {
     if (!studentSearch.trim()) return estudantes.slice(0, 30);
     const q = studentSearch.toLowerCase().trim();
-    return estudantes.filter(e => 
+    return estudantes.filter(e =>
       (e.nome || '').toLowerCase().includes(q) ||
       (e.email || '').toLowerCase().includes(q) ||
       (e.turma || '').toLowerCase().includes(q)
@@ -203,10 +203,10 @@ export default function ValidacaoRapidaView({
     if (!currentRedacao) return;
     const aiNome = currentRedacao.extracted_data?.aluno || currentRedacao.nome_aluno;
     const aiTurma = currentRedacao.extracted_data?.turma || currentRedacao.turma_aluno;
-    
+
     // Tenta achar estudante correspondente na lista
     if (aiNome && estudantes.length > 0) {
-      const match = estudantes.find(e => 
+      const match = estudantes.find(e =>
         (e.nome || '').trim().toLowerCase() === aiNome.trim().toLowerCase()
       );
       if (match) {
@@ -233,8 +233,8 @@ export default function ValidacaoRapidaView({
     try {
       const finalNome = (nomeToSave || manualNome).trim() || 'Estudante Não Identificado';
       const finalTurma = (turmaToSave || manualTurma).trim() || 'Sem Turma';
-      const finalUserId = userIdToSave !== undefined 
-        ? (userIdToSave ? Number(userIdToSave) : null) 
+      const finalUserId = userIdToSave !== undefined
+        ? (userIdToSave ? Number(userIdToSave) : null)
         : (selectedStudentId ? Number(selectedStudentId) : null);
 
       const timestamp = new Date().toISOString();
@@ -292,7 +292,7 @@ export default function ValidacaoRapidaView({
 
   return (
     <div className="space-y-5 animate-fadeIn">
-      
+
       {/* ======================================================== */}
       {/* 1. HEADER PRINCIPAL COM MÉTRICAS DE CONFERÊNCIA REAL    */}
       {/* ======================================================== */}
@@ -332,7 +332,7 @@ export default function ValidacaoRapidaView({
 
         {/* Barra de Progresso Real */}
         <div className="mt-4 w-full bg-[#e6e5e0] h-2 rounded-full overflow-hidden">
-          <div 
+          <div
             className="bg-[#1f8a65] h-full transition-all duration-500 rounded-full"
             style={{ width: `${percentualConcluido}%` }}
           />
@@ -343,15 +343,14 @@ export default function ValidacaoRapidaView({
       {/* 2. BARRA DE FILTROS & ABAS DE NAVEGAÇÃO                  */}
       {/* ======================================================== */}
       <div className="bg-[#fafaf7] border border-[#e6e5e0] p-3.5 rounded-xl flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3 shadow-xs">
-        
+
         {/* Toggle Modo: Esteira vs Tabela */}
         <div className="flex items-center gap-1 bg-[#ffffff] border border-[#e6e5e0] p-1 rounded-lg text-xs font-medium">
           <button
             type="button"
             onClick={() => setViewMode('esteira')}
-            className={`px-3 py-1.5 rounded-md transition-all cursor-pointer flex items-center gap-1.5 ${
-              viewMode === 'esteira' ? 'bg-[#26251e] text-white shadow-xs font-semibold' : 'text-[#807d72] hover:text-[#26251e]'
-            }`}
+            className={`px-3 py-1.5 rounded-md transition-all cursor-pointer flex items-center gap-1.5 ${viewMode === 'esteira' ? 'bg-[#26251e] text-white shadow-xs font-semibold' : 'text-[#807d72] hover:text-[#26251e]'
+              }`}
           >
             <ImageIcon className="w-3.5 h-3.5" />
             <span>Modo Esteira (Folha Manuscrita)</span>
@@ -359,9 +358,8 @@ export default function ValidacaoRapidaView({
           <button
             type="button"
             onClick={() => setViewMode('tabela')}
-            className={`px-3 py-1.5 rounded-md transition-all cursor-pointer flex items-center gap-1.5 ${
-              viewMode === 'tabela' ? 'bg-[#26251e] text-white shadow-xs font-semibold' : 'text-[#807d72] hover:text-[#26251e]'
-            }`}
+            className={`px-3 py-1.5 rounded-md transition-all cursor-pointer flex items-center gap-1.5 ${viewMode === 'tabela' ? 'bg-[#26251e] text-white shadow-xs font-semibold' : 'text-[#807d72] hover:text-[#26251e]'
+              }`}
           >
             <FileText className="w-3.5 h-3.5" />
             <span>Modo Tabela ({filteredRedacoes.length})</span>
@@ -370,15 +368,14 @@ export default function ValidacaoRapidaView({
 
         {/* Abas de Status e Filtros */}
         <div className="flex flex-wrap items-center gap-2">
-          
+
           {/* Abas de Conferência */}
           <div className="flex items-center bg-[#ffffff] border border-[#e6e5e0] p-0.5 rounded-lg text-xs font-mono">
             <button
               type="button"
               onClick={() => { setFilterType('pendentes'); setCurrentIndex(0); }}
-              className={`px-2.5 py-1 rounded transition-colors cursor-pointer flex items-center gap-1 ${
-                filterType === 'pendentes' ? 'bg-[#f54e00]/15 text-[#f54e00] font-bold' : 'text-[#807d72] hover:text-[#26251e]'
-              }`}
+              className={`px-2.5 py-1 rounded transition-colors cursor-pointer flex items-center gap-1 ${filterType === 'pendentes' ? 'bg-[#f54e00]/15 text-[#f54e00] font-bold' : 'text-[#807d72] hover:text-[#26251e]'
+                }`}
             >
               <Clock className="w-3 h-3" />
               <span>Pendentes ({pendentesCount})</span>
@@ -386,9 +383,8 @@ export default function ValidacaoRapidaView({
             <button
               type="button"
               onClick={() => { setFilterType('conferidas'); setCurrentIndex(0); }}
-              className={`px-2.5 py-1 rounded transition-colors cursor-pointer flex items-center gap-1 ${
-                filterType === 'conferidas' ? 'bg-[#1f8a65]/15 text-[#1f8a65] font-bold' : 'text-[#807d72] hover:text-[#26251e]'
-              }`}
+              className={`px-2.5 py-1 rounded transition-colors cursor-pointer flex items-center gap-1 ${filterType === 'conferidas' ? 'bg-[#1f8a65]/15 text-[#1f8a65] font-bold' : 'text-[#807d72] hover:text-[#26251e]'
+                }`}
             >
               <CheckCircle className="w-3 h-3" />
               <span>Conferidas ({conferidasCount})</span>
@@ -396,9 +392,8 @@ export default function ValidacaoRapidaView({
             <button
               type="button"
               onClick={() => { setFilterType('todas'); setCurrentIndex(0); }}
-              className={`px-2.5 py-1 rounded transition-colors cursor-pointer ${
-                filterType === 'todas' ? 'bg-[#26251e] text-white font-bold' : 'text-[#807d72] hover:text-[#26251e]'
-              }`}
+              className={`px-2.5 py-1 rounded transition-colors cursor-pointer ${filterType === 'todas' ? 'bg-[#26251e] text-white font-bold' : 'text-[#807d72] hover:text-[#26251e]'
+                }`}
             >
               <span>Todas ({totalCount})</span>
             </button>
@@ -453,8 +448,8 @@ export default function ValidacaoRapidaView({
               {filterType === 'pendentes' ? 'Parabéns! Todas as redações foram conferidas.' : 'Nenhuma redação encontrada.'}
             </h3>
             <p className="text-xs text-[#807d72] max-w-md mx-auto">
-              {filterType === 'pendentes' 
-                ? 'Todas as 50 redações já possuem validação confirmada pelo professor.' 
+              {filterType === 'pendentes'
+                ? 'Todas as redações já possuem validação confirmada pelo professor.'
                 : 'Tente alterar os filtros ou o termo de busca.'}
             </p>
             {filterType === 'pendentes' && (
@@ -469,7 +464,7 @@ export default function ValidacaoRapidaView({
           </div>
         ) : currentRedacao && (
           <div className="space-y-4">
-            
+
             {/* Navegador Superior & Minimapa #1 a #50 */}
             <div className="bg-[#ffffff] border border-[#e6e5e0] p-3 sm:p-4 rounded-xl shadow-xs space-y-3">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -479,7 +474,7 @@ export default function ValidacaoRapidaView({
                     {currentIndex + 1} de {filteredRedacoes.length}
                   </span>
                   <span className="text-xs font-mono text-[#807d72]">ID #{currentRedacao.id}</span>
-                  
+
                   <span className="px-2 py-0.5 rounded text-[11px] font-mono font-bold bg-[#f54e00]/10 text-[#f54e00] border border-[#f54e00]/20">
                     {currentRedacao.nota_final} pts
                   </span>
@@ -528,13 +523,12 @@ export default function ValidacaoRapidaView({
                         key={r.id}
                         type="button"
                         onClick={() => setCurrentIndex(idx)}
-                        className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold shrink-0 transition-all cursor-pointer ${
-                          isCurrent
+                        className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold shrink-0 transition-all cursor-pointer ${isCurrent
                             ? 'bg-[#26251e] text-white ring-2 ring-[#f54e00]'
                             : isConf
                               ? 'bg-[#9fc9a2]/30 text-[#1f8a65] border border-[#9fc9a2]'
                               : 'bg-[#fafaf7] text-[#807d72] border border-[#e6e5e0] hover:border-[#26251e]'
-                        }`}
+                          }`}
                         title={`Redação #${r.id} - ${r.nome_aluno || 'Pendente'}`}
                       >
                         {idx + 1}
@@ -547,10 +541,10 @@ export default function ValidacaoRapidaView({
 
             {/* Grid Principal: Folha Manuscrita (Esq) vs Painel de Seleção (Dir) */}
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
-              
+
               {/* LADO ESQUERDO (7 Colunas): VISUALIZADOR COMPLETO DA FOLHA MANUSCRITA */}
               <div className="lg:col-span-7 bg-[#ffffff] border border-[#e6e5e0] rounded-xl p-4 sm:p-5 space-y-3 shadow-xs">
-                
+
                 {/* Barra de Controles da Imagem */}
                 <div className="flex items-center justify-between pb-2 border-b border-[#e6e5e0] text-xs">
                   <div className="flex items-center gap-2 font-mono font-medium text-[#26251e]">
@@ -610,7 +604,7 @@ export default function ValidacaoRapidaView({
                 </div>
 
                 {/* Box da Imagem com Visualização Completa (Sem Cortes) */}
-                <div 
+                <div
                   ref={imageContainerRef}
                   className="relative bg-slate-900 rounded-lg border border-slate-800 h-[680px] overflow-y-auto overflow-x-auto custom-scrollbar p-3 flex flex-col items-center"
                 >
@@ -620,7 +614,7 @@ export default function ValidacaoRapidaView({
                       <span>Carregando folha original em alta resolução...</span>
                     </div>
                   ) : currentImageBase64 ? (
-                    <div 
+                    <div
                       className="w-full transition-transform duration-200 origin-top flex flex-col items-center"
                       style={{
                         transform: `scale(${zoomLevel}) rotate(${rotation}deg)`,
@@ -663,7 +657,7 @@ export default function ValidacaoRapidaView({
 
               {/* LADO DIREITO (5 Colunas): PAINEL DE VALIDAÇÃO E SELEÇÃO DE ALUNO */}
               <div className="lg:col-span-5 bg-[#ffffff] border border-[#e6e5e0] rounded-xl p-5 space-y-4 shadow-xs sticky top-4">
-                
+
                 <div>
                   <h4 className="text-sm font-semibold text-[#26251e] flex items-center gap-2">
                     <UserCheck className="w-4 h-4 text-[#1f8a65]" />
@@ -685,21 +679,19 @@ export default function ValidacaoRapidaView({
                   const isMed = conf === 'MEDIA';
 
                   return (
-                    <div className={`p-3.5 rounded-lg border space-y-2 ${
-                      isHigh
+                    <div className={`p-3.5 rounded-lg border space-y-2 ${isHigh
                         ? 'bg-emerald-50/70 border-emerald-300 text-emerald-950'
                         : isMed
-                        ? 'bg-amber-50/80 border-amber-300 text-amber-950'
-                        : 'bg-rose-50/80 border-rose-300 text-rose-950'
-                    }`}>
+                          ? 'bg-amber-50/80 border-amber-300 text-amber-950'
+                          : 'bg-rose-50/80 border-rose-300 text-rose-950'
+                      }`}>
                       <div className="flex items-center justify-between text-xs font-mono font-bold">
                         <span className="flex items-center gap-1.5">
                           <Sparkles className={`w-3.5 h-3.5 ${isHigh ? 'text-emerald-600' : isMed ? 'text-amber-600' : 'text-rose-600'}`} />
                           Diagnóstico de Certeza da IA:
                         </span>
-                        <span className={`px-2 py-0.5 rounded text-[10px] uppercase font-mono font-bold ${
-                          isHigh ? 'bg-emerald-200 text-emerald-900' : isMed ? 'bg-amber-200 text-amber-900' : 'bg-rose-200 text-rose-900'
-                        }`}>
+                        <span className={`px-2 py-0.5 rounded text-[10px] uppercase font-mono font-bold ${isHigh ? 'bg-emerald-200 text-emerald-900' : isMed ? 'bg-amber-200 text-amber-900' : 'bg-rose-200 text-rose-900'
+                          }`}>
                           Certeza {conf}
                         </span>
                       </div>
@@ -758,7 +750,7 @@ export default function ValidacaoRapidaView({
                     </span>
                     <span className="text-[10px] text-[#807d72]">({estudantes.length} alunos)</span>
                   </label>
-                  
+
                   <div className="relative">
                     <Search className="w-3.5 h-3.5 text-[#807d72] absolute left-3 top-1/2 -translate-y-1/2" />
                     <input
@@ -769,8 +761,8 @@ export default function ValidacaoRapidaView({
                       className="w-full pl-9 pr-8 py-2 bg-[#ffffff] border border-[#e6e5e0] rounded-md text-xs text-[#26251e] placeholder-[#a09c92] focus:outline-none focus:border-[#26251e]"
                     />
                     {studentSearch && (
-                      <button 
-                        onClick={() => setStudentSearch('')} 
+                      <button
+                        onClick={() => setStudentSearch('')}
                         className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#807d72] hover:text-[#26251e] cursor-pointer"
                       >
                         <X className="w-3.5 h-3.5" />
@@ -1004,7 +996,7 @@ export default function ValidacaoRapidaView({
       {/* ======================================================== */}
       {isFullscreen && currentRedacao && (
         <div className="fixed inset-0 z-50 bg-black/90 backdrop-blur-sm flex flex-col animate-fadeIn">
-          
+
           {/* Header do Modal */}
           <div className="p-4 bg-slate-900 border-b border-slate-800 flex items-center justify-between text-white">
             <div className="flex items-center gap-3">
@@ -1059,7 +1051,7 @@ export default function ValidacaoRapidaView({
           {/* Área de Visualização Fullscreen */}
           <div className="flex-1 overflow-auto custom-scrollbar p-6 flex items-start justify-center">
             {currentImageBase64 ? (
-              <div 
+              <div
                 className="transition-transform duration-200 origin-top flex justify-center"
                 style={{
                   transform: `scale(${zoomLevel}) rotate(${rotation}deg)`,
