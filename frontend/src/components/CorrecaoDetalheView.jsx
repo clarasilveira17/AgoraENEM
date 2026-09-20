@@ -39,6 +39,26 @@ function getNivelBadgeClass(nivel) {
   return 'bg-[#f54e00]/15 text-[#f54e00] border-[#f54e00]/30';
 }
 
+function getParsedLines(text) {
+  if (!text || text === 'Transcrição indisponível.') {
+    return ['Transcrição indisponível.'];
+  }
+  const rawLines = text.split('\n');
+  if (rawLines.length >= 4) {
+    return rawLines;
+  }
+  const lines = [];
+  rawLines.forEach(paragraph => {
+    const trimmed = paragraph.trim();
+    if (!trimmed) return;
+    const sentences = trimmed.split(/(?<=[.!?])\s+/);
+    sentences.forEach(s => {
+      if (s.trim()) lines.push(s.trim());
+    });
+  });
+  return lines.length ? lines : rawLines;
+}
+
 export default function CorrecaoDetalheView({ 
   redacao, 
   redacoes = [], 
@@ -202,27 +222,7 @@ export default function CorrecaoDetalheView({
 
   const fullTextContent = redacao.texto_digitado || data.texto_transcrito || 'Transcrição indisponível.';
 
-  // Estudo de linhas: preserva quebras pautadas 01 a 30 da folha ou divide por parágrafos/frases se o texto for contínuo
-  const parsedLines = useMemo(() => {
-    if (!fullTextContent || fullTextContent === 'Transcrição indisponível.') {
-      return ['Transcrição indisponível.'];
-    }
-    const rawLines = fullTextContent.split('\n');
-    if (rawLines.length >= 4) {
-      return rawLines;
-    }
-    // Se veio tudo em 1 único bloco contínuo, formata em linhas pautadas por sentenças
-    const lines = [];
-    rawLines.forEach(paragraph => {
-      const trimmed = paragraph.trim();
-      if (!trimmed) return;
-      const sentences = trimmed.split(/(?<=[.!?])\s+/);
-      sentences.forEach(s => {
-        if (s.trim()) lines.push(s.trim());
-      });
-    });
-    return lines.length ? lines : rawLines;
-  }, [fullTextContent]);
+  const parsedLines = getParsedLines(fullTextContent);
 
   const handleCopyText = () => {
     navigator.clipboard.writeText(fullTextContent);
