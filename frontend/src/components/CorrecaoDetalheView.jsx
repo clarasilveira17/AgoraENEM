@@ -194,6 +194,7 @@ export default function CorrecaoDetalheView({
   const c2Val = Number(enem.competencia_2?.nota ?? 0);
   const c3Val = Number(enem.competencia_3?.nota ?? 0);
   const c4Val = Number(enem.competencia_4?.nota ?? 0);
+  const c5Val = Number(enem.competencia_5?.nota ?? 0);
   const sumCompetencias = c1Val + c2Val + c3Val + c4Val + c5Val;
   const notaEnemCalculada = (enem.competencia_1 || enem.competencia_2) ? sumCompetencias : Number(enem.nota_total_enem ?? redacao.nota_final ?? 0);
   const devolutivaEnem = data.devolutiva_enem || (data.devolutiva_nivel_inicial && data.devolutiva_nivel_inicial.includes('Competência') ? data.devolutiva_nivel_inicial : null);
