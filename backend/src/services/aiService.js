@@ -142,7 +142,12 @@ ${textoDigitado ? `\nTEXTO DIGITADO:\n"""\n${textoDigitado}\n"""` : ''}`;
     genAI,
     {
       systemInstruction,
-      generationConfig: { responseMimeType: 'application/json' }
+      generationConfig: {
+        responseMimeType: 'application/json',
+        temperature: 0.0,
+        topP: 0.95,
+        topK: 1
+      }
     },
     contents
   );
