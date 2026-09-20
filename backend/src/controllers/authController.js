@@ -128,8 +128,8 @@ export const register = async (req, res) => {
 
     const isStudentDomain = studentDomains.some(domain => cleanEmail.endsWith(domain));
     const isStrictTeacherDomain = strictTeacherDomains.some(domain => cleanEmail.endsWith(domain));
-    const { codigoEscola } = req.body; // Chave opcional de validação de professor (ex: "AGORA2026" ou enviada via ENV)
-    const PROFESSOR_SECRET_KEY = process.env.PROFESSOR_SECRET_KEY || 'AGORA2026';
+    const { codigoEscola } = req.body;
+    const PROFESSOR_SECRET_KEY = process.env.PROFESSOR_SECRET_KEY;
 
     let userRole = 'ESTUDANTE';
 
@@ -138,12 +138,15 @@ export const register = async (req, res) => {
     } else if (isStrictTeacherDomain) {
       userRole = 'ADMIN';
     } else if (role === 'ADMIN') {
-      // Se solicitou papel de Professor com e-mail comum (ex: gmail.com), exige validação por chave da escola ou por admin autenticado
-      if (req.user?.role === 'ADMIN' || (codigoEscola && codigoEscola.trim().toUpperCase() === PROFESSOR_SECRET_KEY)) {
+      // Se solicitou papel de Professor com e-mail comum, exige chave da escola configurada no ambiente ou autorização por admin autenticado
+      const isAuthorizedByAdmin = req.user?.role === 'ADMIN';
+      const isValidSchoolCode = Boolean(PROFESSOR_SECRET_KEY && codigoEscola && codigoEscola.trim() === PROFESSOR_SECRET_KEY);
+
+      if (isAuthorizedByAdmin || isValidSchoolCode) {
         userRole = 'ADMIN';
       } else {
         return res.status(403).json({
-          error: 'Para se cadastrar como Professor utilizando e-mail pessoal, informe a Chave da Escola fornecida pela coordenação.'
+          error: 'Cadastro de Professor com e-mail pessoal não autorizado. É necessário informar uma Chave da Escola válida ou ter convite de um Administrador.'
         });
       }
     }

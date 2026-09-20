@@ -110,27 +110,24 @@ if (db) {
     console.log('[SQLite DB] Migração de colunas concluída ou não necessária.');
   }
 
-  // Seed / Sync Default Admin user (Profa. Clara)
-  const ADMIN_EMAIL = 'clara.gabriellee16@gmail.com';
-  const ADMIN_PASS = 'Clara@Enem2026';
-  const adminPasswordHash = bcrypt.hashSync(ADMIN_PASS, 10);
+  // Seed / Sync Initial Admin user (Apenas se configurado via variáveis de ambiente)
+  const ADMIN_INIT_EMAIL = process.env.ADMIN_INIT_EMAIL;
+  const ADMIN_INIT_PASSWORD = process.env.ADMIN_INIT_PASSWORD;
 
-  try {
-    const existingAdmin = db.prepare("SELECT id FROM users WHERE LOWER(email) = LOWER(?)").get(ADMIN_EMAIL);
-    if (!existingAdmin) {
-      db.prepare(`
-        INSERT INTO users (nome, email, senha_hash, role, turma)
-        VALUES (?, ?, ?, ?, ?)
-      `).run('Profa. Clara Silveira', ADMIN_EMAIL, adminPasswordHash, 'ADMIN', 'Coordenação Pedagógica');
-      console.log(`[SQLite DB] Admin padrão criado: ${ADMIN_EMAIL} / ${ADMIN_PASS}`);
-    } else {
-      db.prepare(`
-        UPDATE users SET senha_hash = ?, role = 'ADMIN' WHERE LOWER(email) = LOWER(?)
-      `).run(adminPasswordHash, ADMIN_EMAIL);
-      console.log(`[SQLite DB] Admin padrão atualizado: ${ADMIN_EMAIL}`);
+  if (ADMIN_INIT_EMAIL && ADMIN_INIT_PASSWORD) {
+    try {
+      const adminPasswordHash = bcrypt.hashSync(ADMIN_INIT_PASSWORD, 10);
+      const existingAdmin = db.prepare("SELECT id FROM users WHERE LOWER(email) = LOWER(?)").get(ADMIN_INIT_EMAIL);
+      if (!existingAdmin) {
+        db.prepare(`
+          INSERT INTO users (nome, email, senha_hash, role, turma)
+          VALUES (?, ?, ?, ?, ?)
+        `).run('Administrador', ADMIN_INIT_EMAIL, adminPasswordHash, 'ADMIN', 'Coordenação Pedagógica');
+        console.log(`[SQLite DB] Usuário admin inicial provisionado a partir do ambiente: ${ADMIN_INIT_EMAIL}`);
+      }
+    } catch (err) {
+      console.error('[SQLite DB] Erro ao provisionar usuário admin inicial:', err.message);
     }
-  } catch (err) {
-    console.error('[SQLite DB] Erro ao sincronizar usuário admin padrão:', err.message);
   }
 } else {
   // Safe Fallback Mock DB object so calling db.prepare / db.exec doesn't throw null reference error

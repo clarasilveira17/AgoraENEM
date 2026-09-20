@@ -663,7 +663,11 @@ export const deleteRedacao = async (req, res) => {
   try {
     const { id } = req.params;
 
-    if (req.user && req.user.role === 'ESTUDANTE') {
+    if (!req.user) {
+      return res.status(401).json({ error: 'Acesso não autorizado. Autenticação necessária.' });
+    }
+
+    if (req.user.role !== 'ADMIN') {
       return res.status(403).json({ error: 'Apenas professores/administradores podem excluir redações.' });
     }
 
@@ -693,16 +697,23 @@ export const deleteRedacao = async (req, res) => {
 // GET /api/export-db or /api/redacoes/export-db
 export const exportDatabase = async (req, res) => {
   try {
+    if (!req.user) {
+      return res.status(401).json({ error: 'Acesso não autorizado.' });
+    }
+    if (req.user.role !== 'ADMIN') {
+      return res.status(403).json({ error: 'Apenas administradores podem exportar o banco de dados.' });
+    }
+
     let users = [];
     let redacoes = [];
 
     if (isSupabaseConfigured) {
-      const { data: uData } = await supabase.from('users').select('*');
+      const { data: uData } = await supabase.from('users').select('id, nome, email, role, turma, created_at');
       const { data: rData } = await supabase.from('redacoes').select('*');
       users = uData || [];
       redacoes = rData || [];
     } else {
-      users = db.prepare('SELECT id, nome, email, senha_hash, role, turma, created_at FROM users').all();
+      users = db.prepare('SELECT id, nome, email, role, turma, created_at FROM users').all();
       redacoes = db.prepare('SELECT * FROM redacoes').all();
     }
 

@@ -2,7 +2,19 @@ import jwt from 'jsonwebtoken';
 import db from '../config/db.js';
 import { supabase, isSupabaseConfigured } from '../config/supabaseClient.js';
 
-export const JWT_SECRET = process.env.JWT_SECRET || 'agora-enem-secret-key-2026';
+const getJwtSecret = () => {
+  const secret = process.env.JWT_SECRET;
+  if (!secret) {
+    if (process.env.NODE_ENV === 'production') {
+      throw new Error('[Segurança Crítica] Variável de ambiente JWT_SECRET obrigatória não configurada.');
+    }
+    console.warn('[Segurança Alerta] JWT_SECRET não configurado no .env. Usando fallback temporário de desenvolvimento local.');
+    return 'dev-insecure-secret-key-change-me-in-env';
+  }
+  return secret;
+};
+
+export const JWT_SECRET = getJwtSecret();
 
 export const authenticate = async (req, res, next) => {
   const authHeader = req.headers.authorization;
