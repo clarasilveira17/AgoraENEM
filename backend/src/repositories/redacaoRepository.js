@@ -193,30 +193,80 @@ export const redacaoRepository = {
     return formatted;
   },
 
+  async getNextAvailableId() {
+    if (isSupabaseConfigured) {
+      try {
+        const { data, error } = await supabase
+          .from('redacoes')
+          .select('id')
+          .order('id', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (!error && data && data.id) {
+          return Number(data.id) + 1;
+        }
+      } catch (err) {
+        console.warn('[redacaoRepository] Falha ao consultar MAX(id):', err.message);
+      }
+    }
+    return 1;
+  },
+
   async create(data) {
     let savedId = null;
 
     if (isSupabaseConfigured) {
-      const { data: inserted, error } = await supabase
+      const payload = {
+        user_id: data.user_id,
+        nome_aluno: data.nome_aluno,
+        turma_aluno: data.turma_aluno,
+        nome_detectado: data.nome_detectado ?? 1,
+        data_captura: data.data_captura || new Date().toISOString(),
+        tipo_input: data.tipo_input || 'imagem',
+        imagem_base64: data.imagem_base64 || null,
+        texto_digitado: data.texto_digitado || null,
+        is_synced: 1,
+        extracted_data: data.extracted_data || {},
+        nota_final: data.nota_final || 0,
+        status_validacao: data.status_validacao || 'VALIDADA',
+        validado_por: data.validado_por || null,
+        data_validacao: data.data_validacao || null
+      };
+
+      // 1. Primeira tentativa: inserção padrão usando a sequence do PostgreSQL
+      let { data: inserted, error } = await supabase
         .from('redacoes')
-        .insert({
-          user_id: data.user_id,
-          nome_aluno: data.nome_aluno,
-          turma_aluno: data.turma_aluno,
-          nome_detectado: data.nome_detectado ?? 1,
-          data_captura: data.data_captura || new Date().toISOString(),
-          tipo_input: data.tipo_input || 'imagem',
-          imagem_base64: data.imagem_base64 || null,
-          texto_digitado: data.texto_digitado || null,
-          is_synced: 1,
-          extracted_data: data.extracted_data || {},
-          nota_final: data.nota_final || 0,
-          status_validacao: data.status_validacao || 'VALIDADA',
-          validado_por: data.validado_por || null,
-          data_validacao: data.data_validacao || null
-        })
+        .insert(payload)
         .select('id')
         .single();
+
+      // 2. Fallback de sequence desincronizada: se houver conflito de redacoes_pkey, calcula MAX(id) + 1 e insere com ID explícito
+      if (error && (error.code === '23505' || String(error.message).includes('redacoes_pkey'))) {
+        console.warn('[redacaoRepository.create] Conflito de redacoes_pkey detectado. Recuperando sequence com MAX(id) + 1...');
+        
+        let attempts = 0;
+        let success = false;
+        
+        while (attempts < 3 && !success) {
+          attempts++;
+          const nextId = await this.getNextAvailableId() + (attempts - 1);
+          const retryRes = await supabase
+            .from('redacoes')
+            .insert({ ...payload, id: nextId })
+            .select('id')
+            .single();
+
+          if (!retryRes.error && retryRes.data) {
+            inserted = retryRes.data;
+            error = null;
+            success = true;
+            break;
+          } else {
+            error = retryRes.error;
+          }
+        }
+      }
 
       if (error) {
         console.error('[redacaoRepository.create] Erro ao inserir no Supabase:', error);
