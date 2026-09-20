@@ -218,7 +218,12 @@ export const redacaoRepository = {
         .select('id')
         .single();
 
-      if (!error && inserted) {
+      if (error) {
+        console.error('[redacaoRepository.create] Erro ao inserir no Supabase:', error);
+        throw new Error(error.message || 'Erro ao persistir redação no Supabase');
+      }
+
+      if (inserted) {
         savedId = inserted.id;
       }
     }

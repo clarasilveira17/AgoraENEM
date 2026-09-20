@@ -120,10 +120,17 @@ export async function processRedacoesCloud(items, onProgress, defaults = {}) {
     });
   }
 
+  if (successCount === 0 && errorCount > 0) {
+    const firstError = allResults.find(r => r.error)?.error || 'Falha ao processar redação na nuvem.';
+    throw new Error(firstError);
+  }
+
   return {
     successCount,
     errorCount,
     results: allResults,
-    message: `${successCount} redação(ões) avaliada(s) e gravada(s) na nuvem Supabase com sucesso!`
+    message: errorCount > 0
+      ? `${successCount} redação(ões) avaliada(s) com sucesso, ${errorCount} com erro.`
+      : `${successCount} redação(ões) avaliada(s) e gravada(s) na nuvem Supabase com sucesso!`
   };
 }
