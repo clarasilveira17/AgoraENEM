@@ -394,23 +394,25 @@ export default function FolhaOficialRedacao({
                       display: 'flex',
                       justifyContent: 'space-between',
                       alignItems: 'center',
-                      padding: '4px 0',
-                      borderBottom: idx === rubricasDiscursiva.length - 1 ? 'none' : '0.5px solid #e5e7eb'
+                      padding: '5px 0',
+                      boxSizing: 'border-box'
                     }}
                   >
-                    <span style={{ fontSize: '8.5px', color: '#1c1c1c', fontWeight: '600' }}>
+                    <span style={{ fontSize: '8.5px', color: '#1c1c1c', fontWeight: '600', lineHeight: '1.2' }}>
                       {item.title}
                     </span>
                     <span style={{
-                      display: 'inline-block',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
                       border: '1px solid #000000',
-                      borderRadius: '2px',
-                      padding: '1px 6px',
+                      borderRadius: '3px',
+                      padding: '2px 8px',
                       fontSize: '8px',
                       fontWeight: '700',
                       backgroundColor: '#fafafa',
                       color: '#000000',
-                      lineHeight: '1.2'
+                      lineHeight: '1'
                     }}>
                       {item.nivel}
                     </span>
@@ -441,23 +443,25 @@ export default function FolhaOficialRedacao({
                       display: 'flex',
                       justifyContent: 'space-between',
                       alignItems: 'center',
-                      padding: '4px 0',
-                      borderBottom: idx === rubricasEticoMoral.length - 1 ? 'none' : '0.5px solid #e5e7eb'
+                      padding: '5px 0',
+                      boxSizing: 'border-box'
                     }}
                   >
-                    <span style={{ fontSize: '8.5px', color: '#1c1c1c', fontWeight: '600' }}>
+                    <span style={{ fontSize: '8.5px', color: '#1c1c1c', fontWeight: '600', lineHeight: '1.2' }}>
                       {item.title}
                     </span>
                     <span style={{
-                      display: 'inline-block',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
                       border: '1px solid #000000',
-                      borderRadius: '2px',
-                      padding: '1px 6px',
+                      borderRadius: '3px',
+                      padding: '2px 8px',
                       fontSize: '8px',
                       fontWeight: '700',
                       backgroundColor: '#fafafa',
                       color: '#000000',
-                      lineHeight: '1.2'
+                      lineHeight: '1'
                     }}>
                       {item.nivel}
                     </span>
@@ -684,11 +688,10 @@ export default function FolhaOficialRedacao({
           </section>
         </div>
 
-        {/* RODAPÉ DA PÁGINA 2 COM AMPLO ESPAÇO FÍSICO PARA ASSINATURA & NOTAS LEGAIS */}
+        {/* RODAPÉ DA PÁGINA 2 COM ASSINATURA & NOTAS LEGAIS (SEM LINHA DIVISÓRIA SUPERIOR) */}
         <footer style={{
-          borderTop: '1.5px solid #000000',
           marginTop: 'auto',
-          paddingTop: '10px',
+          paddingTop: '6px',
           width: '100%'
         }}>
           {showSignature && (
@@ -698,11 +701,11 @@ export default function FolhaOficialRedacao({
               alignItems: 'center',
               justifyContent: 'center',
               textAlign: 'center',
-              marginTop: '10px',
-              marginBottom: '12px'
+              marginTop: '15px',
+              marginBottom: '16px'
             }}>
-              {/* Espaço em branco confortável (48px) para assinatura física do professor com caneta */}
-              <div style={{ height: '48px', width: '100%' }}></div>
+              {/* Espaço em branco confortável (50px) para assinatura física do professor com caneta */}
+              <div style={{ height: '50px', width: '100%' }}></div>
               <div style={{
                 width: '320px',
                 height: '1px',
