@@ -178,13 +178,14 @@ function AppContent() {
   const unidentifiedCount = redacoes.filter(r => r.status_validacao === 'PENDENTE_VALIDACAO' || !r.user_id || !r.nome_aluno).length;
 
   return (
-    <div className="h-screen h-[100dvh] w-screen bg-[#f7f7f4] text-[#26251e] font-sans flex overflow-hidden select-none">
+    <div className="h-screen h-[100dvh] w-screen bg-[#f7f7f4] text-[#26251e] font-sans flex overflow-hidden">
       
       {/* Mobile Drawer Backdrop Overlay */}
       {isMobileMenuOpen && (
         <div
           onClick={() => setIsMobileMenuOpen(false)}
           className="fixed inset-0 bg-black/40 backdrop-blur-xs z-30 md:hidden animate-fadeIn"
+          aria-hidden="true"
         />
       )}
 
@@ -217,10 +218,12 @@ function AppContent() {
         {isAuthenticated && (
           <div className="md:hidden px-4 py-2.5 bg-[#f7f7f4] border-b border-[#e6e5e0] flex items-center justify-between shrink-0">
             <button
+              type="button"
               onClick={() => setIsMobileMenuOpen(true)}
+              aria-label="Abrir menu de navegação"
               className="p-1.5 rounded-md bg-[#ffffff] border border-[#e6e5e0] text-[#26251e] flex items-center gap-2 text-xs font-medium cursor-pointer"
             >
-              <Menu className="w-4 h-4 text-[#f54e00]" />
+              <Menu className="w-4 h-4 text-[#f54e00]" aria-hidden="true" />
               <span>Menu</span>
             </button>
             <span className="text-xs font-semibold text-[#26251e] font-mono">Ágora ENEM</span>
@@ -231,6 +234,9 @@ function AppContent() {
         {toast && (
           <div className="px-6 pt-4 animate-fadeIn">
             <div
+              role="status"
+              aria-live="polite"
+              aria-atomic="true"
               className={`p-3.5 rounded-lg border text-xs font-medium flex items-center justify-between shadow-sm ${
                 toast.type === 'error'
                   ? 'bg-[#dfa88f] border-[#dfa88f] text-[#26251e]'
@@ -241,7 +247,9 @@ function AppContent() {
             >
               <span>{toast.message}</span>
               <button
+                type="button"
                 onClick={() => setToast(null)}
+                aria-label="Fechar notificação"
                 className="ml-4 font-mono text-xs hover:underline cursor-pointer opacity-80 hover:opacity-100"
               >
                 ✕
@@ -334,11 +342,13 @@ function AppContent() {
         <div className="fixed inset-0 bg-[#26251e]/40 backdrop-blur-xs z-50 flex items-center justify-center p-4">
           <div className="relative w-full max-w-md">
             <button
+              type="button"
               onClick={() => setIsLoginModalOpen(false)}
+              aria-label="Fechar janela de login"
               className="absolute top-4 right-4 text-[#807d72] hover:text-[#26251e] p-1.5 rounded-md bg-[#ffffff] border border-[#e6e5e0] z-10 transition-colors cursor-pointer"
               title="Fechar"
             >
-              <X className="w-4 h-4" />
+              <X className="w-4 h-4" aria-hidden="true" />
             </button>
             <LoginView onLoginSuccess={() => setIsLoginModalOpen(false)} />
           </div>

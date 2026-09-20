@@ -166,30 +166,35 @@ export default function UploaderView({ onRedacaoSaved }) {
         {/* Student Metadata Inputs */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <label className="block text-xs font-semibold text-[#5a5852] uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
-              <User className="w-3.5 h-3.5 text-[#807d72]" />
+            <label htmlFor="uploader-manual-name" className="block text-xs font-semibold text-[#5a5852] uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
+              <User className="w-3.5 h-3.5 text-[#807d72]" aria-hidden="true" />
               Nome do Aluno (Opcional)
             </label>
             <input
+              id="uploader-manual-name"
+              name="nomeAluno"
               type="text"
+              autoComplete="name"
               placeholder="IA extrai se houver no cabeçalho..."
               value={manualName}
               onChange={(e) => setManualName(e.target.value)}
-              className="w-full bg-[#fafaf7] border border-[#e6e5e0] rounded-md px-3.5 py-2.5 text-xs text-[#26251e] placeholder-[#a09c92] focus:outline-none focus:border-[#26251e] transition-colors"
+              className="w-full bg-[#fafaf7] border border-[#e6e5e0] rounded-md px-3.5 py-2.5 text-xs text-[#26251e] placeholder-[#a09c92] focus:outline-none focus:ring-2 focus:ring-[#26251e] transition-colors"
             />
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-[#5a5852] uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
-              <GraduationCap className="w-3.5 h-3.5 text-[#807d72]" />
+            <label htmlFor="uploader-manual-turma" className="block text-xs font-semibold text-[#5a5852] uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
+              <GraduationCap className="w-3.5 h-3.5 text-[#807d72]" aria-hidden="true" />
               Turma (Opcional)
             </label>
             <input
+              id="uploader-manual-turma"
+              name="turmaAluno"
               type="text"
               placeholder="ex: 3º Ano A - Ensino Médio..."
               value={manualTurma}
               onChange={(e) => setManualTurma(e.target.value)}
-              className="w-full bg-[#fafaf7] border border-[#e6e5e0] rounded-md px-3.5 py-2.5 text-xs text-[#26251e] placeholder-[#a09c92] focus:outline-none focus:border-[#26251e] transition-colors"
+              className="w-full bg-[#fafaf7] border border-[#e6e5e0] rounded-md px-3.5 py-2.5 text-xs text-[#26251e] placeholder-[#a09c92] focus:outline-none focus:ring-2 focus:ring-[#26251e] transition-colors"
             />
           </div>
         </div>
@@ -203,6 +208,7 @@ export default function UploaderView({ onRedacaoSaved }) {
               onChange={handleFileSelect}
               accept="image/*"
               multiple
+              aria-label="Selecionar arquivos de fotos de redação"
               className="hidden"
             />
 
@@ -210,7 +216,7 @@ export default function UploaderView({ onRedacaoSaved }) {
               onClick={() => fileInputRef.current?.click()}
               className="border-2 border-dashed border-[#cfcdc4] hover:border-[#26251e] bg-[#fafaf7] rounded-xl p-8 text-center cursor-pointer transition-all group"
             >
-              <ImageIcon className="w-10 h-10 mx-auto text-[#807d72] group-hover:text-[#f54e00] transition-colors mb-3" />
+              <ImageIcon className="w-10 h-10 mx-auto text-[#807d72] group-hover:text-[#f54e00] transition-colors mb-3" aria-hidden="true" />
               <p className="text-sm font-semibold text-[#26251e]">
                 Clique para selecionar uma ou <span className="text-[#f54e00]">múltiplas fotos de redação</span>
               </p>
@@ -240,16 +246,17 @@ export default function UploaderView({ onRedacaoSaved }) {
                       className="flex items-center justify-between bg-[#fafaf7] border border-[#e6e5e0] rounded-md p-3 text-xs"
                     >
                       <div className="flex items-center gap-2.5 truncate">
-                        <ImageIcon className="w-4 h-4 text-[#807d72] shrink-0" />
+                        <ImageIcon className="w-4 h-4 text-[#807d72] shrink-0" aria-hidden="true" />
                         <span className="truncate text-[#26251e] font-mono">{file.name}</span>
                         <span className="text-xs font-mono text-[#807d72]">({file.size})</span>
                       </div>
                       <button
                         type="button"
                         onClick={() => handleRemoveFile(idx)}
+                        aria-label={`Remover arquivo ${file.name}`}
                         className="text-[#a09c92] hover:text-[#cf2d56] transition-colors p-1 cursor-pointer"
                       >
-                        <Trash2 className="w-4 h-4" />
+                        <Trash2 className="w-4 h-4" aria-hidden="true" />
                       </button>
                     </div>
                   ))}
@@ -265,13 +272,13 @@ export default function UploaderView({ onRedacaoSaved }) {
             >
               {isProcessing ? (
                 <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  Corrigindo com Inteligência Artificial...
+                  <Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" />
+                  <span>Corrigindo com Inteligência Artificial...</span>
                 </>
               ) : (
                 <>
-                  <Sparkles className="w-4 h-4 text-white" />
-                  Enviar & Corrigir {selectedFiles.length > 0 ? `${selectedFiles.length} ` : ''}Redação(ões) com IA
+                  <Sparkles className="w-4 h-4 text-white" aria-hidden="true" />
+                  <span>Enviar & Corrigir {selectedFiles.length > 0 ? `${selectedFiles.length} ` : ''}Redação(ões) com IA</span>
                 </>
               )}
             </button>
@@ -283,7 +290,7 @@ export default function UploaderView({ onRedacaoSaved }) {
           <div className="space-y-4">
             <div>
               <div className="flex items-center justify-between mb-1.5">
-                <label className="block text-xs font-semibold text-[#5a5852] uppercase tracking-wider">
+                <label htmlFor="uploader-typed-text" className="block text-xs font-semibold text-[#5a5852] uppercase tracking-wider">
                   Texto Integral da Redação
                 </label>
                 <div className="text-[11px] font-mono text-[#807d72] flex items-center gap-3">
@@ -293,11 +300,13 @@ export default function UploaderView({ onRedacaoSaved }) {
               </div>
 
               <textarea
+                id="uploader-typed-text"
+                name="textoDigitado"
                 rows={10}
                 placeholder="Cole ou digite aqui o texto completo da redação do aluno para avaliação..."
                 value={typedText}
                 onChange={(e) => setTypedText(e.target.value)}
-                className="w-full bg-[#fafaf7] border border-[#e6e5e0] rounded-md p-4 text-xs font-mono text-[#26251e] placeholder-[#a09c92] focus:outline-none focus:border-[#26251e] transition-colors custom-scrollbar"
+                className="w-full bg-[#fafaf7] border border-[#e6e5e0] rounded-md p-4 text-xs font-mono text-[#26251e] placeholder-[#a09c92] focus:outline-none focus:ring-2 focus:ring-[#26251e] transition-colors custom-scrollbar"
               />
             </div>
 
@@ -309,13 +318,13 @@ export default function UploaderView({ onRedacaoSaved }) {
             >
               {isProcessing ? (
                 <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  Corrigindo com Inteligência Artificial...
+                  <Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" />
+                  <span>Corrigindo com Inteligência Artificial...</span>
                 </>
               ) : (
                 <>
-                  <Sparkles className="w-4 h-4 text-white" />
-                  Enviar & Corrigir Redação Digitada com IA
+                  <Sparkles className="w-4 h-4 text-white" aria-hidden="true" />
+                  <span>Enviar & Corrigir Redação Digitada com IA</span>
                 </>
               )}
             </button>
@@ -325,6 +334,8 @@ export default function UploaderView({ onRedacaoSaved }) {
         {/* Feedback Banner */}
         {feedback && (
           <div
+            role="status"
+            aria-live="polite"
             className={`p-4 rounded-md border text-xs flex items-center gap-2.5 animate-fadeIn ${
               feedback.type === 'success'
                 ? 'bg-[#9fc9a2] border-[#9fc9a2] text-[#26251e]'
@@ -332,9 +343,9 @@ export default function UploaderView({ onRedacaoSaved }) {
             }`}
           >
             {feedback.type === 'success' ? (
-              <CheckCircle2 className="w-4 h-4 shrink-0" />
+              <CheckCircle2 className="w-4 h-4 shrink-0" aria-hidden="true" />
             ) : (
-              <AlertCircle className="w-4 h-4 shrink-0" />
+              <AlertCircle className="w-4 h-4 shrink-0" aria-hidden="true" />
             )}
             <span>{feedback.message}</span>
           </div>
