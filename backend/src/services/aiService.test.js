@@ -16,10 +16,12 @@ describe('AI Service - JSON Cleaning & Parsing', () => {
     expect(parsed.turma).toBe('3A');
   });
 
-  it('should sanitize unescaped control characters like tabs and invalid escapes inside strings', () => {
-    const raw = '{\n  "texto": "Linha 1 \\x00 Linha 2",\n  "aluno": "Maria"\n}';
-    const parsed = cleanAndParseJSON(raw);
-    expect(parsed.aluno).toBe('Maria');
+  it('should sanitize unescaped control characters like tabs, raw newlines and invalid escapes inside strings', () => {
+    const rawWithRawNewline = `{\n  "texto_transcrito": "Linha 1 da redacao\nLinha 2 da redacao\tcom tabulacao",\n  "aluno": "Maria Silva"\n}`;
+    const parsed = cleanAndParseJSON(rawWithRawNewline);
+    expect(parsed.aluno).toBe('Maria Silva');
+    expect(parsed.texto_transcrito).toContain('Linha 1 da redacao');
+    expect(parsed.texto_transcrito).toContain('Linha 2 da redacao');
   });
 
   it('should auto-repair unescaped inner double quotes in string property values', () => {

@@ -2,9 +2,76 @@ import { GoogleGenerativeAI } from '@google/generative-ai';
 import { generateContentWithFallback } from '../config/gemini.js';
 
 /**
+ * State-machine JSON repairer that sanitizes raw control characters,
+ * fixes unescaped inner quotes, and corrects invalid escapes inside strings.
+ */
+function repairJsonString(jsonStr) {
+  let result = '';
+  let inString = false;
+  let isEscaped = false;
+
+  for (let i = 0; i < jsonStr.length; i++) {
+    const char = jsonStr[i];
+
+    if (inString) {
+      if (isEscaped) {
+        if (char === '"' || char === '\\' || char === '/' || char === 'b' || char === 'f' || char === 'n' || char === 'r' || char === 't' || char === 'u') {
+          result += '\\' + char;
+        } else {
+          result += char;
+        }
+        isEscaped = false;
+      } else if (char === '\\') {
+        isEscaped = true;
+      } else if (char === '"') {
+        // Determine if this is the closing quote or an unescaped inner quote
+        const remaining = jsonStr.slice(i + 1);
+        const nextNonWs = remaining.search(/\S/);
+        const nextChar = nextNonWs !== -1 ? remaining[nextNonWs] : '';
+
+        if (nextChar === ':' || nextChar === ',' || nextChar === '}' || nextChar === ']' || nextChar === '') {
+          inString = false;
+          result += '"';
+        } else {
+          result += "'";
+        }
+      } else if (char === '\n') {
+        result += '\\n';
+      } else if (char === '\r') {
+        result += '\\r';
+      } else if (char === '\t') {
+        result += '\\t';
+      } else if (char.charCodeAt(0) < 32) {
+        // Strip other invalid control characters (0x00 to 0x1F)
+      } else {
+        result += char;
+      }
+    } else {
+      if (char === '"') {
+        inString = true;
+        result += '"';
+      } else {
+        result += char;
+      }
+    }
+  }
+
+  if (inString) {
+    result += '"';
+  }
+
+  // Remove trailing commas before } or ]
+  return result.replace(/,\s*([}\]])/g, '$1');
+}
+
+/**
  * Helper to safely clean and parse JSON responses from AI models
  */
 export function cleanAndParseJSON(rawText) {
+  if (!rawText || typeof rawText !== 'string') {
+    throw new Error('Texto de resposta inválido ou vazio para conversão em JSON.');
+  }
+
   let cleaned = rawText.trim();
 
   // Remove markdown codeblock wrappers if present
@@ -17,54 +84,42 @@ export function cleanAndParseJSON(rawText) {
     cleaned = cleaned.substring(startIdx, endIdx + 1);
   }
 
+  // Tentativa 1: Parse direto padrão
   try {
     return JSON.parse(cleaned);
   } catch (firstErr) {
-    console.warn(`[JSON Parser] Tentativa 1 de parse falhou (${firstErr.message}). Sanitizando JSON...`);
+    console.warn(`[JSON Parser] Tentativa 1 de parse falhou (${firstErr.message}). Aplicando reparo avançado de JSON...`);
+  }
 
-    let sanitized = cleaned
-      // Escape raw unescaped control characters
-      .replace(/[\u0000-\u0009\u000B\u000C\u000E-\u001F]/g, '')
-      // Remove trailing commas before closing braces/brackets
-      .replace(/,\s*([}\]])/g, '$1')
-      // Fix invalid backslash escapes (e.g., \x, \a)
-      .replace(/\\([^"\\\/bfnrtu])/g, '$1')
-      .replace(/\\'/g, "'");
+  // Tentativa 2: Reparo de máquina de estados (caracteres de controle, quebras de linha cruas, aspas internas)
+  try {
+    const repaired = repairJsonString(cleaned);
+    return JSON.parse(repaired);
+  } catch (secondErr) {
+    console.warn(`[JSON Parser] Tentativa 2 de parse falhou (${secondErr.message}). Sanitizando linhas com regex...`);
+  }
 
-    try {
-      return JSON.parse(sanitized);
-    } catch (secondErr) {
-      console.warn(`[JSON Parser] Tentativa 2 de parse falhou (${secondErr.message}). Sanitizando aspas internas não escapadas...`);
-
-      try {
-        const lines = sanitized.split('\n');
-        const fixedLines = lines.map(line => {
-          // Detect key-value string lines: "key": "value"
-          const match = line.match(/^(\s*"[a-zA-Z0-9_]+"\s*:\s*")(.*)("(?:,\s*|\s*))$/);
-          if (match) {
-            const prefix = match[1];
-            const content = match[2];
-            const suffix = match[3];
-            // Replace any unescaped quotes inside content with single quotes
-            const safeContent = content.replace(/(?<!\\)"/g, "'");
-            return prefix + safeContent + suffix;
-          }
-          return line;
-        });
-        return JSON.parse(fixedLines.join('\n'));
-      } catch (thirdErr) {
-        console.warn(`[JSON Parser] Tentativa 3 falhou (${thirdErr.message}). Sanitizando caracteres especiais remanescentes...`);
-        try {
-          const ultraSanitized = sanitized
-            .replace(/[\u007F-\u009F]/g, '')
-            .replace(/"\s*\+\s*"/g, '');
-          return JSON.parse(ultraSanitized);
-        } catch (finalErr) {
-          console.error(`[JSON Parser] ❌ Falha crítica no parsing do JSON: ${finalErr.message}`);
-          throw finalErr;
-        }
+  // Tentativa 3: Sanitização agressiva linha por linha
+  try {
+    const lines = cleaned.split(/\r?\n/);
+    const fixedLines = lines.map(line => {
+      const match = line.match(/^(\s*"[a-zA-Z0-9_]+"\s*:\s*")(.*)("(?:,\s*|\s*))$/);
+      if (match) {
+        const prefix = match[1];
+        const content = match[2];
+        const suffix = match[3];
+        const safeContent = content
+          .replace(/[\u0000-\u001F]/g, ' ')
+          .replace(/(?<!\\)"/g, "'");
+        return prefix + safeContent + suffix;
       }
-    }
+      return line.replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g, '');
+    });
+    const finalClean = fixedLines.join('\n').replace(/,\s*([}\]])/g, '$1');
+    return JSON.parse(finalClean);
+  } catch (finalErr) {
+    console.error(`[JSON Parser] ❌ Falha crítica no parsing do JSON: ${finalErr.message}`);
+    throw finalErr;
   }
 }
 
