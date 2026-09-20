@@ -75,7 +75,7 @@ app.use((err, req, res, next) => {
 });
 
 // Process safety and Graceful Shutdown (Standalone Node environment)
-if (!process.env.VERCEL) {
+if (!process.env.VERCEL && process.env.NODE_ENV !== 'test') {
   const server = app.listen(PORT, () => {
     console.log(`==================================================`);
     console.log(`  Plataforma SaaS IA (ENEM x Sisedu - Agente Unificado)`);
