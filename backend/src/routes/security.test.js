@@ -4,7 +4,7 @@ import http from 'http';
 import app from '../../server.js';
 import { JWT_SECRET } from '../middleware/authMiddleware.js';
 
-describe('Security & Access Control Tests (Fase 1 Remediations)', () => {
+describe('Security & Access Control Tests (Fase 1 & Fase 2 Remediations)', () => {
   let server;
   let baseUrl;
 
@@ -25,6 +25,7 @@ describe('Security & Access Control Tests (Fase 1 Remediations)', () => {
     });
   });
 
+  // FASE 1 TESTS
   it('deve retornar 401 Unauthorized ao acessar /api/export-db sem token', async () => {
     const res = await fetch(`${baseUrl}/api/export-db`);
     expect(res.status).toBe(401);
@@ -45,7 +46,6 @@ describe('Security & Access Control Tests (Fase 1 Remediations)', () => {
   });
 
   it('deve retornar 403 Forbidden ao tentar deletar redação com token de estudante', async () => {
-    // Cria um token válido de estudante
     const studentToken = jwt.sign({ id: 9999, role: 'ESTUDANTE' }, JWT_SECRET);
 
     const res = await fetch(`${baseUrl}/api/redacoes/999999`, {
@@ -55,7 +55,6 @@ describe('Security & Access Control Tests (Fase 1 Remediations)', () => {
       }
     });
 
-    // Como o usuário não existe no DB mock/supabase, o authenticate verifica no banco e se não achar retorna 401 ou 403
     expect([401, 403]).toContain(res.status);
   });
 
@@ -67,5 +66,22 @@ describe('Security & Access Control Tests (Fase 1 Remediations)', () => {
   it('deve retornar 401 Unauthorized ao acessar lista de estudantes /api/auth/estudantes sem token', async () => {
     const res = await fetch(`${baseUrl}/api/auth/estudantes`);
     expect(res.status).toBe(401);
+  });
+
+  // FASE 2 TESTS
+  it('deve retornar 401 Unauthorized ao tentar chamar o endpoint de IA /api/corrigir sem token', async () => {
+    const res = await fetch(`${baseUrl}/api/corrigir`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ texto_digitado: 'Teste de redação' })
+    });
+    expect(res.status).toBe(401);
+  });
+
+  it('deve incluir cabeçalhos de RateLimit (X-RateLimit-Limit e X-RateLimit-Remaining) nas respostas', async () => {
+    const res = await fetch(`${baseUrl}/api/health`);
+    expect(res.status).toBe(200);
+    expect(res.headers.get('x-ratelimit-limit')).toBeDefined();
+    expect(res.headers.get('x-ratelimit-remaining')).toBeDefined();
   });
 });

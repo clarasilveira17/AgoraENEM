@@ -2,6 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import apiRoutes from './src/routes/apiRoutes.js';
+import { generalLimiter } from './src/middleware/rateLimitMiddleware.js';
 
 dotenv.config();
 
@@ -20,9 +21,12 @@ app.use((req, res, next) => {
 // Configure CORS to allow frontend communication
 app.use(cors());
 
-// Payload limit setup for image uploads
-app.use(express.json({ limit: '50mb' }));
-app.use(express.urlencoded({ limit: '50mb', extended: true }));
+// General Rate Limiter for all API routes
+app.use('/api', generalLimiter);
+
+// Payload limit setup for image uploads (10mb safe limit)
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ limit: '10mb', extended: true }));
 
 // Mount API routes
 app.use('/api', apiRoutes);

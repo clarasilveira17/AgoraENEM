@@ -24,17 +24,5 @@ if (isSupabaseConfigured) {
   console.log('[Supabase Client] SUPABASE_URL/SUPABASE_KEY não configurados. Usando modo SQLite local.');
 }
 
-export async function getNextId(table = 'redacoes') {
-  if (!isSupabaseConfigured || !supabase) return null;
-  try {
-    const { data } = await supabase.from(table).select('id').order('id', { ascending: false }).limit(1);
-    if (data && data.length > 0 && data[0].id) {
-      return Number(data[0].id) + 1;
-    }
-    return 1;
-  } catch (e) {
-    console.warn(`[Supabase Client] Falha ao obter next ID para ${table}:`, e.message);
-    return null;
-  }
-}
+
 

@@ -1,5 +1,5 @@
 import db from '../config/db.js';
-import { supabase, isSupabaseConfigured, getNextId } from '../config/supabaseClient.js';
+import { supabase, isSupabaseConfigured } from '../config/supabaseClient.js';
 import { TURMAS_ESCOLA, normalizeTurma, normalizeStr, MANUAL_OCR_NAME_MAP, resolveStudent } from '../utils/turmasUtils.js';
 
 // POST /api/redacoes/sync-legacy
@@ -63,9 +63,7 @@ export const syncLegacyRedacoes = async (req, res) => {
           continue;
         }
 
-        const nextId = await getNextId('redacoes');
         const { error: insErr } = await supabase.from('redacoes').insert({
-          ...(nextId ? { id: nextId } : {}),
           user_id: resolved.user_id,
           nome_aluno: resolved.nome_aluno,
           turma_aluno: resolved.turma_aluno,
@@ -410,11 +408,9 @@ export const createRedacao = async (req, res) => {
     const resolved = await resolveStudent(user_id, nome_aluno, turma_aluno);
 
     if (isSupabaseConfigured) {
-      const nextId = await getNextId('redacoes');
       const { data, error } = await supabase
         .from('redacoes')
         .insert({
-          ...(nextId ? { id: nextId } : {}),
           user_id: resolved.user_id,
           nome_aluno: resolved.nome_aluno,
           turma_aluno: resolved.turma_aluno,

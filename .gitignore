@@ -14,19 +14,33 @@ dist/
 frontend/dist/
 build/
 
-# Zip / Archives
+# Zip / Archives & Binaries
 *.zip
+*.tar.gz
+*.exe
+
+# Sensitive Student Data & Backups (LGPD)
+*.xlsx
+*.xls
+*.csv
+*.pdf
+backend/data/
+agora-db-backup.json
+backup*.json
+*.json
+!frontend/package.json
+!frontend/package-lock.json
+!backend/package.json
+!backend/package-lock.json
+!package.json
+!package-lock.json
+!vercel.json
+!.oxlintrc.json
 
 # System & IDE
 .DS_Store
 .vscode/
 .idea/
 *.log
-backend/data/
-*.json
-!frontend/package.json
-!backend/package.json
-!package.json
-!vercel.json
 scratch/
 
