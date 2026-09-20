@@ -51,8 +51,8 @@ export default function FolhaOficialRedacao({
 
   const printDateStr = new Date().toLocaleDateString('pt-BR');
   const printTimeStr = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-  const dataLancamentoStr = redacao.data_captura 
-    ? new Date(redacao.data_captura).toLocaleDateString('pt-BR') 
+  const dataLancamentoStr = redacao.data_captura
+    ? new Date(redacao.data_captura).toLocaleDateString('pt-BR')
     : printDateStr;
 
   const enemCompetenciasMap = [
@@ -108,7 +108,7 @@ export default function FolhaOficialRedacao({
 
   return (
     <div className="folha-oficial-wrapper" style={{ display: 'flex', flexDirection: 'column', gap: '24px', alignItems: 'center' }}>
-      
+
       {/* ========================================================================= */}
       {/* PÁGINA 1: FICHA DE AVALIAÇÃO DE REDAÇÃO (ENEM & SISEDU)                    */}
       {/* ========================================================================= */}
@@ -142,7 +142,7 @@ export default function FolhaOficialRedacao({
           flexDirection: 'column',
           justifyContent: 'space-between'
         }}>
-          
+
           {/* 1. Header Institucional */}
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '1.5px solid #000000', paddingBottom: '8px' }}>
             <div>
@@ -403,7 +403,7 @@ export default function FolhaOficialRedacao({
           flexDirection: 'column',
           justifyContent: 'space-between'
         }}>
-          
+
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
             {/* Top Mini Header */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1.5px solid #000000', paddingBottom: '6px', marginBottom: '10px', fontFamily: monoFont, fontSize: '8.5px', lineHeight: '1.3' }}>

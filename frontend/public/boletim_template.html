@@ -1,0 +1,885 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Boletim Oficial de Redação ENEM • Projeto Ágora Escolar</title>
+  
+  <!-- Tipografia Profissional: Inter (Sans-serif analítica) e Merriweather (Serif clássica editorial) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,300..800;1,14..32,300..800&family=Merriweather:ital,wght@0,300;0,400;0,700;1,300;1,400&display=swap" rel="stylesheet">
+
+  <!-- Biblioteca html2pdf.js para Exportação Direta do PDF -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+
+  <style>
+    /* ==========================================================================
+       DESIGN SYSTEM MINIMALISTA & MONOCROMÁTICO (ESTÁVEL & INK-SAVING)
+       ========================================================================== */
+    :root {
+      --black: #000000;
+      --charcoal: #1c1c1c;
+      --gray-dark: #333333;
+      --gray-mid: #555555;
+      --gray-light: #777777;
+      --border-color: #000000;
+      --border-subtle: #d1d5db;
+      --white: #ffffff;
+
+      --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      --font-serif: 'Merriweather', Georgia, Cambria, "Times New Roman", serif;
+    }
+
+    * {
+      box-sizing: border-box !important;
+      margin: 0;
+      padding: 0;
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
+      color-adjust: exact !important;
+    }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      background-color: #ffffff;
+      color: var(--charcoal);
+      font-family: var(--font-sans);
+      font-size: 11.5px;
+      line-height: 1.45;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    body {
+      padding: 20px 12px 60px 12px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+    }
+
+    /* ==========================================================================
+       CONFIGURAÇÃO NATIVA DE IMPRESSÃO (@page & @media print)
+       ========================================================================== */
+    @page {
+      size: A4 portrait;
+      margin: 12mm 10mm 12mm 10mm;
+    }
+
+    @media print {
+      body {
+        padding: 0;
+        background: transparent;
+      }
+      #container-do-boletim {
+        max-width: 100% !important;
+        width: 100% !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        box-shadow: none !important;
+      }
+      .no-print, .btn-imprimir {
+        display: none !important;
+      }
+    }
+
+    /* ==========================================================================
+       CONTENTOR DO BOLETIM (ESTRUTURA DE 760PX COM ZONA SEGURA INTERNA)
+       ========================================================================== */
+    #container-do-boletim {
+      width: 100%;
+      max-width: 760px;
+      margin: 0 auto;
+      padding: 0 20px;
+      background: var(--white);
+      box-sizing: border-box;
+    }
+
+    /* Prevenção estrita de quebras indesejadas */
+    .avoid-break, 
+    .header, 
+    .table-booktabs, 
+    .rubricas-container, 
+    .essay-box, 
+    .footer-wrap {
+      page-break-inside: avoid !important;
+      break-inside: avoid !important;
+      width: 100%;
+      box-sizing: border-box;
+    }
+
+    table, tr, td, th, div, p, span {
+      max-width: 100%;
+      word-wrap: break-word;
+      overflow-wrap: break-word;
+      box-sizing: border-box;
+    }
+
+    /* ==========================================================================
+       CABEÇALHO INSTITUCIONAL & NOTA FINAL
+       ========================================================================== */
+    .header {
+      border-bottom: 2px solid var(--black);
+      padding-bottom: 12px;
+      margin-bottom: 14px;
+      width: 100%;
+    }
+
+    .header-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 10px;
+      width: 100%;
+    }
+
+    .brand-title {
+      font-size: 17px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+      color: var(--black);
+      line-height: 1.1;
+    }
+
+    .brand-subtitle {
+      font-size: 10.5px;
+      font-weight: 500;
+      color: var(--gray-mid);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-top: 3px;
+    }
+
+    /* Card Monocromático da Nota Final */
+    .score-badge {
+      border: 1.5px solid var(--black);
+      padding: 5px 14px;
+      text-align: center;
+      min-width: 120px;
+      flex-shrink: 0;
+    }
+
+    .score-badge .score-label {
+      font-size: 8.5px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      display: block;
+      color: var(--gray-dark);
+    }
+
+    .score-badge .score-val {
+      font-size: 24px;
+      font-weight: 800;
+      line-height: 1.05;
+      color: var(--black);
+      margin: 1px 0;
+    }
+
+    .score-badge .score-max {
+      font-size: 8.5px;
+      font-weight: 600;
+      color: var(--gray-mid);
+    }
+
+    /* Metadados do Aluno em Grid Linear */
+    .meta-table {
+      width: 100%;
+      border-top: 1px solid var(--black);
+      padding-top: 8px;
+      display: grid;
+      grid-template-columns: 2fr 1.1fr 1fr 0.9fr;
+      gap: 10px;
+    }
+
+    .meta-group {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .meta-label {
+      font-size: 8.5px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+      color: var(--gray-mid);
+    }
+
+    .meta-value {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--black);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    /* ==========================================================================
+       TÍTULOS DE SEÇÃO
+       ========================================================================== */
+    .section-title-wrap {
+      border-bottom: 1px solid var(--black);
+      padding-bottom: 3px;
+      margin: 14px 0 8px 0;
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      width: 100%;
+    }
+
+    .section-title {
+      font-size: 12px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+      color: var(--black);
+    }
+
+    .section-meta {
+      font-size: 9px;
+      color: var(--gray-mid);
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+      white-space: nowrap;
+    }
+
+    /* ==========================================================================
+       TABELA DE COMPETÊNCIAS (ESTILO BOOKTABS EXPANDIDO)
+       ========================================================================== */
+    .table-booktabs {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 10px;
+      margin-bottom: 10px;
+    }
+
+    .table-booktabs thead tr {
+      border-top: 1.5px solid var(--black);
+      border-bottom: 1px solid var(--black);
+    }
+
+    .table-booktabs th {
+      padding: 6px 8px;
+      font-weight: 700;
+      text-transform: uppercase;
+      font-size: 9px;
+      letter-spacing: 0.4px;
+      color: var(--black);
+      text-align: left;
+    }
+
+    .table-booktabs th.center,
+    .table-booktabs td.center {
+      text-align: center;
+    }
+
+    .table-booktabs tbody tr {
+      border-bottom: 0.5px solid var(--border-subtle);
+    }
+
+    .table-booktabs tbody tr:last-child {
+      border-bottom: 1.5px solid var(--black);
+    }
+
+    .table-booktabs td {
+      padding: 7px 8px;
+      vertical-align: top;
+      line-height: 1.35;
+      color: var(--charcoal);
+    }
+
+    .comp-code {
+      font-weight: 800;
+      font-size: 10.5px;
+      color: var(--black);
+      display: block;
+    }
+
+    .comp-name {
+      font-size: 9.5px;
+      color: var(--gray-dark);
+      display: block;
+    }
+
+    .score-pill-mono {
+      font-weight: 800;
+      font-size: 11.5px;
+      color: var(--black);
+    }
+
+    .citation-quote {
+      font-family: var(--font-serif);
+      font-style: italic;
+      font-size: 9.5px;
+      line-height: 1.35;
+      color: var(--gray-dark);
+      padding-left: 6px;
+      border-left: 1.5px solid var(--black);
+    }
+
+    .feedback-body {
+      font-size: 9.5px;
+      line-height: 1.35;
+      color: var(--charcoal);
+    }
+
+    /* ==========================================================================
+       RUBRICAS ANALÍTICAS (GRID MINIMALISTA)
+       ========================================================================== */
+    .rubricas-container {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+      margin-bottom: 12px;
+      width: 100%;
+    }
+
+    .rubrica-box {
+      border: 1px solid var(--border-subtle);
+      padding: 8px 12px;
+      width: 100%;
+    }
+
+    .rubrica-box-title {
+      font-size: 10px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+      border-bottom: 1px solid var(--black);
+      padding-bottom: 3px;
+      margin-bottom: 6px;
+      display: flex;
+      justify-content: space-between;
+    }
+
+    .rubrica-line {
+      margin-bottom: 5px;
+    }
+
+    .rubrica-line:last-child {
+      margin-bottom: 0;
+    }
+
+    .rubrica-info {
+      display: flex;
+      justify-content: space-between;
+      font-size: 9.5px;
+      margin-bottom: 2px;
+    }
+
+    .rubrica-criteria {
+      font-weight: 600;
+      color: var(--black);
+    }
+
+    .rubrica-scale {
+      font-weight: 700;
+      color: var(--charcoal);
+    }
+
+    .bar-track {
+      width: 100%;
+      height: 4px;
+      border: 0.8px solid var(--black);
+      background: transparent;
+      position: relative;
+    }
+
+    .bar-fill-mono {
+      height: 100%;
+      background-color: var(--black);
+    }
+
+    /* ==========================================================================
+       TRANSCRIÇÃO DA REDAÇÃO (TIPO JORNAL / LIVRO CLÁSSICO)
+       ========================================================================== */
+    .essay-box {
+      border: 1px solid var(--black);
+      padding: 12px 16px;
+      margin-bottom: 12px;
+      width: 100%;
+      max-width: 100%;
+      box-sizing: border-box;
+      overflow-wrap: break-word;
+      word-wrap: break-word;
+    }
+
+    .essay-theme-row {
+      border-bottom: 1px solid var(--black);
+      padding-bottom: 5px;
+      margin-bottom: 8px;
+    }
+
+    .essay-theme-tag {
+      font-size: 8px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      color: var(--gray-mid);
+      display: block;
+    }
+
+    .essay-theme-text {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--black);
+    }
+
+    .essay-body {
+      font-family: var(--font-serif);
+      font-size: 10.5px;
+      line-height: 1.6;
+      color: var(--charcoal);
+      text-align: justify;
+      hyphens: auto;
+      width: 100%;
+      max-width: 100%;
+      box-sizing: border-box;
+      overflow-wrap: break-word;
+      word-wrap: break-word;
+    }
+
+    .essay-body p {
+      text-indent: 1.6em;
+      margin-bottom: 6px;
+      word-wrap: break-word;
+      overflow-wrap: break-word;
+    }
+
+    .essay-body p:last-child {
+      margin-bottom: 0;
+    }
+
+    /* ==========================================================================
+       RODAPÉ COM ESPAÇO REAL DE 80PX PARA ASSINATURA MANUAL & NOTAS LEGAIS
+       ========================================================================== */
+    .footer-wrap {
+      border-top: 1.5px solid var(--black);
+      margin-top: 20px;
+      padding-top: 12px;
+      width: 100%;
+    }
+
+    .signature-center-wrap {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      margin-bottom: 10px;
+    }
+
+    .signature-line-mono {
+      width: 320px;
+      border-bottom: 1px solid var(--black);
+      margin-bottom: 6px;
+      height: 80px; /* Espaço vertical real e confortável para assinatura manual */
+    }
+
+    .signature-teacher {
+      font-size: 10.5px;
+      font-weight: 700;
+      color: var(--black);
+    }
+
+    .signature-desc {
+      font-size: 9px;
+      color: var(--gray-mid);
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+    }
+
+    .legal-note {
+      font-size: 8px;
+      color: var(--gray-mid);
+      border-top: 0.5px solid var(--border-subtle);
+      padding-top: 5px;
+      display: flex;
+      justify-content: space-between;
+      width: 100%;
+    }
+
+    /* ==========================================================================
+       BOTÃO DE DOWNLOAD / IMPRESSÃO
+       ========================================================================== */
+    .btn-imprimir {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      background-color: var(--black);
+      color: var(--white);
+      border: 1px solid var(--black);
+      border-radius: 4px;
+      padding: 10px 20px;
+      font-family: var(--font-sans);
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.4px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
+      transition: all 0.2s ease;
+      z-index: 9999;
+    }
+
+    .btn-imprimir:hover {
+      background-color: var(--gray-dark);
+      transform: translateY(-2px);
+      box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
+    }
+
+    .btn-imprimir:active {
+      transform: translateY(0);
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Botão de Download / Impressão -->
+  <button class="btn-imprimir" id="btn-imprimir">
+    <svg width="15" height="15" fill="currentColor" viewBox="0 0 16 16">
+      <path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/>
+      <path d="M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 0-1 0v8.793L5.354 8.146a.5.5 0 1 0-.708.708l3 3z"/>
+    </svg>
+    <span>Imprimir / Salvar PDF</span>
+  </button>
+
+  <!-- CONTENTOR PRINCIPAL DO BOLETIM (ALVO DIRETO DA EXPORTAÇÃO) -->
+  <div id="container-do-boletim">
+
+    <!-- ======================================================================
+         CABEÇALHO COM METADADOS E NOTA FINAL
+         ====================================================================== -->
+    <header class="header avoid-break">
+      <div class="header-top">
+        <div>
+          <h1 class="brand-title">Projeto Ágora Escolar</h1>
+          <p class="brand-subtitle">Boletim Diagnóstico de Redação • Matriz ENEM</p>
+        </div>
+
+        <div class="score-badge">
+          <span class="score-label">Nota Final</span>
+          <div class="score-val">880</div>
+          <span class="score-max">/ 1000 PONTOS</span>
+        </div>
+      </div>
+
+      <div class="meta-table">
+        <div class="meta-group">
+          <span class="meta-label">Estudante</span>
+          <span class="meta-value">ANA WIVIAN DUTRA TORRES</span>
+        </div>
+        <div class="meta-group">
+          <span class="meta-label">Turma</span>
+          <span class="meta-value">3º Ano D (Manhã)</span>
+        </div>
+        <div class="meta-group">
+          <span class="meta-label">Identificador</span>
+          <span class="meta-value">#AG-54-2026</span>
+        </div>
+        <div class="meta-group">
+          <span class="meta-label">Data</span>
+          <span class="meta-value">19/09/2026</span>
+        </div>
+      </div>
+    </header>
+
+    <!-- ======================================================================
+         SEÇÃO 1: MATRIZ DE COMPETÊNCIAS DO ENEM (ESTILO BOOKTABS)
+         ====================================================================== -->
+    <section class="avoid-break">
+      <div class="section-title-wrap">
+        <h2 class="section-title">1. Matriz de Competências ENEM</h2>
+        <span class="section-meta">Grade Oficial INEP</span>
+      </div>
+
+      <table class="table-booktabs">
+        <thead>
+          <tr>
+            <th style="width: 17%;">Competência</th>
+            <th style="width: 8%;" class="center">Pontos</th>
+            <th style="width: 37%;">Evidência Textual (Citação)</th>
+            <th style="width: 38%;">Parecer Avaliativo</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>
+              <span class="comp-code">C1</span>
+              <span class="comp-name">Norma Padrão</span>
+            </td>
+            <td class="center">
+              <span class="score-pill-mono">160</span>
+            </td>
+            <td>
+              <div class="citation-quote">
+                "[...] onde a vulnerabilidade socioeconômica reflete diretamente..."
+              </div>
+            </td>
+            <td class="feedback-body">
+              Estrutura sintática com excelente fluência. Registra-se apenas o emprego do pronome relativo "onde" com valor não locativo e um desvio pontual de regência.
+            </td>
+          </tr>
+
+          <tr>
+            <td>
+              <span class="comp-code">C2</span>
+              <span class="comp-name">Tema e Repertório</span>
+            </td>
+            <td class="center">
+              <span class="score-pill-mono">200</span>
+            </td>
+            <td>
+              <div class="citation-quote">
+                "Conforme preconizado pelo sociólogo Zygmunt Bauman em 'Vidas Desperdiçadas'..."
+              </div>
+            </td>
+            <td class="feedback-body">
+              Compreensão completa da frase temática. Repertório sociocultural legitimado, pertinente e articulado com produtividade máxima à argumentação.
+            </td>
+          </tr>
+
+          <tr>
+            <td>
+              <span class="comp-code">C3</span>
+              <span class="comp-name">Projeto de Texto</span>
+            </td>
+            <td class="center">
+              <span class="score-pill-mono">160</span>
+            </td>
+            <td>
+              <div class="citation-quote">
+                "Dessa forma, perpetua-se um ciclo de invisibilidade estrutural..."
+              </div>
+            </td>
+            <td class="feedback-body">
+              Projeto de texto estratégico com tese bem delineada. Sugere-se aprofundar a relação causal no segundo parágrafo de desenvolvimento para atingir a pontuação máxima.
+            </td>
+          </tr>
+
+          <tr>
+            <td>
+              <span class="comp-code">C4</span>
+              <span class="comp-name">Coesão Textual</span>
+            </td>
+            <td class="center">
+              <span class="score-pill-mono">160</span>
+            </td>
+            <td>
+              <div class="citation-quote">
+                "Ademais, cabe ressaltar...", "Portanto, medidas são urgentes..."
+              </div>
+            </td>
+            <td class="feedback-body">
+              Presença diversificada e adequada de operadores argumentativos interparágrafos. Leve reincidência lexical no uso de conectivos internos.
+            </td>
+          </tr>
+
+          <tr>
+            <td>
+              <span class="comp-code">C5</span>
+              <span class="comp-name">Proposta de Intervenção</span>
+            </td>
+            <td class="center">
+              <span class="score-pill-mono">200</span>
+            </td>
+            <td>
+              <div class="citation-quote">
+                "Cabe ao Ministério do Desenvolvimento Social, mediante campanhas e ampliação de verbas..."
+              </div>
+            </td>
+            <td class="feedback-body">
+              Proposta completa contendo os cinco elementos válidos: Agente, Ação, Meio/Modo, Efeito e Detalhamento, com total respeito aos Direitos Humanos.
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <!-- ======================================================================
+         SEÇÃO 2: RUBRICAS ANALÍTICAS (GRID MINIMALISTA)
+         ====================================================================== -->
+    <section class="avoid-break">
+      <div class="section-title-wrap">
+        <h2 class="section-title">2. Rubricas Formativas & Critérios Transversais</h2>
+        <span class="section-meta">Diagnóstico Qualitativo</span>
+      </div>
+
+      <div class="rubricas-container">
+        <!-- Dimensão Discursiva -->
+        <div class="rubrica-box">
+          <div class="rubrica-box-title">
+            <span>Dimensão Discursiva</span>
+            <span>Nível</span>
+          </div>
+
+          <div class="rubrica-line">
+            <div class="rubrica-info">
+              <span class="rubrica-criteria">Clareza e Fluência Textual</span>
+              <span class="rubrica-scale">Avançado (90%)</span>
+            </div>
+            <div class="bar-track">
+              <div class="bar-fill-mono" style="width: 90%;"></div>
+            </div>
+          </div>
+
+          <div class="rubrica-line">
+            <div class="rubrica-info">
+              <span class="rubrica-criteria">Consistência e Progressão</span>
+              <span class="rubrica-scale">Proficiente (85%)</span>
+            </div>
+            <div class="bar-track">
+              <div class="bar-fill-mono" style="width: 85%;"></div>
+            </div>
+          </div>
+
+          <div class="rubrica-line">
+            <div class="rubrica-info">
+              <span class="rubrica-criteria">Produtividade de Repertório</span>
+              <span class="rubrica-scale">Excelente (100%)</span>
+            </div>
+            <div class="bar-track">
+              <div class="bar-fill-mono" style="width: 100%;"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Dimensão Ético-Moral -->
+        <div class="rubrica-box">
+          <div class="rubrica-box-title">
+            <span>Dimensão Ético-Moral</span>
+            <span>Nível</span>
+          </div>
+
+          <div class="rubrica-line">
+            <div class="rubrica-info">
+              <span class="rubrica-criteria">Respeito aos Direitos Humanos</span>
+              <span class="rubrica-scale">Pleno (100%)</span>
+            </div>
+            <div class="bar-track">
+              <div class="bar-fill-mono" style="width: 100%;"></div>
+            </div>
+          </div>
+
+          <div class="rubrica-line">
+            <div class="rubrica-info">
+              <span class="rubrica-criteria">Justificação Axiológica</span>
+              <span class="rubrica-scale">Avançado (90%)</span>
+            </div>
+            <div class="bar-track">
+              <div class="bar-fill-mono" style="width: 90%;"></div>
+            </div>
+          </div>
+
+          <div class="rubrica-line">
+            <div class="rubrica-info">
+              <span class="rubrica-criteria">Eficácia da Proposta</span>
+              <span class="rubrica-scale">Excelente (95%)</span>
+            </div>
+            <div class="bar-track">
+              <div class="bar-fill-mono" style="width: 95%;"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ======================================================================
+         SEÇÃO 3: TRANSCRIÇÃO INTEGRAL DA REDAÇÃO (TIPO LIVRO / JORNAL)
+         ====================================================================== -->
+    <section class="avoid-break">
+      <div class="section-title-wrap">
+        <h2 class="section-title">3. Transcrição Integral do Texto</h2>
+        <span class="section-meta">Produção Original do Estudante</span>
+      </div>
+
+      <div class="essay-box">
+        <div class="essay-theme-row">
+          <span class="essay-theme-tag">Tema Proposto</span>
+          <div class="essay-theme-text">"Os impactos da estigmatização da pobreza na sociedade brasileira contemporânea"</div>
+        </div>
+
+        <div class="essay-body">
+          <p>
+            Na obra "Vidas Desperdiçadas", o sociólogo Zygmunt Bauman adverte que a modernidade tende a marginalizar indivíduos que não acompanham a engrenagem do consumo desenfreado, transformando-os em figuras invisibilizadas. Fora da ficção sociológica, a realidade brasileira reflete esse cenário com clareza alarmante, haja vista que os impactos da estigmatização da pobreza perpetuam a exclusão social e violam a dignidade humana. Desse modo, torna-se imperioso analisar tanto a omissão governamental na garantia de oportunidades equânimes quanto o preconceito velado enraizado no tecido social, que impedem a plena emancipação dos cidadãos em vulnerabilidade.
+          </p>
+
+          <p>
+            Em primeiro plano, cabe destacar que a inoperância do Estado atua como catalisadora da marginalização dos menos favorecidos. Embora a Constituição Federal de 1988 assegure o bem-estar e a igualdade como direitos universais inalienáveis, a insuficiência de investimentos em saneamento básico, educação de qualidade e geração de renda nas periferias evidencia um abismo entre o texto legal e a vivência cotidiana. Sob essa ótica, a falta de amparo institucional não apenas aprisiona as famílias em um ciclo de privações materiais, mas também alimenta a falsa narrativa meritocrática de que a condição de pobreza decorre exclusivamente do desinteresse individual, legitimando o estigma social.
+          </p>
+
+          <p>
+            Ademais, a perpetuação de estereótipos pela opinião pública intensifica a segregação dos grupos vulneráveis. Segundo o filósofo Frantz Fanon, a desumanização do outro é a ferramenta central de manutenção das hierarquias de poder. No contexto urbano nacional, observa-se que indivíduos em situação de hipossuficiência são reiteradamente associados à criminalidade ou à incapacidade laborativa, sendo alvos de preconceito em processos seletivos e no acesso a espaços públicos. Assim, consolida-se uma barreira simbólica que impede a mobilidade social e condena parcelas expressivas da população ao ostracismo cívico.
+          </p>
+
+          <p>
+            Portanto, medidas urgentes são necessárias para desarticular os estigmas associados à vulnerabilidade socioeconômica no Brasil. Para tanto, cabe ao Ministério do Desenvolvimento e Assistência Social, em parceria com o Ministério da Educação, promover programas contínuos de capacitação profissional e conscientização pública. Essa ação deve ser realizada por meio de palestras em escolas e campanhas informativas de veiculação nacional, com o objetivo de desmistificar preconceitos e reintegrar essas populações ao mercado de trabalho formal. Somente assim, o Brasil poderá se afastar da distopia descrita por Bauman e consolidar a verdadeira justiça distributiva.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ======================================================================
+         RODAPÉ COM ESPAÇO REAL PARA ASSINATURA MANUAL & NOTAS LEGAIS
+         ====================================================================== -->
+    <footer class="footer-wrap avoid-break">
+      <div class="signature-center-wrap">
+        <div class="signature-line-mono"></div>
+        <div class="signature-teacher">Prof. Avaliador Responsável • Banca Examinadora</div>
+        <div class="signature-desc">Projeto Ágora Escolar • Correção Oficial de Redação ENEM</div>
+      </div>
+
+      <div class="legal-note">
+        <span>© 2026 Projeto Ágora Escolar. Todos os direitos reservados. Uso pedagógico restrito.</span>
+        <span>Avaliação baseada na Matriz Oficial de Referência do ENEM (INEP).</span>
+      </div>
+    </footer>
+
+  </div>
+
+  <!-- ==========================================================================
+       SCRIPT JAVASCRIPT: ABORDAGEM "SNAP TO LEFT" (X=0 NATIVO)
+       ========================================================================== -->
+  <script>
+    document.querySelector('.btn-imprimir').addEventListener('click', function() {
+        const elemento = document.getElementById('container-do-boletim');
+        this.style.display = 'none'; // Esconde o botão
+
+        // Guarda a margem original para restaurar depois
+        const margemOriginal = elemento.style.margin;
+        
+        // Encosta o elemento à esquerda (X=0) para evitar o corte do html2canvas
+        elemento.style.margin = '0';
+
+        const opcoes = {
+            margin:       [10, 10, 10, 10], // Margem segura
+            filename:     'Boletim_Redacao_ANA_WIVIAN_DUTRA_TORRES_ID54.pdf',
+            image:        { type: 'jpeg', quality: 1 },
+            html2canvas:  { 
+                scale: 2, 
+                useCORS: true, 
+                scrollX: 0, 
+                scrollY: 0 
+                // Removemos qualquer referência a windowWidth
+            },
+            jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+        };
+
+        html2pdf().set(opcoes).from(elemento).save().then(() => {
+            // Restaura o alinhamento centrado e o botão
+            elemento.style.margin = margemOriginal;
+            this.style.display = 'flex';
+        }).catch((err) => {
+            console.error('Erro:', err);
+            elemento.style.margin = margemOriginal;
+            this.style.display = 'flex';
+        });
+    });
+  </script>
+
+</body>
+</html>
