@@ -193,8 +193,18 @@ MISSÃO ADICIONAL:
 1. **TRANSCRIÇÃO LINHA A LINHA DA FOLHA OFICIAL (Linhas 01 a 30):** Transcreva o texto do aluno preservando exatamente a disposição de linhas da folha pautada de redação. Insira uma quebra de linha ('\n') ao final de cada linha física manuscrita na folha, de modo que cada linha corresponda fielmente às linhas 1 a 30 da folha oficial. Se for texto digitado, quebre as linhas mantendo a estrutura de parágrafos bem definida.
 2. **IDENTIFICAÇÃO SINCERA:** Classifique "confianca_identificacao" em "ALTA", "MEDIA" ou "BAIXA" com base na legibilidade do cabeçalho.
 3. **CITAÇÃO DIRETA ("citacao_texto"):** Extraia sempre trecho literal do aluno como evidência para cada nota.
-4. **DEVOLUTIVA PEDAGÓGICA ENEM ("devolutiva_enem"):** Parecer pedagógico detalhado focado nas 5 Competências do ENEM (C1 a C5), orientando o estudante sobre desvios gramaticais, repertório, projeto de texto, coesão e detalhamento dos 5 elementos da proposta de intervenção.
-5. **DEVOLUTIVA DE INTERVENÇÃO SISEDU/SPAECE ("devolutiva_sisedu"):** Parecer escolar focado exclusivamente nos Descritores do SISEDU (D05 a D18) que apresentarem Nível Inicial ou Intermediário (ex: D15 contra-argumentação, D12 coesão e substituição lexical, D16 articulação tese-argumentos), com recomendação de oficina pedagógica prática para o professor da turma.
+4. **DEVOLUTIVA PEDAGÓGICA ENEM ("devolutiva_enem"):** Parecer pedagógico estruturado OBRIGATORIAMENTE em tópicos com quebras de linha duplas ('\n\n') e marcadores '•', nunca em um único bloco corrido:
+   • Visão Geral da Produção Textual: Parecer sobre a maturidade discursiva e projeto de texto.
+   • Na Competência 1: Análise dos desvios gramaticais, ortografia e sintaxe.
+   • Na Competência 2: Análise da compreensão do tema e repertório legitimado/produtivo.
+   • Na Competência 3: Análise do projeto de texto e consistência dos argumentos.
+   • A Competência 4: Análise dos conectores inter e intraparágrafos e coesão.
+   • Por fim, a Competência 5: Análise dos 5 elementos da intervenção (Agente, Ação, Modo, Efeito, Detalhamento).
+   • Recomendações de Evolução: Ações claras para o estudante atingir os 1000 pontos.
+5. **DEVOLUTIVA DE INTERVENÇÃO SISEDU/SPAECE ("devolutiva_sisedu"):** Parecer escolar focado nos Descritores do SISEDU (D05 a D18), estruturado OBRIGATORIAMENTE com quebras de linha duplas ('\n\n') e marcadores '•':
+   • Diagnóstico Curricular: Nível global e destaque dos descritores adequados (D06, D13, D17).
+   • Fragilidades Prioritárias: Detalhamento dos descritores em nível Inicial ou Intermediário (ex: D15 contra-argumentação, D18 pontuação, D12 substituição lexical).
+   • Sugere-se ao professor: Roteiro prático de oficina pedagógica ou atividade de reescrita para aplicação em sala de aula.
 6. **SINTAXE JSON RIGOROSA:** Retorne estritamente um único objeto JSON válido. Ao citar obras, frases ou palavras dentro das strings do JSON, use sempre aspas simples '...' para nunca quebrar as aspas delimitadoras do JSON.
 
 FORMATO DE SAÍDA OBRIGATÓRIO (JSON estrito):
@@ -204,8 +214,8 @@ FORMATO DE SAÍDA OBRIGATÓRIO (JSON estrito):
   "confianca_identificacao": "ALTA",
   "motivo_incerteza_identificacao": "Nome e turma perfeitamente legíveis no cabeçalho",
   "texto_transcrito": "Linha 1 do texto manuscrito...\nLinha 2 do texto manuscrito...\nLinha 3...",
-  "devolutiva_enem": "Parecer pedagógico de intervenção e evolução na Matriz do ENEM...",
-  "devolutiva_sisedu": "Plano de intervenção pedagógica focado nos Descritores do SISEDU/SPAECE...",
+  "devolutiva_enem": "Visão Geral: O texto apresenta...\n\n• Na Competência 1: Observa-se...\n\n• Na Competência 2: O tema é...\n\n• Na Competência 3: O projeto de texto...\n\n• A Competência 4: Revela bom uso...\n\n• Por fim, a Competência 5: Apresenta os 5 elementos...\n\n• Recomendações de Evolução: Praticar...",
+  "devolutiva_sisedu": "Diagnóstico Curricular: O desempenho situa-se...\n\n• Fragilidades Prioritárias: Observam-se fragilidades em D15 e D18...\n\n• Sugere-se ao professor: Uma oficina prática de...",
   "devolutiva_nivel_inicial": "Plano de intervenção pedagógica focado nos Descritores do SISEDU/SPAECE...",
   "avaliacoes": {
     "enem": {

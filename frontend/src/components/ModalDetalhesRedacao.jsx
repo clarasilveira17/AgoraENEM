@@ -12,6 +12,113 @@ import { useAuth } from '../context/AuthContext';
 import { authService } from '../services/authService';
 import FolhaOficialRedacao from './FolhaOficialRedacao';
 
+function renderInlineMarkdown(str) {
+  if (!str) return '';
+  const parts = str.split(/(\*\*[^*]+\*\*)/g);
+  return parts.map((part, i) => {
+    if (part.startsWith('**') && part.endsWith('**')) {
+      return <strong key={i} className="font-bold text-[#26251e]">{part.slice(2, -2)}</strong>;
+    }
+    return part;
+  });
+}
+
+function FormattedFeedbackText({ text }) {
+  if (!text) return null;
+
+  const rawSections = String(text).split(/\r?\n+/).map(s => s.trim()).filter(Boolean);
+
+  let sections = [];
+  rawSections.forEach(block => {
+    const splitRegex = /(?=(?:Na\s+Competência\s+[1-5]|A\s+Competência\s+[1-5]|Competência\s+[1-5]|Por\s+fim,\s+a\s+Competência\s+[1-5]|Sugere-se\s+ao\s+professor|Recomenda-se\s+ao\s+professor|Sugere-se|Recomenda-se|No\s+entanto,\s+há\s+fragilidades|Fragilidades\s+Prioritárias|Oficina\s+Pedagógica|Recomendações\s+de\s+Evolução|Diagnóstico\s+Curricular|Descritores?\s+em\s+Nível|\u2022|\*|\-))/gi;
+    const parts = block.split(splitRegex).map(p => p.trim()).filter(Boolean);
+    if (parts.length > 1) {
+      sections.push(...parts);
+    } else {
+      sections.push(block);
+    }
+  });
+
+  return (
+    <div className="space-y-2.5 text-xs sm:text-[13px] leading-relaxed text-[#26251e] mt-1">
+      {sections.map((sec, idx) => {
+        const cleanSec = sec.replace(/^[\u2022\*\-]\s*/, '').trim();
+
+        // 1. Competência ENEM (C1 a C5)
+        const compMatch = cleanSec.match(/^(?:Na\s+Competência\s+([1-5])|A\s+Competência\s+([1-5])|Competência\s+([1-5])|Por\s+fim,\s+a\s+Competência\s+([1-5]))[,:\s]*(.*)$/i);
+        if (compMatch) {
+          const compNum = compMatch[1] || compMatch[2] || compMatch[3] || compMatch[4];
+          const restText = compMatch[5] || cleanSec;
+          return (
+            <div key={idx} className="flex items-start gap-2.5 bg-white/80 border border-[#1f8a65]/20 rounded-lg p-3 shadow-2xs">
+              <span className="shrink-0 px-2 py-0.5 bg-[#1f8a65] text-white font-mono font-bold text-[11px] rounded tracking-wide shadow-2xs">
+                C{compNum}
+              </span>
+              <div className="flex-1 font-sans">
+                <span className="font-bold text-[#1f8a65] block mb-0.5 sm:inline sm:mb-0 sm:mr-1">Competência {compNum}:</span>
+                <span className="text-[#383630]">{renderInlineMarkdown(restText)}</span>
+              </div>
+            </div>
+          );
+        }
+
+        // 2. Descritor SISEDU (D05 a D18)
+        const descMatch = cleanSec.match(/^(?:Descritor\s+(D\d{2})|No\s+descritor\s+(D\d{2})|(D\d{2}))[,:\s]*(.*)$/i);
+        if (descMatch) {
+          const descCode = descMatch[1] || descMatch[2] || descMatch[3];
+          const restText = descMatch[4] || cleanSec;
+          return (
+            <div key={idx} className="flex items-start gap-2.5 bg-white/80 border border-[#f54e00]/20 rounded-lg p-3 shadow-2xs">
+              <span className="shrink-0 px-2 py-0.5 bg-[#f54e00] text-white font-mono font-bold text-[11px] rounded tracking-wide shadow-2xs">
+                {descCode.toUpperCase()}
+              </span>
+              <div className="flex-1 font-sans">
+                <span className="font-bold text-[#f54e00] block mb-0.5 sm:inline sm:mb-0 sm:mr-1">{descCode.toUpperCase()}:</span>
+                <span className="text-[#383630]">{renderInlineMarkdown(restText)}</span>
+              </div>
+            </div>
+          );
+        }
+
+        // 3. Recomendação / Sugestão / Oficina Pedagógica
+        const recMatch = cleanSec.match(/^(Sugere-se(?:\s+ao\s+professor)?|Recomenda-se(?:\s+ao\s+professor)?|Oficina\s+Pedagógica(?:\s+Recomendada)?|Recomendações(?:\s+de\s+Evolução)?)[,:\s]*(.*)$/i);
+        if (recMatch) {
+          return (
+            <div key={idx} className="flex items-start gap-2.5 bg-[#c08532]/10 border border-[#c08532]/30 rounded-lg p-3 shadow-2xs">
+              <span className="shrink-0 text-base">💡</span>
+              <div className="flex-1 font-sans text-xs sm:text-[13px] text-[#4d3209]">
+                <strong className="font-bold text-[#8a5203] block mb-0.5 sm:inline sm:mb-0 sm:mr-1">{recMatch[1]}:</strong>
+                <span>{renderInlineMarkdown(recMatch[2])}</span>
+              </div>
+            </div>
+          );
+        }
+
+        // 4. Fragilidades / Pontos de Atenção
+        const fragMatch = cleanSec.match(/^(No\s+entanto[,\s]+há\s+fragilidades|Fragilidades\s+Prioritárias|Atenção|Pontos\s+de\s+Atenção)[,:\s]*(.*)$/i);
+        if (fragMatch) {
+          return (
+            <div key={idx} className="flex items-start gap-2.5 bg-[#f54e00]/10 border border-[#f54e00]/30 rounded-lg p-3 shadow-2xs">
+              <span className="shrink-0 text-base">⚠️</span>
+              <div className="flex-1 font-sans text-xs sm:text-[13px] text-[#6e1e00]">
+                <strong className="font-bold text-[#b83800] block mb-0.5 sm:inline sm:mb-0 sm:mr-1">{fragMatch[1]}:</strong>
+                <span>{renderInlineMarkdown(fragMatch[2])}</span>
+              </div>
+            </div>
+          );
+        }
+
+        // 5. Parágrafo Geral / Visão Global
+        return (
+          <div key={idx} className="font-sans leading-relaxed text-[#26251e] bg-white/70 p-3 rounded-lg border border-black/5 shadow-2xs">
+            {renderInlineMarkdown(cleanSec)}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 export default function ModalDetalhesRedacao({ redacao, onClose, onUpdated }) {
   const { isAdmin } = useAuth();
   const [manualName, setManualName] = useState(redacao?.nome_aluno || '');
@@ -505,14 +612,12 @@ export default function ModalDetalhesRedacao({ redacao, onClose, onUpdated }) {
             {activeTab === 'enem' && (
               <div className="space-y-3.5">
                 {devolutivaEnem && (
-                  <div className="bg-[#1f8a65]/10 border border-[#1f8a65]/30 rounded-xl p-4 space-y-2 shadow-xs animate-fadeIn">
-                    <div className="flex items-center gap-2 text-[#1f8a65] font-bold text-xs uppercase tracking-wider">
+                  <div className="bg-[#1f8a65]/10 border border-[#1f8a65]/30 rounded-xl p-4 sm:p-5 space-y-2.5 shadow-xs animate-fadeIn">
+                    <div className="flex items-center gap-2 text-[#1f8a65] font-bold text-xs uppercase tracking-wider pb-1 border-b border-[#1f8a65]/20">
                       <Sparkles className="w-4 h-4 text-[#1f8a65] shrink-0" />
                       <span>Parecer & Diretrizes Pedagógicas — Matriz ENEM</span>
                     </div>
-                    <p className="text-xs text-[#26251e] leading-relaxed whitespace-pre-wrap font-sans">
-                      {devolutivaEnem}
-                    </p>
+                    <FormattedFeedbackText text={devolutivaEnem} />
                   </div>
                 )}
 
@@ -573,14 +678,14 @@ export default function ModalDetalhesRedacao({ redacao, onClose, onUpdated }) {
             {activeTab === 'sisedu' && (
               <div className="space-y-4">
                 {(devolutivaSisedu || Object.values(siseduDescritores).some(d => d?.nivel === 'Inicial')) && (
-                  <div className="bg-rose-500/10 border-2 border-rose-500/40 rounded-xl p-4 space-y-2 shadow-sm animate-fadeIn">
-                    <div className="flex items-center gap-2 text-rose-700 font-bold text-xs uppercase tracking-wider">
-                      <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0" />
+                  <div className="bg-[#f54e00]/10 border border-[#f54e00]/30 rounded-xl p-4 sm:p-5 space-y-2.5 shadow-xs animate-fadeIn">
+                    <div className="flex items-center gap-2 text-[#f54e00] font-bold text-xs uppercase tracking-wider pb-1 border-b border-[#f54e00]/20">
+                      <AlertTriangle className="w-4 h-4 text-[#f54e00] shrink-0" />
                       <span>Plano de Intervenção Pedagógica — Matriz SISEDU / SPAECE</span>
                     </div>
-                    <p className="text-xs text-rose-900 leading-relaxed whitespace-pre-wrap font-sans">
-                      {devolutivaSisedu || "Atenção: O estudante apresentou descritores em Nível Inicial. Recomenda-se aplicar atividade direcionada de reescrita com foco em contra-argumentação (D15) e coesão lexical (D12)."}
-                    </p>
+                    <FormattedFeedbackText 
+                      text={devolutivaSisedu || "Atenção: O estudante apresentou descritores em Nível Inicial. Recomenda-se aplicar atividade direcionada de reescrita com foco em contra-argumentação (D15) e coesão lexical (D12)."} 
+                    />
                   </div>
                 )}
 
