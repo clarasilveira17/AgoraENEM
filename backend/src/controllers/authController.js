@@ -3,6 +3,7 @@ import jwt from 'jsonwebtoken';
 import db from '../config/db.js';
 import { supabase, isSupabaseConfigured } from '../config/supabaseClient.js';
 import { JWT_SECRET } from '../middleware/authMiddleware.js';
+import { invalidateStudentCache } from '../utils/turmasUtils.js';
 
 // POST /api/auth/login
 export const login = async (req, res) => {
@@ -191,6 +192,8 @@ export const register = async (req, res) => {
 
     const token = jwt.sign({ id: newUser.id, email: newUser.email, role: newUser.role }, JWT_SECRET, { expiresIn: '7d' });
 
+    invalidateStudentCache();
+
     res.status(201).json({
       message: 'Cadastro realizado com sucesso!',
       token,
@@ -287,6 +290,8 @@ export const createEstudante = async (req, res) => {
       `).run(cleanNome, cleanEmail, senhaHash, cleanTurma);
       newStudent = { id: info.lastInsertRowid, nome: cleanNome, email: cleanEmail, turma: cleanTurma, role: 'ESTUDANTE' };
     }
+
+    invalidateStudentCache();
 
     res.status(201).json({
       message: 'Estudante cadastrado com sucesso!',

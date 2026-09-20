@@ -92,6 +92,48 @@ export const MANUAL_OCR_NAME_MAP = {
   'Evely Loviny Santos Pessoa': 'EVELY LAVINY SANTOS PESSOA'
 };
 
+// Cache em memória para lista de estudantes (TTL: 5 minutos)
+let studentCache = {
+  data: null,
+  timestamp: 0
+};
+const CACHE_TTL_MS = 5 * 60 * 1000;
+
+export function invalidateStudentCache() {
+  studentCache.data = null;
+  studentCache.timestamp = 0;
+}
+
+async function getRegisteredStudents() {
+  const now = Date.now();
+  if (studentCache.data && (now - studentCache.timestamp < CACHE_TTL_MS)) {
+    return studentCache.data;
+  }
+
+  let students = [];
+  if (isSupabaseConfigured) {
+    try {
+      const { data } = await supabase.from('users').select('id, nome, turma').eq('role', 'ESTUDANTE');
+      students = data || [];
+    } catch (e) {
+      console.warn('[TurmasUtils] Falha ao consultar estudantes do Supabase:', e.message);
+    }
+  }
+
+  if (students.length === 0 && db) {
+    try {
+      students = db.prepare("SELECT id, nome, turma FROM users WHERE role = 'ESTUDANTE'").all() || [];
+    } catch (e) {}
+  }
+
+  studentCache = {
+    data: students,
+    timestamp: now
+  };
+
+  return students;
+}
+
 /**
  * Resolução e blindagem de vínculo de estudante e turma oficial
  */
@@ -137,63 +179,32 @@ export async function resolveStudent(userId, rawNome, rawTurma) {
     };
   }
 
-  // 3. Match inteligente contra banco de alunos cadastrados
-  if (isSupabaseConfigured) {
-    const { data: users } = await supabase.from('users').select('id, nome, turma').eq('role', 'ESTUDANTE');
-    if (users && users.length > 0) {
-      let matched = users.find(u => normalizeStr(u.nome) === normTarget);
-      if (!matched) {
-        const candidates = users.filter(u => {
-          const uNorm = normalizeStr(u.nome);
-          return uNorm.includes(normTarget) || normTarget.includes(uNorm);
-        });
-        if (candidates.length === 1) {
-          matched = candidates[0];
-        } else if (candidates.length > 1) {
-          const normT = normalizeStr(finalTurma);
-          matched = candidates.find(c => {
-            const cT = normalizeStr(c.turma);
-            return normT.length > 1 && (cT.includes(normT) || normT.includes(cT.substring(0, 3)));
-          }) || candidates[0];
-        }
-      }
-      if (matched) {
-        return {
-          user_id: matched.id,
-          nome_aluno: matched.nome,
-          turma_aluno: normalizeTurma(matched.turma || finalTurma)
-        };
+  // 3. Match inteligente contra cache de alunos cadastrados
+  const users = await getRegisteredStudents();
+  if (users && users.length > 0) {
+    let matched = users.find(u => normalizeStr(u.nome) === normTarget);
+    if (!matched) {
+      const candidates = users.filter(u => {
+        const uNorm = normalizeStr(u.nome);
+        return uNorm.includes(normTarget) || normTarget.includes(uNorm);
+      });
+      if (candidates.length === 1) {
+        matched = candidates[0];
+      } else if (candidates.length > 1) {
+        const normT = normalizeStr(finalTurma);
+        matched = candidates.find(c => {
+          const cT = normalizeStr(c.turma);
+          return normT.length > 1 && (cT.includes(normT) || normT.includes(cT.substring(0, 3)));
+        }) || candidates[0];
       }
     }
-  } else if (db) {
-    try {
-      const users = db.prepare("SELECT id, nome, turma FROM users WHERE role = 'ESTUDANTE'").all();
-      if (users && users.length > 0) {
-        let matched = users.find(u => normalizeStr(u.nome) === normTarget);
-        if (!matched) {
-          const candidates = users.filter(u => {
-            const uNorm = normalizeStr(u.nome);
-            return uNorm.includes(normTarget) || normTarget.includes(uNorm);
-          });
-          if (candidates.length === 1) {
-            matched = candidates[0];
-          } else if (candidates.length > 1) {
-            const normT = normalizeStr(finalTurma);
-            matched = candidates.find(c => {
-              const cT = normalizeStr(c.turma);
-              return normT.length > 1 && (cT.includes(normT) || normT.includes(cT.substring(0, 3)));
-            }) || candidates[0];
-          }
-        }
-        if (matched) {
-          return {
-            user_id: matched.id,
-            nome_aluno: matched.nome,
-            turma_aluno: normalizeTurma(matched.turma || finalTurma)
-          };
-        }
-      }
-    } catch (e) {}
+    if (matched) {
+      return {
+        user_id: matched.id,
+        nome_aluno: matched.nome,
+        turma_aluno: normalizeTurma(matched.turma || finalTurma)
+      };
+    }
   }
 
   return {
