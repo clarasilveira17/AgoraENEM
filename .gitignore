@@ -14,10 +14,12 @@ dist/
 frontend/dist/
 build/
 
-# Zip / Archives & Binaries
+# Zip / Archives & Binaries & Scripts
 *.zip
 *.tar.gz
 *.exe
+*.bat
+*.cmd
 
 # Sensitive Student Data & Backups (LGPD)
 *.xlsx
@@ -36,6 +38,16 @@ backup*.json
 !package-lock.json
 !vercel.json
 !.oxlintrc.json
+
+# Draft documentation and legacy root files
+/index.html
+ANALISE.md
+DESIGN-cursor.md
+MELHORIAS.md
+ROADMAP.md
+base.md
+design.md
+design_pattern.md
 
 # System & IDE
 .DS_Store
