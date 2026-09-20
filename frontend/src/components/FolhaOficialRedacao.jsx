@@ -1,6 +1,22 @@
 import React from 'react';
 
 /**
+ * Robust text sanitizer for official documents (Unicode NFKC + control chars removal)
+ */
+export const cleanPrintText = (str) => {
+  if (str === null || str === undefined) return '';
+  return String(str)
+    .normalize('NFKC')
+    .replace(/<[^>]*>/g, '')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&amp;/g, '&')
+    .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F-\u009F]/g, '')
+    .trim();
+};
+
+/**
  * Componente da Folha Oficial de Avaliação e Redação (Documento Oficial Projeto Ágora Escolar).
  * Design Editorial Monocromático de Alta Fidelidade (Padrão Ouro Ink-Saving),
  * idêntico ao modelo consolidado no index.html.
@@ -20,6 +36,8 @@ export default function FolhaOficialRedacao({
   showSisedu = true,
   showWatermark = false,
   showSignature = true,
+  showPage2 = false,
+  pdfPageMode = 'single', // 'single' | 'both'
   idPrefix = 'pdf-export'
 }) {
   if (!redacao) return null;
@@ -32,31 +50,30 @@ export default function FolhaOficialRedacao({
     data = rawExtracted || {};
   }
 
-  // Sanitização de texto
-  const clean = (str) => {
-    if (!str) return '';
-    return String(str)
-      .replace(/<[^>]*>?/gm, '')
-      .replace(/&nbsp;/g, ' ')
-      .replace(/&lt;/g, '<')
-      .replace(/&gt;/g, '>')
-      .replace(/&amp;/g, '&')
-      .replace(/[\u0080-\u009F]/g, '')
-      .trim();
-  };
+  const clean = cleanPrintText;
 
-  const studentNameDisplay = clean(manualName || redacao.nome_aluno || data.aluno || 'ESTUDANTE NÃO IDENTIFICADO');
+  const studentNameDisplay = clean(manualName || redacao.nome_aluno || data.aluno || 'Estudante Não Identificado');
   const turmaDisplay = clean(manualTurma || redacao.turma_aluno || data.turma || 'Geral');
-  const notaTotal = Number(notaEnemCalculada ?? redacao.nota_final ?? 0);
+  
+  // Safe score clamp (0 - 1000)
+  const rawScore = Number(notaEnemCalculada ?? redacao.nota_final ?? 0);
+  const notaTotal = Math.min(1000, Math.max(0, isNaN(rawScore) ? 0 : rawScore));
+  
   const temaRedacao = clean(redacao.tema || data.tema || data.titulo_tema || 'Tema Oficial do Exame Nacional do Ensino Médio');
 
   const printDateStr = new Date().toLocaleDateString('pt-BR');
-  const printTimeStr = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-  const dataLancamentoStr = redacao.data_captura
-    ? new Date(redacao.data_captura).toLocaleDateString('pt-BR')
-    : printDateStr;
+  
+  // Safe Date parsing
+  let dataLancamentoStr = printDateStr;
+  if (redacao.data_captura) {
+    const parsedDate = new Date(redacao.data_captura);
+    if (!isNaN(parsedDate.getTime()) && parsedDate.getFullYear() >= 2000 && parsedDate.getFullYear() <= 2100) {
+      dataLancamentoStr = parsedDate.toLocaleDateString('pt-BR');
+    }
+  }
 
-  const codigoRedacao = `#AG-${String(redacao.id || 54).padStart(4, '0')}-2026`;
+  const rawIdNum = redacao.id ? String(redacao.id).padStart(4, '0') : '0000';
+  const codigoRedacao = `#AG-${rawIdNum}-2026`;
 
   const enemCompetenciasMap = [
     { key: 'competencia_1', code: 'C1', title: 'Norma Padrão', name: 'Domínio da modalidade escrita formal' },
@@ -124,9 +141,11 @@ export default function FolhaOficialRedacao({
 
   const sanitizedFullText = clean(fullTextContent || data.texto_transcrito || redacao.texto_digitado || 'Texto da redação indisponível.');
 
-  // Fontes editoriais consistentes com index.html
+  // Fontes editoriais carregadas
   const fontSans = "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif";
   const fontSerif = "'Merriweather', Georgia, Cambria, 'Times New Roman', serif";
+
+  const isPage2Visible = showPage2 || pdfPageMode === 'both';
 
   return (
     <div className="folha-oficial-wrapper" style={{ display: 'flex', flexDirection: 'column', gap: '30px', alignItems: 'center' }}>
@@ -292,7 +311,7 @@ export default function FolhaOficialRedacao({
 
                     <td style={{ padding: '5px 6px', verticalAlign: 'top', textAlign: 'center' }}>
                       <span style={{ fontWeight: '800', fontSize: '10.5px', color: '#000000' }}>
-                        {comp.nota ?? 0}
+                        {Math.min(200, Math.max(0, Number(comp.nota ?? 0)))}
                       </span>
                     </td>
 
@@ -370,7 +389,14 @@ export default function FolhaOficialRedacao({
                       <span style={{ fontWeight: '600', color: '#000000' }}>{item.title}</span>
                       <span style={{ fontWeight: '700', color: '#1c1c1c' }}>{item.nivel}</span>
                     </div>
-                    <div style={{ width: '100%', height: '3.5px', border: '0.8px solid #000000', background: 'transparent', position: 'relative' }}>
+                    <div 
+                      role="progressbar" 
+                      aria-valuenow={item.percent} 
+                      aria-valuemin={0} 
+                      aria-valuemax={100} 
+                      aria-label={`${item.title}: ${item.nivel}`}
+                      style={{ width: '100%', height: '3.5px', border: '1px solid #000000', background: 'transparent', position: 'relative' }}
+                    >
                       <div style={{ height: '100%', backgroundColor: '#000000', width: `${item.percent}%` }}></div>
                     </div>
                   </div>
@@ -400,7 +426,14 @@ export default function FolhaOficialRedacao({
                       <span style={{ fontWeight: '600', color: '#000000' }}>{item.title}</span>
                       <span style={{ fontWeight: '700', color: '#1c1c1c' }}>{item.nivel}</span>
                     </div>
-                    <div style={{ width: '100%', height: '3.5px', border: '0.8px solid #000000', background: 'transparent', position: 'relative' }}>
+                    <div 
+                      role="progressbar" 
+                      aria-valuenow={item.percent} 
+                      aria-valuemin={0} 
+                      aria-valuemax={100} 
+                      aria-label={`${item.title}: ${item.nivel}`}
+                      style={{ width: '100%', height: '3.5px', border: '1px solid #000000', background: 'transparent', position: 'relative' }}
+                    >
                       <div style={{ height: '100%', backgroundColor: '#000000', width: `${item.percent}%` }}></div>
                     </div>
                   </div>
@@ -540,13 +573,13 @@ export default function FolhaOficialRedacao({
       </div>
 
       {/* ========================================================================= */}
-      {/* PÁGINA 2 (ANEXO II): OCULTADA POR PADRÃO PARA MANTER EXPORTAÇÃO EM 1 PÁGINA */}
+      {/* PÁGINA 2 (ANEXO II): RENDERIZADA QUANDO SELECIONADO MODO DE 2 PÁGINAS       */}
       {/* ========================================================================= */}
       <div
         id={`${idPrefix}-page-2`}
         className="folha-pagina folha-pagina-2 anexo-container"
         style={{
-          display: 'none',
+          display: isPage2Visible ? 'block' : 'none',
           width: '760px',
           maxWidth: '760px',
           minHeight: '1080px',
@@ -568,7 +601,7 @@ export default function FolhaOficialRedacao({
                 ANEXO II: TRANSCRIÇÃO COMPLETA & PARECER FINAL
               </h2>
               <p style={{ fontSize: '8.5px', color: '#555555', textTransform: 'uppercase', margin: '2px 0 0 0' }}>
-                Registro #{String(redacao.id || 54).padStart(5, '0')} • Estudante: <strong>{studentNameDisplay}</strong>
+                Registro #{rawIdNum} • Estudante: <strong>{studentNameDisplay}</strong>
               </p>
             </div>
             <div style={{ textAlign: 'right', fontSize: '8.5px', color: '#555555' }}>

@@ -125,6 +125,7 @@ export default function CorrecaoDetalheView({
   const [showSisedu, setShowSisedu] = useState(true);
   const [showWatermark, setShowWatermark] = useState(true);
   const [showSignature, setShowSignature] = useState(true);
+  const [pdfPageMode, setPdfPageMode] = useState('single'); // 'single' | 'both'
   const [isCustomizingPdf, setIsCustomizingPdf] = useState(false);
 
   // Seleção e vinculação de estudante
@@ -364,7 +365,7 @@ export default function CorrecaoDetalheView({
 
       pdf.addImage(imgData1, 'JPEG', 0, 0, 210, 297, undefined, 'FAST');
 
-      if (page2El && page2El.style.display !== 'none' && window.getComputedStyle(page2El).display !== 'none') {
+      if (pdfPageMode === 'both' && page2El) {
         const canvas2 = await html2canvas(page2El, canvasOptions);
         const imgData2 = canvas2.toDataURL('image/jpeg', 0.98);
         pdf.addPage('a4', 'portrait');
@@ -1023,11 +1024,37 @@ export default function CorrecaoDetalheView({
                 <span>Personalização do Boletim Oficial A4</span>
               </h3>
               <p className="text-xs text-[#807d72]">
-                Ajuste os dados da instituição e assinatura do professor para a impressão.
+                Ajuste os dados da instituição, assinatura do professor e formato de exportação.
               </p>
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
+              {/* Seletor 1 Página vs 2 Páginas */}
+              <div className="flex items-center bg-[#fafaf7] p-1 rounded-lg border border-[#e6e5e0]">
+                <button
+                  type="button"
+                  onClick={() => setPdfPageMode('single')}
+                  className={`px-3 py-1 text-xs font-mono font-medium rounded-md transition-all cursor-pointer ${
+                    pdfPageMode === 'single'
+                      ? 'bg-[#26251e] text-white shadow-xs'
+                      : 'text-[#807d72] hover:text-[#26251e]'
+                  }`}
+                >
+                  📄 1 Página
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPdfPageMode('both')}
+                  className={`px-3 py-1 text-xs font-mono font-medium rounded-md transition-all cursor-pointer ${
+                    pdfPageMode === 'both'
+                      ? 'bg-[#26251e] text-white shadow-xs'
+                      : 'text-[#807d72] hover:text-[#26251e]'
+                  }`}
+                >
+                  📑 2 Páginas
+                </button>
+              </div>
+
               <button
                 type="button"
                 onClick={() => setIsCustomizingPdf(!isCustomizingPdf)}
@@ -1043,7 +1070,7 @@ export default function CorrecaoDetalheView({
                 className="px-4 py-1.5 bg-[#1f8a65] hover:bg-[#187052] text-white text-xs font-mono font-bold rounded-lg transition-all cursor-pointer flex items-center gap-1.5"
               >
                 {isGeneratingPDF ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5" />}
-                <span>Exportar PDF</span>
+                <span>{pdfPageMode === 'both' ? 'Exportar PDF (2 Págs)' : 'Exportar PDF (1 Pág)'}</span>
               </button>
             </div>
           </div>
@@ -1090,6 +1117,8 @@ export default function CorrecaoDetalheView({
                 showSisedu={showSisedu}
                 showWatermark={showWatermark}
                 showSignature={showSignature}
+                pdfPageMode={pdfPageMode}
+                showPage2={pdfPageMode === 'both'}
                 idPrefix="pdf-export"
               />
             </div>

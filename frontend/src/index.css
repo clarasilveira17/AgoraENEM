@@ -110,11 +110,7 @@
   text-align: justify;
 }
 
-.anexo-container, #anexo-ii, .folha-pagina-2 {
-  display: none !important;
-}
-
-/* Official Print / PDF Styling (PRISMA Institutional Document Design) */
+/* Official Print / PDF Styling (Editorial Document Design) */
 @media print {
   @page {
     size: A4 portrait;
@@ -135,12 +131,14 @@
 
   /* Show only the official sheet pages */
   #pdf-print-container, #pdf-print-container *,
-  #container-do-boletim, #container-do-boletim * {
+  #container-do-boletim, #container-do-boletim *,
+  .folha-oficial-wrapper, .folha-oficial-wrapper * {
     visibility: visible;
   }
 
   #pdf-print-container,
-  #container-do-boletim {
+  #container-do-boletim,
+  .folha-oficial-wrapper {
     display: block !important;
     position: absolute;
     left: 0;
@@ -153,14 +151,24 @@
     z-index: 9999999;
   }
 
-  .no-print, .btn-imprimir, .anexo-container, #anexo-ii, .folha-pagina-2 {
+  .no-print, .btn-imprimir {
     display: none !important;
   }
 
   .folha-pagina {
     width: 100% !important;
+    max-width: 100% !important;
     box-sizing: border-box !important;
     page-break-inside: avoid !important;
     break-inside: avoid !important;
+    page-break-after: always !important;
+    break-after: page !important;
+    box-shadow: none !important;
+    border: none !important;
+  }
+
+  .folha-pagina:last-child {
+    page-break-after: auto !important;
+    break-after: auto !important;
   }
 }

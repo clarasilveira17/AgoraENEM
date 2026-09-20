@@ -344,7 +344,9 @@ export default function ModalDetalhesRedacao({ redacao, onClose, onUpdated }) {
     customRecado,
     showSisedu,
     showWatermark,
-    showSignature
+    showSignature,
+    showPage2: pdfPreviewPage === 'page2' || pdfPreviewPage === 'both',
+    pdfPageMode: pdfPreviewPage === 'page2' || pdfPreviewPage === 'both' ? 'both' : 'single'
   };
 
   return (
