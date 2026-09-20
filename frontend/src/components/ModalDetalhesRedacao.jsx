@@ -149,7 +149,8 @@ export default function ModalDetalhesRedacao({ redacao, onClose, onUpdated }) {
   const enem = avaliacoes.enem || {};
   const sisedu = avaliacoes.sisedu || avaliacoes.sisedu_agora || {};
   const siseduDescritores = sisedu.descritores || sisedu || {};
-  const devolutivaInicial = data.devolutiva_nivel_inicial || avaliacoes.devolutiva_nivel_inicial || sisedu.devolutiva_nivel_inicial;
+  const devolutivaEnem = data.devolutiva_enem || (data.devolutiva_nivel_inicial && data.devolutiva_nivel_inicial.includes('Competência') ? data.devolutiva_nivel_inicial : null);
+  const devolutivaSisedu = data.devolutiva_sisedu || (data.devolutiva_nivel_inicial && !data.devolutiva_nivel_inicial.includes('Competência') ? data.devolutiva_nivel_inicial : null) || data.devolutiva_nivel_inicial;
   const isIdentified = redacao.nome_detectado && redacao.nome_aluno;
 
   // Cálculo matemático consistente da soma das 5 competências do ENEM
@@ -503,6 +504,18 @@ export default function ModalDetalhesRedacao({ redacao, onClose, onUpdated }) {
             {/* TAB 1: ENEM MATRIX */}
             {activeTab === 'enem' && (
               <div className="space-y-3.5">
+                {devolutivaEnem && (
+                  <div className="bg-[#1f8a65]/10 border border-[#1f8a65]/30 rounded-xl p-4 space-y-2 shadow-xs animate-fadeIn">
+                    <div className="flex items-center gap-2 text-[#1f8a65] font-bold text-xs uppercase tracking-wider">
+                      <Sparkles className="w-4 h-4 text-[#1f8a65] shrink-0" />
+                      <span>Parecer & Diretrizes Pedagógicas — Matriz ENEM</span>
+                    </div>
+                    <p className="text-xs text-[#26251e] leading-relaxed whitespace-pre-wrap font-sans">
+                      {devolutivaEnem}
+                    </p>
+                  </div>
+                )}
+
                 <div className="flex items-center justify-between pb-2 border-b border-[#e6e5e0]">
                   <h4 className="text-xs font-semibold text-[#807d72] uppercase tracking-wider flex items-center gap-1.5">
                     <Sparkles className="w-3.5 h-3.5 text-[#f54e00]" />
@@ -559,14 +572,14 @@ export default function ModalDetalhesRedacao({ redacao, onClose, onUpdated }) {
             {/* TAB 2: SISEDU MATRIX */}
             {activeTab === 'sisedu' && (
               <div className="space-y-4">
-                {(devolutivaInicial || Object.values(siseduDescritores).some(d => d?.nivel === 'Inicial')) && (
+                {(devolutivaSisedu || Object.values(siseduDescritores).some(d => d?.nivel === 'Inicial')) && (
                   <div className="bg-rose-500/10 border-2 border-rose-500/40 rounded-xl p-4 space-y-2 shadow-sm animate-fadeIn">
                     <div className="flex items-center gap-2 text-rose-700 font-bold text-xs uppercase tracking-wider">
                       <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0" />
-                      <span>Devolutiva de Intervenção Pedagógica — Nível Inicial (SISEDU)</span>
+                      <span>Plano de Intervenção Pedagógica — Matriz SISEDU / SPAECE</span>
                     </div>
                     <p className="text-xs text-rose-900 leading-relaxed whitespace-pre-wrap font-sans">
-                      {devolutivaInicial || "Atenção: O estudante apresentou descritores em Nível Inicial. Recomenda-se aplicar atividade direcionada de reescrita com suporte em conectores argumentativos e substituição lexical antes do próximo ciclo de avaliação."}
+                      {devolutivaSisedu || "Atenção: O estudante apresentou descritores em Nível Inicial. Recomenda-se aplicar atividade direcionada de reescrita com foco em contra-argumentação (D15) e coesão lexical (D12)."}
                     </p>
                   </div>
                 )}

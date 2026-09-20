@@ -194,11 +194,34 @@ export default function CorrecaoDetalheView({
   const c2Val = Number(enem.competencia_2?.nota ?? 0);
   const c3Val = Number(enem.competencia_3?.nota ?? 0);
   const c4Val = Number(enem.competencia_4?.nota ?? 0);
-  const c5Val = Number(enem.competencia_5?.nota ?? 0);
   const sumCompetencias = c1Val + c2Val + c3Val + c4Val + c5Val;
   const notaEnemCalculada = (enem.competencia_1 || enem.competencia_2) ? sumCompetencias : Number(enem.nota_total_enem ?? redacao.nota_final ?? 0);
+  const devolutivaEnem = data.devolutiva_enem || (data.devolutiva_nivel_inicial && data.devolutiva_nivel_inicial.includes('Competência') ? data.devolutiva_nivel_inicial : null);
+  const devolutivaSisedu = data.devolutiva_sisedu || (data.devolutiva_nivel_inicial && !data.devolutiva_nivel_inicial.includes('Competência') ? data.devolutiva_nivel_inicial : null) || data.devolutiva_nivel_inicial;
 
   const fullTextContent = redacao.texto_digitado || data.texto_transcrito || 'Transcrição indisponível.';
+
+  // Estudo de linhas: preserva quebras pautadas 01 a 30 da folha ou divide por parágrafos/frases se o texto for contínuo
+  const parsedLines = useMemo(() => {
+    if (!fullTextContent || fullTextContent === 'Transcrição indisponível.') {
+      return ['Transcrição indisponível.'];
+    }
+    const rawLines = fullTextContent.split('\n');
+    if (rawLines.length >= 4) {
+      return rawLines;
+    }
+    // Se veio tudo em 1 único bloco contínuo, formata em linhas pautadas por sentenças
+    const lines = [];
+    rawLines.forEach(paragraph => {
+      const trimmed = paragraph.trim();
+      if (!trimmed) return;
+      const sentences = trimmed.split(/(?<=[.!?])\s+/);
+      sentences.forEach(s => {
+        if (s.trim()) lines.push(s.trim());
+      });
+    });
+    return lines.length ? lines : rawLines;
+  }, [fullTextContent]);
 
   const handleCopyText = () => {
     navigator.clipboard.writeText(fullTextContent);
@@ -629,7 +652,20 @@ export default function CorrecaoDetalheView({
       {/* ======================================================== */}
       {activeTab === 'enem' && (
         <div className="space-y-4 animate-fadeIn">
-          
+
+          {/* Devolutiva Pedagógica ENEM */}
+          {devolutivaEnem && (
+            <div className="bg-[#1f8a65]/10 border border-[#1f8a65]/30 rounded-xl p-4 space-y-2 shadow-xs animate-fadeIn">
+              <div className="flex items-center gap-2 text-[#1f8a65] font-bold text-xs font-mono uppercase tracking-wider">
+                <Award className="w-4 h-4 shrink-0" />
+                <span>Parecer & Diretrizes Pedagógicas — Matriz ENEM</span>
+              </div>
+              <p className="text-xs text-[#26251e] leading-relaxed whitespace-pre-wrap font-sans">
+                {devolutivaEnem}
+              </p>
+            </div>
+          )}
+
           {/* Grid de Competências */}
           <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
             {competenciasList.map((comp) => {
@@ -731,13 +767,13 @@ export default function CorrecaoDetalheView({
             </div>
 
             <div className="bg-[#fafaf7] border border-[#e6e5e0] rounded-lg p-4 font-mono text-xs text-[#26251e] leading-relaxed max-h-[600px] overflow-y-auto custom-scrollbar whitespace-pre-wrap divide-y divide-[#e6e5e0]/40">
-              {fullTextContent.split('\n').map((line, idx) => (
+              {parsedLines.map((line, idx) => (
                 <div key={idx} className="py-1 flex items-start gap-3">
                   <span className="text-[#5a5852] select-none font-mono font-medium text-[11px] w-6 shrink-0 text-right">
                     {String(idx + 1).padStart(2, '0')}
                   </span>
                   <span className="flex-1 font-serif text-sm text-[#26251e] leading-relaxed">
-                    {line}
+                    {line || <span className="opacity-0">—</span>}
                   </span>
                 </div>
               ))}
@@ -827,15 +863,15 @@ export default function CorrecaoDetalheView({
       {activeTab === 'sisedu' && (
         <div className="space-y-4 animate-fadeIn">
           
-          {/* Alerta de Devolutiva Pedagógica Inicial se houver */}
-          {(data.devolutiva_nivel_inicial || Object.values(siseduDescritores).some(d => String(d?.nivel || '').toLowerCase().includes('inicial'))) && (
+          {/* Alerta de Devolutiva Pedagógica SISEDU se houver */}
+          {(devolutivaSisedu || Object.values(siseduDescritores).some(d => String(d?.nivel || '').toLowerCase().includes('inicial'))) && (
             <div className="bg-[#f54e00]/10 border border-[#f54e00]/30 rounded-xl p-4 space-y-2 shadow-xs animate-fadeIn">
               <div className="flex items-center gap-2 text-[#f54e00] font-bold text-xs font-mono uppercase tracking-wider">
-                <AlertTriangle className="w-4 h-4 shrink-0" />
-                <span>Devolutiva de Intervenção Pedagógica — Nível Inicial (SISEDU)</span>
+                <Compass className="w-4 h-4 shrink-0" />
+                <span>Plano de Intervenção Pedagógica — Matriz SISEDU / SPAECE</span>
               </div>
               <p className="text-xs text-[#26251e] leading-relaxed whitespace-pre-wrap font-sans">
-                {data.devolutiva_nivel_inicial || "Atenção: O estudante apresentou descritores em Nível Inicial. Recomenda-se aplicar atividade direcionada de reescrita com suporte em conectores argumentativos e substituição lexical antes do próximo ciclo de avaliação."}
+                {devolutivaSisedu || "Atenção: O estudante apresentou descritores em Nível Inicial. Recomenda-se aplicar atividade direcionada de reescrita com suporte em conectores argumentativos e substituição lexical antes do próximo ciclo de avaliação."}
               </p>
             </div>
           )}

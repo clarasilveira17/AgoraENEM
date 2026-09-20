@@ -135,11 +135,12 @@ DIRETRIZES DA MATRIZ SISEDU/SPAECE (D05 a D18):
 - D18: Emprego da pontuação e recursos expressivos na organização textual.
 
 MISSÃO ADICIONAL:
-1. **TRANSCRIÇÃO 100% INTEGRAL ("texto_transcrito"):** Transcreva 100% do texto do aluno sem omitir palavras e sem reticências. Se digitado, preserve integralmente.
+1. **TRANSCRIÇÃO LINHA A LINHA DA FOLHA OFICIAL (Linhas 01 a 30):** Transcreva o texto do aluno preservando exatamente a disposição de linhas da folha pautada de redação. Insira uma quebra de linha ('\n') ao final de cada linha física manuscrita na folha, de modo que cada linha corresponda fielmente às linhas 1 a 30 da folha oficial. Se for texto digitado, quebre as linhas mantendo a estrutura de parágrafos bem definida.
 2. **IDENTIFICAÇÃO SINCERA:** Classifique "confianca_identificacao" em "ALTA", "MEDIA" ou "BAIXA" com base na legibilidade do cabeçalho.
 3. **CITAÇÃO DIRETA ("citacao_texto"):** Extraia sempre trecho literal do aluno como evidência para cada nota.
-4. **DEVOLUTIVA PEDAGÓGICA ("devolutiva_nivel_inicial"):** Forneça um parecer claro com pontos fortes e orientações concretas de evolução para os aspectos em Nível Inicial ou Intermediário.
-5. **SINTAXE JSON RIGOROSA:** Retorne estritamente um único objeto JSON válido. Ao citar obras, frases ou palavras dentro das strings do JSON, use sempre aspas simples '...' para nunca quebrar as aspas delimitadoras do JSON.
+4. **DEVOLUTIVA PEDAGÓGICA ENEM ("devolutiva_enem"):** Parecer pedagógico detalhado focado nas 5 Competências do ENEM (C1 a C5), orientando o estudante sobre desvios gramaticais, repertório, projeto de texto, coesão e detalhamento dos 5 elementos da proposta de intervenção.
+5. **DEVOLUTIVA DE INTERVENÇÃO SISEDU/SPAECE ("devolutiva_sisedu"):** Parecer escolar focado exclusivamente nos Descritores do SISEDU (D05 a D18) que apresentarem Nível Inicial ou Intermediário (ex: D15 contra-argumentação, D12 coesão e substituição lexical, D16 articulação tese-argumentos), com recomendação de oficina pedagógica prática para o professor da turma.
+6. **SINTAXE JSON RIGOROSA:** Retorne estritamente um único objeto JSON válido. Ao citar obras, frases ou palavras dentro das strings do JSON, use sempre aspas simples '...' para nunca quebrar as aspas delimitadoras do JSON.
 
 FORMATO DE SAÍDA OBRIGATÓRIO (JSON estrito):
 {
@@ -147,8 +148,10 @@ FORMATO DE SAÍDA OBRIGATÓRIO (JSON estrito):
   "turma": "${turmaFornecida || 'Turma do Aluno ou null'}",
   "confianca_identificacao": "ALTA",
   "motivo_incerteza_identificacao": "Nome e turma perfeitamente legíveis no cabeçalho",
-  "texto_transcrito": "Texto integral transcrito palavra por palavra...",
-  "devolutiva_nivel_inicial": "Diretriz pedagógica estruturada de intervenção...",
+  "texto_transcrito": "Linha 1 do texto manuscrito...\nLinha 2 do texto manuscrito...\nLinha 3...",
+  "devolutiva_enem": "Parecer pedagógico de intervenção e evolução na Matriz do ENEM...",
+  "devolutiva_sisedu": "Plano de intervenção pedagógica focado nos Descritores do SISEDU/SPAECE...",
+  "devolutiva_nivel_inicial": "Plano de intervenção pedagógica focado nos Descritores do SISEDU/SPAECE...",
   "avaliacoes": {
     "enem": {
       "competencia_1": { "nota": 160, "citacao_texto": "trecho literal", "justificativa": "..." },
