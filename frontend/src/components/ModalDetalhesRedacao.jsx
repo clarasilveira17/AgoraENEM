@@ -197,11 +197,11 @@ export default function ModalDetalhesRedacao({ redacao, onClose, onUpdated }) {
     return String(str).replace(/[^a-zA-Z0-9_]/g, '_');
   };
 
-  // ROBUST 2-PAGE STRICT PDF GENERATION VIA JSPDF + HTML2CANVAS (100% fiel ao HTML)
+  // STRICT 1-PAGE A4 PDF GENERATION VIA JSPDF + HTML2CANVAS (100% fiel ao HTML)
   const handleDownloadPDF = async () => {
     const page1El = document.getElementById('pdf-export-page-1');
     const page2El = document.getElementById('pdf-export-page-2');
-    if (!page1El || !page2El) {
+    if (!page1El) {
       alert('Aguarde o carregamento do documento para exportar.');
       return;
     }
@@ -235,15 +235,15 @@ export default function ModalDetalhesRedacao({ redacao, onClose, onUpdated }) {
       // Add Page 1 (Frente)
       pdf.addImage(imgData1, 'JPEG', 0, 0, 210, 297, undefined, 'FAST');
 
-      // 3. Capture Page 2 (Verso)
-      const canvas2 = await html2canvas(page2El, canvasOptions);
-      const imgData2 = canvas2.toDataURL('image/jpeg', 0.98);
+      // 3. Capture Page 2 (Verso) only if explicitly rendered and visible
+      if (page2El && page2El.style.display !== 'none' && window.getComputedStyle(page2El).display !== 'none') {
+        const canvas2 = await html2canvas(page2El, canvasOptions);
+        const imgData2 = canvas2.toDataURL('image/jpeg', 0.98);
+        pdf.addPage('a4', 'portrait');
+        pdf.addImage(imgData2, 'JPEG', 0, 0, 210, 297, undefined, 'FAST');
+      }
 
-      // Add Page 2
-      pdf.addPage('a4', 'portrait');
-      pdf.addImage(imgData2, 'JPEG', 0, 0, 210, 297, undefined, 'FAST');
-
-      // Save exact 2-page PDF
+      // Save PDF
       pdf.save(filename);
     } catch (err) {
       console.error('Erro ao gerar PDF com jsPDF:', err);

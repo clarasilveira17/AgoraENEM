@@ -15,7 +15,7 @@
 
   <style>
     /* ==========================================================================
-       DESIGN SYSTEM MINIMALISTA & MONOCROMÁTICO (ESTÁVEL & INK-SAVING)
+       DESIGN SYSTEM MINIMALISTA & MONOCROMÁTICO (FIT-TO-PAGE 1 PÁGINA A4)
        ========================================================================== */
     :root {
       --black: #000000;
@@ -46,13 +46,13 @@
       background-color: #ffffff;
       color: var(--charcoal);
       font-family: var(--font-sans);
-      font-size: 11.5px;
-      line-height: 1.45;
+      font-size: 10px; /* Calibrado para Fit-to-Page A4 perfeito */
+      line-height: 1.4;
       -webkit-font-smoothing: antialiased;
     }
 
     body {
-      padding: 20px 12px 60px 12px;
+      padding: 16px 12px 50px 12px;
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -64,7 +64,7 @@
        ========================================================================== */
     @page {
       size: A4 portrait;
-      margin: 12mm 10mm 12mm 10mm;
+      margin: 10mm 10mm 10mm 10mm;
     }
 
     @media print {
@@ -79,24 +79,29 @@
         padding: 0 !important;
         box-shadow: none !important;
       }
-      .no-print, .btn-imprimir {
+      .no-print, .btn-imprimir, .anexo-container, #anexo-ii, .folha-pagina-2 {
         display: none !important;
       }
     }
 
+    /* Ocultação total e estrita do Anexo II redundante */
+    .anexo-container, #anexo-ii, .folha-pagina-2 {
+      display: none !important;
+    }
+
     /* ==========================================================================
-       CONTENTOR DO BOLETIM (ESTRUTURA DE 760PX COM ZONA SEGURA INTERNA)
+       CONTENTOR DO BOLETIM (ESTRUTURA DE 760PX COM ZONA SEGURA)
        ========================================================================== */
     #container-do-boletim {
       width: 100%;
       max-width: 760px;
       margin: 0 auto;
-      padding: 0 20px;
+      padding: 0 16px;
       background: var(--white);
       box-sizing: border-box;
     }
 
-    /* Prevenção estrita de quebras indesejadas */
+    /* Prevenção de quebras de página no PDF */
     .avoid-break, 
     .header, 
     .table-booktabs, 
@@ -109,20 +114,13 @@
       box-sizing: border-box;
     }
 
-    table, tr, td, th, div, p, span {
-      max-width: 100%;
-      word-wrap: break-word;
-      overflow-wrap: break-word;
-      box-sizing: border-box;
-    }
-
     /* ==========================================================================
        CABEÇALHO INSTITUCIONAL & NOTA FINAL
        ========================================================================== */
     .header {
       border-bottom: 2px solid var(--black);
-      padding-bottom: 12px;
-      margin-bottom: 14px;
+      padding-bottom: 8px;
+      margin-bottom: 10px;
       width: 100%;
     }
 
@@ -130,12 +128,12 @@
       display: flex;
       justify-content: space-between;
       align-items: flex-start;
-      margin-bottom: 10px;
+      margin-bottom: 8px;
       width: 100%;
     }
 
     .brand-title {
-      font-size: 17px;
+      font-size: 15px;
       font-weight: 800;
       text-transform: uppercase;
       letter-spacing: 0.4px;
@@ -144,25 +142,25 @@
     }
 
     .brand-subtitle {
-      font-size: 10.5px;
+      font-size: 9.5px;
       font-weight: 500;
       color: var(--gray-mid);
       text-transform: uppercase;
       letter-spacing: 0.5px;
-      margin-top: 3px;
+      margin-top: 2px;
     }
 
     /* Card Monocromático da Nota Final */
     .score-badge {
       border: 1.5px solid var(--black);
-      padding: 5px 14px;
+      padding: 4px 12px;
       text-align: center;
-      min-width: 120px;
+      min-width: 110px;
       flex-shrink: 0;
     }
 
     .score-badge .score-label {
-      font-size: 8.5px;
+      font-size: 7.5px;
       font-weight: 700;
       text-transform: uppercase;
       letter-spacing: 0.8px;
@@ -171,7 +169,7 @@
     }
 
     .score-badge .score-val {
-      font-size: 24px;
+      font-size: 21px;
       font-weight: 800;
       line-height: 1.05;
       color: var(--black);
@@ -179,7 +177,7 @@
     }
 
     .score-badge .score-max {
-      font-size: 8.5px;
+      font-size: 7.5px;
       font-weight: 600;
       color: var(--gray-mid);
     }
@@ -188,10 +186,10 @@
     .meta-table {
       width: 100%;
       border-top: 1px solid var(--black);
-      padding-top: 8px;
+      padding-top: 6px;
       display: grid;
       grid-template-columns: 2fr 1.1fr 1fr 0.9fr;
-      gap: 10px;
+      gap: 8px;
     }
 
     .meta-group {
@@ -200,7 +198,7 @@
     }
 
     .meta-label {
-      font-size: 8.5px;
+      font-size: 7.5px;
       font-weight: 700;
       text-transform: uppercase;
       letter-spacing: 0.4px;
@@ -208,7 +206,7 @@
     }
 
     .meta-value {
-      font-size: 11px;
+      font-size: 10px;
       font-weight: 700;
       color: var(--black);
       white-space: nowrap;
@@ -221,8 +219,8 @@
        ========================================================================== */
     .section-title-wrap {
       border-bottom: 1px solid var(--black);
-      padding-bottom: 3px;
-      margin: 14px 0 8px 0;
+      padding-bottom: 2px;
+      margin: 10px 0 6px 0;
       display: flex;
       justify-content: space-between;
       align-items: baseline;
@@ -230,7 +228,7 @@
     }
 
     .section-title {
-      font-size: 12px;
+      font-size: 10.5px;
       font-weight: 800;
       text-transform: uppercase;
       letter-spacing: 0.4px;
@@ -238,7 +236,7 @@
     }
 
     .section-meta {
-      font-size: 9px;
+      font-size: 8px;
       color: var(--gray-mid);
       text-transform: uppercase;
       letter-spacing: 0.3px;
@@ -246,13 +244,13 @@
     }
 
     /* ==========================================================================
-       TABELA DE COMPETÊNCIAS (ESTILO BOOKTABS EXPANDIDO)
+       TABELA DE COMPETÊNCIAS (ESTILO BOOKTABS COMPACTO)
        ========================================================================== */
     .table-booktabs {
       width: 100%;
       border-collapse: collapse;
-      font-size: 10px;
-      margin-bottom: 10px;
+      font-size: 9px;
+      margin-bottom: 8px;
     }
 
     .table-booktabs thead tr {
@@ -261,10 +259,10 @@
     }
 
     .table-booktabs th {
-      padding: 6px 8px;
+      padding: 4px 6px;
       font-weight: 700;
       text-transform: uppercase;
-      font-size: 9px;
+      font-size: 8px;
       letter-spacing: 0.4px;
       color: var(--black);
       text-align: left;
@@ -284,78 +282,82 @@
     }
 
     .table-booktabs td {
-      padding: 7px 8px;
+      padding: 5px 6px;
       vertical-align: top;
-      line-height: 1.35;
+      line-height: 1.3;
       color: var(--charcoal);
     }
 
     .comp-code {
       font-weight: 800;
-      font-size: 10.5px;
+      font-size: 9.5px;
       color: var(--black);
       display: block;
     }
 
     .comp-name {
-      font-size: 9.5px;
+      font-size: 8.5px;
       color: var(--gray-dark);
       display: block;
     }
 
     .score-pill-mono {
       font-weight: 800;
-      font-size: 11.5px;
+      font-size: 10.5px;
       color: var(--black);
     }
 
     .citation-quote {
       font-family: var(--font-serif);
       font-style: italic;
-      font-size: 9.5px;
-      line-height: 1.35;
+      font-size: 8.5px;
+      line-height: 1.3;
       color: var(--gray-dark);
-      padding-left: 6px;
+      padding-left: 5px;
       border-left: 1.5px solid var(--black);
+      word-break: normal !important;
+      overflow-wrap: break-word !important;
     }
 
     .feedback-body {
-      font-size: 9.5px;
-      line-height: 1.35;
+      font-size: 8.5px;
+      line-height: 1.3;
       color: var(--charcoal);
+      word-break: normal !important;
+      overflow-wrap: break-word !important;
     }
 
     /* ==========================================================================
-       RUBRICAS ANALÍTICAS (GRID MINIMALISTA)
+       RUBRICAS ANALÍTICAS (GRID COMPACTO)
        ========================================================================== */
     .rubricas-container {
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: 14px;
-      margin-bottom: 12px;
+      gap: 10px;
+      margin-bottom: 8px;
       width: 100%;
     }
 
     .rubrica-box {
       border: 1px solid var(--border-subtle);
-      padding: 8px 12px;
+      padding: 6px 10px;
       width: 100%;
     }
 
     .rubrica-box-title {
-      font-size: 10px;
+      font-size: 9px;
       font-weight: 800;
       text-transform: uppercase;
       letter-spacing: 0.4px;
       border-bottom: 1px solid var(--black);
-      padding-bottom: 3px;
-      margin-bottom: 6px;
+      padding-bottom: 2px;
+      margin-bottom: 5px;
       display: flex;
       justify-content: space-between;
     }
 
     .rubrica-line {
-      margin-bottom: 5px;
+      margin-bottom: 4px;
     }
 
     .rubrica-line:last-child {
@@ -365,7 +367,7 @@
     .rubrica-info {
       display: flex;
       justify-content: space-between;
-      font-size: 9.5px;
+      font-size: 8.5px;
       margin-bottom: 2px;
     }
 
@@ -381,7 +383,7 @@
 
     .bar-track {
       width: 100%;
-      height: 4px;
+      height: 3.5px;
       border: 0.8px solid var(--black);
       background: transparent;
       position: relative;
@@ -393,27 +395,25 @@
     }
 
     /* ==========================================================================
-       TRANSCRIÇÃO DA REDAÇÃO (TIPO JORNAL / LIVRO CLÁSSICO)
+       TRANSCRIÇÃO DA REDAÇÃO (SEM WORD-BREAK BUG - QUEBRAS GRAMATICAIS PERFEITAS)
        ========================================================================== */
     .essay-box {
       border: 1px solid var(--black);
-      padding: 12px 16px;
-      margin-bottom: 12px;
+      padding: 10px 14px;
+      margin-bottom: 10px;
       width: 100%;
       max-width: 100%;
       box-sizing: border-box;
-      overflow-wrap: break-word;
-      word-wrap: break-word;
     }
 
     .essay-theme-row {
       border-bottom: 1px solid var(--black);
-      padding-bottom: 5px;
-      margin-bottom: 8px;
+      padding-bottom: 4px;
+      margin-bottom: 6px;
     }
 
     .essay-theme-tag {
-      font-size: 8px;
+      font-size: 7.5px;
       font-weight: 700;
       text-transform: uppercase;
       letter-spacing: 0.8px;
@@ -422,30 +422,29 @@
     }
 
     .essay-theme-text {
-      font-size: 11px;
+      font-size: 9.5px;
       font-weight: 700;
       color: var(--black);
     }
 
-    .essay-body {
+    .essay-body,
+    .essay-body p {
       font-family: var(--font-serif);
-      font-size: 10.5px;
-      line-height: 1.6;
+      font-size: 9.2pt;
+      line-height: 1.5;
       color: var(--charcoal);
       text-align: justify;
       hyphens: auto;
+      word-break: normal !important;
+      overflow-wrap: break-word !important;
       width: 100%;
       max-width: 100%;
       box-sizing: border-box;
-      overflow-wrap: break-word;
-      word-wrap: break-word;
     }
 
     .essay-body p {
       text-indent: 1.6em;
-      margin-bottom: 6px;
-      word-wrap: break-word;
-      overflow-wrap: break-word;
+      margin-bottom: 5px;
     }
 
     .essay-body p:last-child {
@@ -453,12 +452,12 @@
     }
 
     /* ==========================================================================
-       RODAPÉ COM ESPAÇO REAL DE 80PX PARA ASSINATURA MANUAL & NOTAS LEGAIS
+       RODAPÉ COM ESPAÇO PARA ASSINATURA MANUAL & NOTAS LEGAIS
        ========================================================================== */
     .footer-wrap {
       border-top: 1.5px solid var(--black);
-      margin-top: 20px;
-      padding-top: 12px;
+      margin-top: 14px;
+      padding-top: 8px;
       width: 100%;
     }
 
@@ -468,41 +467,41 @@
       align-items: center;
       justify-content: center;
       text-align: center;
-      margin-bottom: 10px;
+      margin-bottom: 8px;
     }
 
     .signature-line-mono {
-      width: 320px;
+      width: 300px;
       border-bottom: 1px solid var(--black);
-      margin-bottom: 6px;
-      height: 80px; /* Espaço vertical real e confortável para assinatura manual */
+      margin-bottom: 5px;
+      height: 65px; /* Espaço confortável para assinatura sem estourar 1 folha */
     }
 
     .signature-teacher {
-      font-size: 10.5px;
+      font-size: 9.5px;
       font-weight: 700;
       color: var(--black);
     }
 
     .signature-desc {
-      font-size: 9px;
+      font-size: 8px;
       color: var(--gray-mid);
       text-transform: uppercase;
       letter-spacing: 0.4px;
     }
 
     .legal-note {
-      font-size: 8px;
+      font-size: 7.5px;
       color: var(--gray-mid);
       border-top: 0.5px solid var(--border-subtle);
-      padding-top: 5px;
+      padding-top: 4px;
       display: flex;
       justify-content: space-between;
       width: 100%;
     }
 
     /* ==========================================================================
-       BOTÃO DE DOWNLOAD / IMPRESSÃO
+       BOTÃO DE DOWNLOAD (FIXO E FORA DO DOCUMENTO)
        ========================================================================== */
     .btn-imprimir {
       position: fixed;
@@ -548,7 +547,7 @@
     <span>Imprimir / Salvar PDF</span>
   </button>
 
-  <!-- CONTENTOR PRINCIPAL DO BOLETIM (ALVO DIRETO DA EXPORTAÇÃO) -->
+  <!-- CONTENTOR PRINCIPAL DO BOLETIM (ALVO DA CONVERSÃO PARA PDF - 1 PÁGINA A4 PERFEITA) -->
   <div id="container-do-boletim">
 
     <!-- ======================================================================
@@ -824,7 +823,7 @@
     </section>
 
     <!-- ======================================================================
-         RODAPÉ COM ESPAÇO REAL PARA ASSINATURA MANUAL & NOTAS LEGAIS
+         RODAPÉ COM ESPAÇO PARA ASSINATURA MANUAL & NOTAS LEGAIS
          ====================================================================== -->
     <footer class="footer-wrap avoid-break">
       <div class="signature-center-wrap">
@@ -864,7 +863,6 @@
                 useCORS: true, 
                 scrollX: 0, 
                 scrollY: 0 
-                // Removemos qualquer referência a windowWidth
             },
             jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
         };

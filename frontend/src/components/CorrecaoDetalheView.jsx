@@ -265,11 +265,11 @@ export default function CorrecaoDetalheView({
     }
   };
 
-  // Download do PDF Oficial
+  // Download do PDF Oficial (1 Página A4 Estrita)
   const handleDownloadPDF = async () => {
     const page1El = document.getElementById('pdf-export-page-1');
     const page2El = document.getElementById('pdf-export-page-2');
-    if (!page1El || !page2El) {
+    if (!page1El) {
       setActiveTab('pdf_preview');
       alert('Carregando prévia do documento para exportação. Clique novamente em Baixar PDF.');
       return;
@@ -301,11 +301,12 @@ export default function CorrecaoDetalheView({
 
       pdf.addImage(imgData1, 'JPEG', 0, 0, 210, 297, undefined, 'FAST');
 
-      const canvas2 = await html2canvas(page2El, canvasOptions);
-      const imgData2 = canvas2.toDataURL('image/jpeg', 0.98);
-
-      pdf.addPage('a4', 'portrait');
-      pdf.addImage(imgData2, 'JPEG', 0, 0, 210, 297, undefined, 'FAST');
+      if (page2El && page2El.style.display !== 'none' && window.getComputedStyle(page2El).display !== 'none') {
+        const canvas2 = await html2canvas(page2El, canvasOptions);
+        const imgData2 = canvas2.toDataURL('image/jpeg', 0.98);
+        pdf.addPage('a4', 'portrait');
+        pdf.addImage(imgData2, 'JPEG', 0, 0, 210, 297, undefined, 'FAST');
+      }
 
       pdf.save(filename);
     } catch (error) {

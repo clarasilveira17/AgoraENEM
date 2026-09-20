@@ -95,16 +95,29 @@
   font-family: var(--font-mono);
 }
 
+/* Global Word-break and Anexo II suppression rules */
+.essay-body,
+.essay-body p {
+  word-break: normal !important;
+  overflow-wrap: break-word !important;
+  hyphens: auto;
+  text-align: justify;
+}
+
+.anexo-container, #anexo-ii, .folha-pagina-2 {
+  display: none !important;
+}
+
 /* Official Print / PDF Styling (PRISMA Institutional Document Design) */
 @media print {
   @page {
     size: A4 portrait;
-    margin: 0;
+    margin: 10mm;
   }
 
   body {
     background-color: #ffffff !important;
-    color: #0f172a !important;
+    color: #000000 !important;
     margin: 0 !important;
     padding: 0 !important;
   }
@@ -115,34 +128,33 @@
   }
 
   /* Show only the official sheet pages */
-  #pdf-print-container, #pdf-print-container * {
+  #pdf-print-container, #pdf-print-container *,
+  #container-do-boletim, #container-do-boletim * {
     visibility: visible;
   }
 
-  #pdf-print-container {
+  #pdf-print-container,
+  #container-do-boletim {
     display: block !important;
     position: absolute;
     left: 0;
     top: 0;
-    width: 210mm;
-    margin: 0;
-    padding: 0;
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
     background: #ffffff !important;
     z-index: 9999999;
   }
 
-  .folha-pagina {
-    width: 210mm !important;
-    height: 297mm !important;
-    max-height: 297mm !important;
-    page-break-after: always !important;
-    break-after: page !important;
-    box-sizing: border-box !important;
-    overflow: hidden !important;
+  .no-print, .btn-imprimir, .anexo-container, #anexo-ii, .folha-pagina-2 {
+    display: none !important;
   }
 
-  .folha-pagina-2 {
-    page-break-after: avoid !important;
-    break-after: avoid !important;
+  .folha-pagina {
+    width: 100% !important;
+    box-sizing: border-box !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
   }
 }
