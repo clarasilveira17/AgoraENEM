@@ -69,7 +69,25 @@ export default function GestaoRedacoesView({
   const handleFilesSelected = (e) => {
     const files = Array.from(e.target.files || []);
     if (files.length === 0) return;
-    setSelectedFiles(prev => [...prev, ...files]);
+
+    const filePromises = files.map((file) => {
+      return new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+          resolve({
+            name: file.name,
+            size: (file.size / 1024).toFixed(1) + ' KB',
+            base64: ev.target?.result,
+            file
+          });
+        };
+        reader.readAsDataURL(file);
+      });
+    });
+
+    Promise.all(filePromises).then((newFiles) => {
+      setSelectedFiles(prev => [...prev, ...newFiles]);
+    });
   };
 
   const removeFile = (index) => {
@@ -92,10 +110,17 @@ export default function GestaoRedacoesView({
 
     try {
       if (mode === 'imagem') {
-        const results = await processRedacoesCloud(
-          selectedFiles,
-          (progress) => {
-            setProgressText(progress.status || `Processando ${progress.current || 1} de ${progress.total || selectedFiles.length}...`);
+        const itemsToProcess = selectedFiles.map((f) => ({
+          imagem_base64: f.base64,
+          tipo_input: 'imagem',
+          nome_manual: manualName.trim() || null,
+          turma_manual: manualTurma.trim() || null
+        }));
+
+        const res = await processRedacoesCloud(
+          itemsToProcess,
+          (cur, total) => {
+            setProgressText(`Avaliando ${cur} de ${total}...`);
           },
           {
             usuarioId: isEstudante && user ? user.id : null,
@@ -105,22 +130,31 @@ export default function GestaoRedacoesView({
         );
 
         setFeedback({
-          type: 'success',
-          message: `${results.length} redação(ões) processada(s) e integradas com sucesso!`
+          type: res.errorCount > 0 && res.successCount === 0 ? 'error' : 'success',
+          message: res.message || `${res.successCount} redação(ões) processada(s) com sucesso!`
         });
         setSelectedFiles([]);
         if (fileInputRef.current) fileInputRef.current.value = '';
       } else {
-        const resultado = await authService.avaliarTexto({
-          texto: typedText,
-          nome_aluno: isEstudante && user ? user.nome : (manualName || 'Estudante'),
-          turma_aluno: isEstudante && user?.turma ? user.turma : (manualTurma || 'Geral'),
-          user_id: isEstudante && user ? user.id : null
-        });
+        const res = await processRedacoesCloud(
+          [{
+            texto_digitado: typedText.trim(),
+            tipo_input: 'texto',
+            nome_manual: isEstudante && user ? user.nome : (manualName.trim() || null),
+            turma_manual: isEstudante && user?.turma ? user.turma : (manualTurma.trim() || null),
+            user_id: isEstudante && user ? user.id : null
+          }],
+          null,
+          {
+            usuarioId: isEstudante && user ? user.id : null,
+            nomePadrao: isEstudante && user ? user.nome : (manualName || null),
+            turmaPadrao: isEstudante && user?.turma ? user.turma : (manualTurma || null)
+          }
+        );
 
         setFeedback({
-          type: 'success',
-          message: 'Redação avaliada e salva no banco de dados com sucesso!'
+          type: res.errorCount > 0 && res.successCount === 0 ? 'error' : 'success',
+          message: res.message || 'Redação digitada avaliada e salva na nuvem com sucesso!'
         });
         setTypedText('');
         setManualName('');
