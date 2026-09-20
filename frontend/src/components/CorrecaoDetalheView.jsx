@@ -341,6 +341,10 @@ export default function CorrecaoDetalheView({
 
     setIsGeneratingPDF(true);
     try {
+      if (document.fonts) {
+        await document.fonts.ready;
+      }
+
       const studentNameClean = String(manualName || redacao.nome_aluno || 'Estudante').replace(/[^a-zA-Z0-9_]/g, '_');
       const filename = `Boletim_Redacao_${studentNameClean}_ID${redacao.id}.pdf`;
 
@@ -350,7 +354,14 @@ export default function CorrecaoDetalheView({
         logging: false,
         backgroundColor: '#ffffff',
         scrollX: 0,
-        scrollY: 0
+        scrollY: 0,
+        onclone: (clonedDoc) => {
+          if (document.fonts && clonedDoc.fonts) {
+            document.fonts.forEach(font => {
+              try { clonedDoc.fonts.add(font); } catch (e) {}
+            });
+          }
+        }
       };
 
       const canvas1 = await html2canvas(page1El, canvasOptions);

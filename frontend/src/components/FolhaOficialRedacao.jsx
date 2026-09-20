@@ -393,26 +393,19 @@ export default function FolhaOficialRedacao({
                     style={{
                       display: 'flex',
                       justifyContent: 'space-between',
-                      alignItems: 'center',
-                      padding: '5px 0',
+                      alignItems: 'baseline',
+                      padding: '4.5px 0',
                       boxSizing: 'border-box'
                     }}
                   >
-                    <span style={{ fontSize: '8.5px', color: '#1c1c1c', fontWeight: '600', lineHeight: '1.2' }}>
+                    <span style={{ fontSize: '8.5px', color: '#1c1c1c', fontWeight: '600' }}>
                       {item.title}
                     </span>
                     <span style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      border: '1px solid #000000',
-                      borderRadius: '3px',
-                      padding: '2px 8px',
-                      fontSize: '8px',
-                      fontWeight: '700',
-                      backgroundColor: '#fafafa',
+                      fontSize: '8.5px',
+                      fontWeight: '800',
                       color: '#000000',
-                      lineHeight: '1'
+                      textAlign: 'right'
                     }}>
                       {item.nivel}
                     </span>
@@ -442,26 +435,19 @@ export default function FolhaOficialRedacao({
                     style={{
                       display: 'flex',
                       justifyContent: 'space-between',
-                      alignItems: 'center',
-                      padding: '5px 0',
+                      alignItems: 'baseline',
+                      padding: '4.5px 0',
                       boxSizing: 'border-box'
                     }}
                   >
-                    <span style={{ fontSize: '8.5px', color: '#1c1c1c', fontWeight: '600', lineHeight: '1.2' }}>
+                    <span style={{ fontSize: '8.5px', color: '#1c1c1c', fontWeight: '600' }}>
                       {item.title}
                     </span>
                     <span style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      border: '1px solid #000000',
-                      borderRadius: '3px',
-                      padding: '2px 8px',
-                      fontSize: '8px',
-                      fontWeight: '700',
-                      backgroundColor: '#fafafa',
+                      fontSize: '8.5px',
+                      fontWeight: '800',
                       color: '#000000',
-                      lineHeight: '1'
+                      textAlign: 'right'
                     }}>
                       {item.nivel}
                     </span>
