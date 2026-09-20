@@ -319,28 +319,24 @@ export default function FolhaOficialRedacao({
                       </span>
                     </td>
 
-                    <td style={{ padding: '6px 6px', verticalAlign: 'top', lineHeight: '1.35' }}>
+                    <td style={{ padding: '6px 6px', verticalAlign: 'top', lineHeight: '1.4' }}>
                       {cleanCitacao ? (
-                        <div style={{
+                        <span style={{
                           fontStyle: 'italic',
                           fontSize: '8.5px',
-                          lineHeight: '1.35',
                           color: '#262626',
-                          backgroundColor: '#f8f8f8',
-                          padding: '3px 6px',
-                          border: '0.5px solid #d1d5db',
-                          borderRadius: '2px',
+                          display: 'block',
                           wordBreak: 'normal',
                           overflowWrap: 'normal'
                         }}>
                           “{cleanCitacao}”
-                        </div>
+                        </span>
                       ) : (
                         <span style={{ color: '#9ca3af', fontSize: '8.5px' }}>—</span>
                       )}
                     </td>
 
-                    <td style={{ padding: '6px 6px', verticalAlign: 'top', lineHeight: '1.35', color: '#1c1c1c', fontSize: '8.5px', wordBreak: 'normal', overflowWrap: 'normal' }}>
+                    <td style={{ padding: '6px 6px', verticalAlign: 'top', lineHeight: '1.4', color: '#1c1c1c', fontSize: '8.5px', wordBreak: 'normal', overflowWrap: 'normal' }}>
                       {cleanParecer}
                     </td>
                   </tr>
