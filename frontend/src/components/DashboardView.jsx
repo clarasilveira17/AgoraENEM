@@ -183,10 +183,10 @@ export default function DashboardView({ redacoes, rankingRedacoes = [], isLoadin
   }, [rankingRedacoes, redacoes]);
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-4 sm:space-y-5 min-w-0">
       
       {/* Hero Welcome Banner */}
-      <div className="bg-[#ffffff] border border-[#e6e5e0] rounded-xl p-5 sm:p-6 shadow-xs relative overflow-hidden">
+      <div className="bg-[#ffffff] border border-[#e6e5e0] rounded-xl p-4 sm:p-6 shadow-xs relative overflow-hidden">
         <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="space-y-1.5">
             <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-mono font-medium border border-[#dfa88f] bg-[#dfa88f]/20 text-[#f54e00]">

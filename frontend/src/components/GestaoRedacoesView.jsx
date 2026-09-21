@@ -245,7 +245,7 @@ export default function GestaoRedacoesView({
       {/* ======================================================== */}
       {/* 1. HEADER PRINCIPAL COM RESUMO DO BANCO                 */}
       {/* ======================================================== */}
-      <div className="bg-[#ffffff] border border-[#e6e5e0] rounded-xl p-5 sm:p-6 shadow-xs">
+      <div className="bg-[#ffffff] border border-[#e6e5e0] rounded-xl p-4 sm:p-6 shadow-xs">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="space-y-1.5">
             <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-mono font-medium border border-[#e6e5e0] bg-[#fafaf7] text-[#26251e]">
@@ -285,12 +285,12 @@ export default function GestaoRedacoesView({
       {/* ======================================================== */}
       {/* 2. GRID EM DUAS COLUNAS: ENVIO (ESQ) vs BANCO (DIR)     */}
       {/* ======================================================== */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 lg:gap-6 items-start">
         
         {/* ======================================================= */}
         {/* COLUNA 1 (5 Colunas): ENVIO E LANÇAMENTO DE REDAÇÕES   */}
         {/* ======================================================= */}
-        <div className="lg:col-span-5 bg-[#ffffff] border border-[#e6e5e0] rounded-xl p-5 space-y-4 shadow-xs sticky top-4">
+        <div className="lg:col-span-5 bg-[#ffffff] border border-[#e6e5e0] rounded-xl p-4 sm:p-5 space-y-4 shadow-xs lg:sticky lg:top-4">
           
           <div className="border-b border-[#e6e5e0] pb-3">
             <h3 className="text-sm font-semibold text-[#26251e] flex items-center gap-2">
@@ -547,7 +547,7 @@ export default function GestaoRedacoesView({
         {/* ======================================================= */}
         {/* COLUNA 2 (7 Colunas): BANCO DE REDAÇÕES EXISTENTES      */}
         {/* ======================================================= */}
-        <div className="lg:col-span-7 bg-[#ffffff] border border-[#e6e5e0] rounded-xl p-5 space-y-4 shadow-xs">
+        <div className="lg:col-span-7 bg-[#ffffff] border border-[#e6e5e0] rounded-xl p-4 sm:p-5 space-y-4 shadow-xs min-w-0">
           
           {/* Cabeçalho do Banco & Controles de Busca */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#e6e5e0] pb-3.5">
@@ -605,7 +605,7 @@ export default function GestaoRedacoesView({
             </div>
 
             {/* Filter Pills */}
-            <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5 custom-scrollbar text-xs font-mono">
+            <div className="flex items-center gap-1.5 overflow-x-auto pb-1 custom-scrollbar text-xs font-mono -mx-1 px-1">
               <button
                 onClick={() => setFilterTab('todas')}
                 className={`px-2.5 py-1 rounded-md transition-colors cursor-pointer ${

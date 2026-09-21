@@ -5,8 +5,7 @@ import {
   FileText, Download, Loader2, Edit3, Search, GraduationCap, 
   Link, Unlink, AlertTriangle, Sliders, Eye, RefreshCw, CheckCircle2 
 } from 'lucide-react';
-import { jsPDF } from 'jspdf';
-import html2canvas from 'html2canvas';
+import { exportFolhaOficialPdf, printFolhaOficialPdf } from '../utils/pdfExport';
 import { updateNomeAluno } from '../db/db';
 import { useAuth } from '../context/AuthContext';
 import { authService } from '../services/authService';
@@ -251,40 +250,16 @@ export default function ModalDetalhesRedacao({ redacao, onClose, onUpdated }) {
       const studentNameClean = sanitizeFilename(manualName || redacao.nome_aluno || data.aluno || 'Estudante');
       const filename = `Boletim_Redacao_${studentNameClean}_ID${redacao.id}.pdf`;
 
-      const canvasOptions = {
-        scale: 3,
-        useCORS: true,
-        logging: false,
-        backgroundColor: '#ffffff',
-        scrollX: 0,
-        scrollY: 0
-      };
+      const includePage2 = Boolean(
+        page2El && window.getComputedStyle(page2El).display !== 'none'
+      );
 
-      // 1. Capture Page 1
-      const canvas1 = await html2canvas(page1El, canvasOptions);
-      const imgData1 = canvas1.toDataURL('image/png');
-
-      // 2. Initialize jsPDF in A4 portrait (210mm x 297mm)
-      const pdf = new jsPDF({
-        orientation: 'portrait',
-        unit: 'mm',
-        format: 'a4',
-        compress: true
+      await exportFolhaOficialPdf({
+        page1El,
+        page2El,
+        includePage2,
+        filename
       });
-
-      // Add Page 1 (Frente)
-      pdf.addImage(imgData1, 'PNG', 0, 0, 210, 297, undefined, 'FAST');
-
-      // 3. Capture Page 2 (Verso) only if explicitly rendered and visible
-      if (page2El && page2El.style.display !== 'none' && window.getComputedStyle(page2El).display !== 'none') {
-        const canvas2 = await html2canvas(page2El, canvasOptions);
-        const imgData2 = canvas2.toDataURL('image/png');
-        pdf.addPage('a4', 'portrait');
-        pdf.addImage(imgData2, 'PNG', 0, 0, 210, 297, undefined, 'FAST');
-      }
-
-      // Save PDF
-      pdf.save(filename);
     } catch (err) {
       console.error('Erro ao gerar PDF com jsPDF:', err);
       alert('Não foi possível gerar o arquivo PDF automaticamente. Por favor, tente novamente.');
@@ -293,8 +268,33 @@ export default function ModalDetalhesRedacao({ redacao, onClose, onUpdated }) {
     }
   };
 
-  const handlePrint = () => {
-    window.print();
+  // Impressão do Boletim Oficial — mesmo pipeline do download (ver src/utils/pdfExport.js
+  // para o porquê de não usar window.print() direto: é frágil numa SPA).
+  const handlePrint = async () => {
+    const page1El = document.getElementById('pdf-export-page-1');
+    const page2El = document.getElementById('pdf-export-page-2');
+    if (!page1El) {
+      alert('Aguarde o carregamento do documento para imprimir.');
+      return;
+    }
+
+    setIsGeneratingPDF(true);
+    try {
+      const includePage2 = Boolean(
+        page2El && window.getComputedStyle(page2El).display !== 'none'
+      );
+
+      await printFolhaOficialPdf({
+        page1El,
+        page2El,
+        includePage2
+      });
+    } catch (err) {
+      console.error('Erro ao preparar impressão:', err);
+      alert('Não foi possível preparar o documento para impressão. Por favor, tente novamente.');
+    } finally {
+      setIsGeneratingPDF(false);
+    }
   };
 
   const getNivelBadgeClass = (nivel) => {
@@ -352,18 +352,18 @@ export default function ModalDetalhesRedacao({ redacao, onClose, onUpdated }) {
   return (
     <>
       {/* FIXED-SIZE CLEAN MODAL VIEW */}
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/50 backdrop-blur-xs animate-fadeIn no-print">
-        <div className="bg-[#ffffff] border border-[#e6e5e0] rounded-xl w-full max-w-4xl h-[660px] max-h-[94vh] flex flex-col shadow-2xl overflow-hidden text-[#26251e]">
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-0 sm:p-4 bg-slate-900/50 backdrop-blur-xs animate-fadeIn no-print">
+        <div className="bg-[#ffffff] border border-[#e6e5e0] rounded-none sm:rounded-xl w-full max-w-4xl h-full h-[100dvh] sm:h-[660px] sm:max-h-[94vh] flex flex-col shadow-2xl overflow-hidden text-[#26251e]">
 
           {/* Header Bar */}
-          <div className="bg-[#fafaf7] border-b border-[#e6e5e0] px-4 sm:px-5 py-3 space-y-2 shrink-0">
+          <div className="bg-[#fafaf7] border-b border-[#e6e5e0] safe-top px-3 sm:px-5 py-3 space-y-2 shrink-0">
             {/* Top Row: Name, Status & Close Button */}
             <div className="flex items-center justify-between gap-2">
               <div className="flex items-center gap-2 min-w-0 flex-wrap">
                 <div className="w-7 h-7 rounded-full bg-[#ffffff] border border-[#e6e5e0] flex items-center justify-center shrink-0 text-[#f54e00]">
                   <GraduationCap className="w-3.5 h-3.5" />
                 </div>
-                <h3 className="text-sm sm:text-base font-semibold text-[#26251e] tracking-tight truncate max-w-[200px] xs:max-w-[300px] sm:max-w-none">
+                <h3 className="text-sm sm:text-base font-semibold text-[#26251e] tracking-tight truncate max-w-[55vw] sm:max-w-none">
                   {manualName || data.aluno || redacao.nome_aluno || 'Estudante Não Identificado'}
                 </h3>
                 {isIdentified ? (
@@ -485,7 +485,7 @@ export default function ModalDetalhesRedacao({ redacao, onClose, onUpdated }) {
           </div>
 
           {/* Navigation Tabs (4 Tabs) */}
-          <div className="px-5 bg-[#fafaf7] border-b border-[#e6e5e0] flex items-center gap-2 shrink-0 overflow-x-auto">
+          <div className="px-3 sm:px-5 bg-[#fafaf7] border-b border-[#e6e5e0] flex items-center gap-2 shrink-0 overflow-x-auto custom-scrollbar">
             <button
               type="button"
               onClick={() => setActiveTab('enem')}
@@ -811,11 +811,12 @@ export default function ModalDetalhesRedacao({ redacao, onClose, onUpdated }) {
                     <button
                       type="button"
                       onClick={handlePrint}
-                      className="px-3 py-1.5 bg-[#ffffff] border border-[#e6e5e0] hover:bg-[#e6e5e0] text-[#26251e] font-medium text-xs rounded-md transition-colors flex items-center gap-1.5 cursor-pointer shadow-xs"
+                      disabled={isGeneratingPDF}
+                      className="px-3 py-1.5 bg-[#ffffff] border border-[#e6e5e0] hover:bg-[#e6e5e0] text-[#26251e] font-medium text-xs rounded-md transition-colors flex items-center gap-1.5 cursor-pointer shadow-xs disabled:opacity-50 disabled:cursor-not-allowed"
                       title="Imprimir ou Salvar como PDF nativo do navegador com máxima fidelidade vetorial"
                     >
                       <Printer className="w-3.5 h-3.5 text-[#807d72]" />
-                      <span>Imprimir / PDF Nativo</span>
+                      <span>{isGeneratingPDF ? 'Gerando...' : 'Imprimir / PDF Nativo'}</span>
                     </button>
 
                     <button
@@ -926,8 +927,8 @@ export default function ModalDetalhesRedacao({ redacao, onClose, onUpdated }) {
                 )}
 
                 {/* LIVE WYSIWYG PREVIEW CONTAINER */}
-                <div className="bg-[#334155] p-4 sm:p-6 rounded-xl overflow-x-auto flex justify-center items-start min-h-[500px]">
-                  <div className="flex flex-col lg:flex-row gap-6 items-center justify-center">
+                <div className="no-print bg-[#334155] p-4 sm:p-6 rounded-xl overflow-x-auto flex justify-center items-start min-h-[500px]">
+                  <div className="flex flex-col lg:flex-row gap-4 sm:gap-6 items-center justify-center">
                     
                     {/* PAGE 1 PREVIEW */}
                     {(pdfPreviewPage === 'page1' || pdfPreviewPage === 'both') && (
@@ -1087,7 +1088,7 @@ export default function ModalDetalhesRedacao({ redacao, onClose, onUpdated }) {
 
       {/* STUDENT PICKER MODAL FOR PROFESSORS */}
       {isStudentPickerOpen && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-[#26251e]/40 backdrop-blur-xs animate-fadeIn no-print">
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-3 sm:p-4 bg-[#26251e]/40 backdrop-blur-xs animate-fadeIn no-print overflow-y-auto">
           <div className="bg-[#ffffff] border border-[#e6e5e0] rounded-xl w-full max-w-lg p-5 shadow-2xl space-y-4 text-[#26251e]">
             
             {/* Header */}

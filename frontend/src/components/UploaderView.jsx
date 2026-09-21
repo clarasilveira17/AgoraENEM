@@ -118,11 +118,11 @@ export default function UploaderView({ onRedacaoSaved }) {
   };
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6 text-[#26251e]">
+    <div className="max-w-4xl mx-auto space-y-4 sm:space-y-6 text-[#26251e] min-w-0">
       
       {/* Module Title Header */}
-      <div className="bg-[#ffffff] border border-[#e6e5e0] rounded-xl p-6 shadow-none">
-        <h2 className="text-2xl font-normal text-[#26251e] tracking-tight flex items-center gap-2">
+      <div className="bg-[#ffffff] border border-[#e6e5e0] rounded-xl p-4 sm:p-6 shadow-none">
+        <h2 className="text-lg sm:text-2xl font-normal text-[#26251e] tracking-tight flex items-center gap-2">
           <Upload className="w-5 h-5 text-[#f54e00]" />
           Módulo de Envio & Lançamento de Redações
         </h2>
@@ -132,10 +132,10 @@ export default function UploaderView({ onRedacaoSaved }) {
       </div>
 
       {/* Input Form Box */}
-      <div className="bg-[#ffffff] border border-[#e6e5e0] rounded-xl p-6 shadow-none space-y-5">
+      <div className="bg-[#ffffff] border border-[#e6e5e0] rounded-xl p-4 sm:p-6 shadow-none space-y-5">
         
         {/* Input Mode Selector */}
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3">
           <button
             type="button"
             onClick={() => setMode('imagem')}

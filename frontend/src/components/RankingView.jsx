@@ -357,7 +357,7 @@ export default function RankingView({ redacoes = [], onSelectRedacao }) {
               <span><strong>Empate Técnico Oficial:</strong> Alunos com notas idênticas em todos os critérios da matriz ENEM dividem o 1º lugar do pódio.</span>
             </div>
           )}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end pt-2 pb-2">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-4 items-end pt-2 pb-2">
             
             {/* 2º ALUNO (ESQUERDA NO PÓDIO) */}
             {top2 && (() => {
@@ -379,7 +379,7 @@ export default function RankingView({ redacoes = [], onSelectRedacao }) {
                   <div className={`w-12 h-12 rounded-full ${style.iconBg} flex items-center justify-center ${style.iconColor} mb-2 mt-2 shadow-2xs`}>
                     <IconComp className="w-6 h-6" />
                   </div>
-                  <h4 className="font-bold text-sm text-[#26251e] truncate max-w-[200px]">{top2.nome || top2.nome_aluno}</h4>
+                  <h4 className="font-bold text-sm text-[#26251e] truncate max-w-[70%] sm:max-w-[200px]">{top2.nome || top2.nome_aluno}</h4>
                   <span className="text-[11px] text-[#807d72] font-mono">{top2.turma || top2.turma_aluno || 'Geral'}</span>
                   
                   <div className="mt-3 w-full pt-3 border-t border-[#e6e5e0] flex justify-around items-center text-xs font-mono">
@@ -418,7 +418,7 @@ export default function RankingView({ redacoes = [], onSelectRedacao }) {
                   <div className="w-16 h-16 rounded-full bg-amber-100 border-2 border-amber-400 flex items-center justify-center text-amber-700 mb-2 mt-3 shadow-inner">
                     <Crown className="w-8 h-8 text-amber-600" />
                   </div>
-                  <h4 className="font-black text-base text-[#26251e] truncate max-w-[220px]">{top1.nome || top1.nome_aluno}</h4>
+                  <h4 className="font-black text-base text-[#26251e] truncate max-w-[70%] sm:max-w-[220px]">{top1.nome || top1.nome_aluno}</h4>
                   <span className="text-xs text-[#807d72] font-mono font-medium">{top1.turma || top1.turma_aluno || 'Geral'}</span>
                   
                   <div className="mt-4 w-full pt-3 border-t border-amber-200/60 flex justify-around items-center text-xs font-mono">
@@ -457,7 +457,7 @@ export default function RankingView({ redacoes = [], onSelectRedacao }) {
                   <div className={`w-12 h-12 rounded-full ${style.iconBg} flex items-center justify-center ${style.iconColor} mb-2 mt-2 shadow-2xs`}>
                     <IconComp className="w-6 h-6" />
                   </div>
-                  <h4 className="font-bold text-sm text-[#26251e] truncate max-w-[200px]">{top3.nome || top3.nome_aluno}</h4>
+                  <h4 className="font-bold text-sm text-[#26251e] truncate max-w-[70%] sm:max-w-[200px]">{top3.nome || top3.nome_aluno}</h4>
                   <span className="text-[11px] text-[#807d72] font-mono">{top3.turma || top3.turma_aluno || 'Geral'}</span>
                   
                   <div className="mt-3 w-full pt-3 border-t border-[#e6e5e0] flex justify-around items-center text-xs font-mono">
@@ -550,8 +550,8 @@ export default function RankingView({ redacoes = [], onSelectRedacao }) {
           </span>
         </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse text-xs">
+        <div className="overflow-x-auto custom-scrollbar -mx-4 px-4 sm:mx-0 sm:px-0">
+          <table className="w-full min-w-[680px] text-left border-collapse text-xs">
             <thead>
               <tr className="border-b border-[#e6e5e0] bg-[#fafaf7] text-[#807d72] font-mono text-[11px] uppercase tracking-wider">
                 <th className="py-3 px-4 w-16 text-center">Posição</th>

@@ -203,7 +203,7 @@ function AppContent() {
   const unidentifiedCount = redacoes.filter(r => r.status_validacao === 'PENDENTE_VALIDACAO' || !r.user_id || !r.nome_aluno).length;
 
   return (
-    <div className="h-screen h-[100dvh] w-screen bg-[#f7f7f4] text-[#26251e] font-sans flex overflow-hidden">
+    <div className="h-screen h-[100dvh] w-full max-w-full bg-[#f7f7f4] text-[#26251e] font-sans flex overflow-hidden">
       
       {/* Mobile Drawer Backdrop Overlay */}
       {isMobileMenuOpen && (
@@ -242,23 +242,23 @@ function AppContent() {
 
         {/* Mobile Hamburger Toggle Header */}
         {isAuthenticated && (
-          <div className="md:hidden px-4 py-2.5 bg-[#f7f7f4] border-b border-[#e6e5e0] flex items-center justify-between shrink-0">
+          <div className="md:hidden safe-top px-3 py-2 bg-[#f7f7f4] border-b border-[#e6e5e0] flex items-center justify-between shrink-0">
             <button
               type="button"
               onClick={() => setIsMobileMenuOpen(true)}
               aria-label="Abrir menu de navegação"
-              className="p-1.5 rounded-md bg-[#ffffff] border border-[#e6e5e0] text-[#26251e] flex items-center gap-2 text-xs font-medium cursor-pointer"
+              className="px-3 py-2 min-h-[44px] rounded-md bg-[#ffffff] border border-[#e6e5e0] text-[#26251e] flex items-center gap-2 text-sm font-medium cursor-pointer active:bg-[#e6e5e0]"
             >
-              <Menu className="w-4 h-4 text-[#f54e00]" aria-hidden="true" />
+              <Menu className="w-5 h-5 text-[#f54e00]" aria-hidden="true" />
               <span>Menu</span>
             </button>
-            <span className="text-xs font-semibold text-[#26251e] font-mono">Ágora ENEM</span>
+            <span className="text-sm font-semibold text-[#26251e] font-mono truncate pl-2">Ágora ENEM</span>
           </div>
         )}
 
         {/* Global Toast Feedback Notification Banner */}
         {toast && (
-          <div className="px-6 pt-4 animate-fadeIn">
+          <div className="px-3 sm:px-6 pt-3 sm:pt-4 animate-fadeIn">
             <div
               role="status"
               aria-live="polite"
@@ -285,7 +285,7 @@ function AppContent() {
         )}
 
         {/* Page Content Body with Suspense Code-Splitting */}
-        <main className="flex-1 p-6 overflow-y-auto custom-scrollbar">
+        <main className="flex-1 p-3 sm:p-6 pb-8 sm:pb-6 safe-bottom overflow-y-auto overflow-x-hidden custom-scrollbar">
           
           {authLoading ? (
             <div className="h-full flex flex-col items-center justify-center text-[#26251e] space-y-3 animate-fadeIn">
@@ -380,8 +380,8 @@ function AppContent() {
 
       {/* Login Modal */}
       {isLoginModalOpen && (
-        <div className="fixed inset-0 bg-[#26251e]/40 backdrop-blur-xs z-50 flex items-center justify-center p-4">
-          <div className="relative w-full max-w-md">
+        <div className="fixed inset-0 bg-[#26251e]/40 backdrop-blur-xs z-50 flex items-start sm:items-center justify-center p-3 sm:p-4 overflow-y-auto">
+          <div className="relative w-full max-w-md my-auto py-6 sm:py-0">
             <button
               type="button"
               onClick={() => setIsLoginModalOpen(false)}

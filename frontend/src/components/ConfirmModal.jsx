@@ -54,7 +54,7 @@ export default function ConfirmModal({
         }
       }}
     >
-      <div className="w-full max-w-md bg-[#ffffff] border border-[#e6e5e0] rounded-xl shadow-xl p-6 text-[#26251e] space-y-4">
+      <div className="w-full max-w-md bg-[#ffffff] border border-[#e6e5e0] rounded-xl shadow-xl p-5 sm:p-6 text-[#26251e] space-y-4">
         <div className="flex items-start gap-3.5">
           <div className={`p-2.5 rounded-lg shrink-0 ${isDestructive ? 'bg-[#cf2d56]/10 text-[#cf2d56]' : 'bg-[#f54e00]/10 text-[#f54e00]'}`}>
             <AlertTriangle className="w-5 h-5" aria-hidden="true" />
@@ -69,13 +69,13 @@ export default function ConfirmModal({
           </div>
         </div>
 
-        <div className="flex items-center justify-end gap-2.5 pt-2 border-t border-[#e6e5e0]">
+        <div className="flex flex-col-reverse sm:flex-row sm:items-center sm:justify-end gap-2.5 pt-3 border-t border-[#e6e5e0]">
           <button
             ref={cancelBtnRef}
             type="button"
             disabled={isLoading}
             onClick={onCancel}
-            className="px-4 py-2 text-xs font-mono font-medium rounded-md border border-[#e6e5e0] text-[#5a5852] hover:text-[#26251e] hover:bg-[#fafaf7] transition-colors cursor-pointer disabled:opacity-50"
+            className="w-full sm:w-auto px-4 py-2.5 text-xs font-mono font-medium rounded-md border border-[#e6e5e0] text-[#5a5852] hover:text-[#26251e] hover:bg-[#fafaf7] transition-colors cursor-pointer disabled:opacity-50"
           >
             {cancelText}
           </button>
@@ -83,7 +83,7 @@ export default function ConfirmModal({
             type="button"
             disabled={isLoading}
             onClick={onConfirm}
-            className={`px-4 py-2 text-xs font-mono font-semibold rounded-md text-white transition-colors cursor-pointer flex items-center gap-1.5 shadow-xs disabled:opacity-50 ${
+            className={`w-full sm:w-auto px-4 py-2.5 text-xs font-mono font-semibold rounded-md text-white transition-colors cursor-pointer flex items-center justify-center gap-1.5 shadow-xs disabled:opacity-50 ${
               isDestructive
                 ? 'bg-[#cf2d56] hover:bg-[#b52449]'
                 : 'bg-[#f54e00] hover:bg-[#d04200]'

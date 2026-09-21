@@ -119,12 +119,12 @@ export default function Sidebar({ activeView, setActiveView, isMobileMenuOpen, s
 
   return (
     <aside
-      className={`bg-[#ffffff] border-r border-[#e6e5e0] flex flex-col transition-all duration-300 z-40 fixed inset-y-0 left-0 md:static md:translate-x-0 md:w-64 ${
-        isMobileMenuOpen ? 'translate-x-0 w-64 shadow-2xl' : '-translate-x-full md:translate-x-0'
+      className={`bg-[#ffffff] border-r border-[#e6e5e0] flex flex-col transition-transform duration-300 z-40 fixed inset-y-0 left-0 w-[84vw] max-w-[18rem] overscroll-contain md:static md:translate-x-0 md:w-64 md:max-w-none ${
+        isMobileMenuOpen ? 'translate-x-0 shadow-2xl' : '-translate-x-full md:translate-x-0'
       }`}
     >
       {/* Brand Header */}
-      <div className="p-4 sm:p-5 border-b border-[#e6e5e0] flex items-center justify-between shrink-0">
+      <div className="safe-top p-4 sm:p-5 border-b border-[#e6e5e0] flex items-center justify-between shrink-0">
         <div className="flex items-center gap-2.5">
           <div className="bg-[#f54e00] p-1.5 rounded-md text-white shrink-0">
             <Award className="w-4 h-4" />
@@ -142,15 +142,15 @@ export default function Sidebar({ activeView, setActiveView, isMobileMenuOpen, s
           type="button"
           onClick={() => setIsMobileMenuOpen(false)}
           aria-label="Fechar menu lateral"
-          className="p-1 rounded-md bg-[#fafaf7] border border-[#e6e5e0] hover:bg-[#e6e5e0] text-[#5a5852] md:hidden cursor-pointer"
+          className="p-2.5 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-md bg-[#fafaf7] border border-[#e6e5e0] hover:bg-[#e6e5e0] text-[#5a5852] md:hidden cursor-pointer"
           title="Fechar Menu"
         >
-          <X className="w-4 h-4" aria-hidden="true" />
+          <X className="w-5 h-5" aria-hidden="true" />
         </button>
       </div>
 
       {/* Navigation Sections */}
-      <nav aria-label="Navegação principal" className="p-3 sm:p-4 space-y-5 flex-1 overflow-y-auto custom-scrollbar">
+      <nav aria-label="Navegação principal" className="p-3 sm:p-4 pb-6 space-y-5 flex-1 overflow-y-auto overscroll-contain custom-scrollbar safe-bottom">
         {navSections.map((section, sIdx) => (
           <div key={sIdx} className="space-y-1">
             <div className="px-2 pb-1 text-[11px] font-mono font-medium text-[#5a5852] uppercase tracking-wider">
@@ -172,7 +172,7 @@ export default function Sidebar({ activeView, setActiveView, isMobileMenuOpen, s
                       setActiveView(item.id);
                       setIsMobileMenuOpen(false);
                     }}
-                    className={`w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-xs font-normal transition-all group cursor-pointer ${
+                    className={`w-full flex items-center gap-2.5 px-2.5 py-2.5 min-h-[44px] rounded-lg text-[13px] sm:text-xs font-normal transition-all group cursor-pointer ${
                       isActive
                         ? 'bg-[#fafaf7] text-[#26251e] border border-[#e6e5e0] font-semibold'
                         : 'text-[#5a5852] hover:text-[#26251e] hover:bg-[#fafaf7] border border-transparent'
@@ -208,7 +208,7 @@ export default function Sidebar({ activeView, setActiveView, isMobileMenuOpen, s
       </nav>
 
       {/* Sleek User Profile & Footer */}
-      <div className="p-3 sm:p-4 border-t border-[#e6e5e0] bg-[#fafaf7] shrink-0 space-y-2.5">
+      <div className="p-3 sm:p-4 safe-bottom border-t border-[#e6e5e0] bg-[#fafaf7] shrink-0 space-y-2.5">
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-2 min-w-0">
             <div className="w-7 h-7 rounded-full bg-[#ffffff] border border-[#e6e5e0] flex items-center justify-center shrink-0 text-[#26251e]">
@@ -231,10 +231,10 @@ export default function Sidebar({ activeView, setActiveView, isMobileMenuOpen, s
             type="button"
             onClick={logout}
             aria-label="Sair da conta"
-            className="p-1.5 text-[#807d72] hover:text-[#cf2d56] hover:bg-red-50 rounded-md transition-colors cursor-pointer shrink-0"
+            className="p-2.5 min-w-[44px] min-h-[44px] flex items-center justify-center text-[#807d72] hover:text-[#cf2d56] hover:bg-red-50 rounded-md transition-colors cursor-pointer shrink-0"
             title="Sair da Conta"
           >
-            <LogOut className="w-3.5 h-3.5" aria-hidden="true" />
+            <LogOut className="w-4 h-4" aria-hidden="true" />
           </button>
         </div>
 

@@ -3,9 +3,9 @@ import { Settings, ShieldCheck, Key, Bot, Cpu, HardDrive, CheckCircle2, UserChec
 
 export default function ConfigView() {
   return (
-    <div className="max-w-4xl mx-auto space-y-6 text-[#26251e]">
+    <div className="max-w-4xl mx-auto space-y-4 sm:space-y-6 text-[#26251e] min-w-0">
       {/* Header */}
-      <div className="bg-white border border-[#e6e5e0] rounded-xl p-6">
+      <div className="bg-white border border-[#e6e5e0] rounded-xl p-4 sm:p-6">
         <h2 className="text-lg font-bold text-[#26251e] tracking-tight flex items-center gap-2">
           <Settings className="w-5 h-5 text-[#f54e00]" />
           Configurações & Integração da API
@@ -16,7 +16,7 @@ export default function ConfigView() {
       </div>
 
       {/* API Key Status Box */}
-      <div className="bg-white border border-[#e6e5e0] rounded-xl p-6 space-y-4">
+      <div className="bg-white border border-[#e6e5e0] rounded-xl p-4 sm:p-6 space-y-4">
         <h3 className="text-xs font-mono font-bold text-[#26251e] uppercase tracking-wider flex items-center gap-2">
           <Key className="w-4 h-4 text-[#f54e00]" />
           Status da Chave Gemini API
@@ -39,7 +39,7 @@ export default function ConfigView() {
       </div>
 
       {/* Unified AI Config Card */}
-      <div className="bg-white border border-[#e6e5e0] rounded-xl p-6 space-y-4">
+      <div className="bg-white border border-[#e6e5e0] rounded-xl p-4 sm:p-6 space-y-4">
         <h3 className="text-xs font-mono font-bold text-[#26251e] uppercase tracking-wider flex items-center gap-2">
           <Bot className="w-4 h-4 text-[#f54e00]" />
           Arquitetura IA: Agente Único Multimodal (Gemini 3.5 Flash Lite)
@@ -62,7 +62,7 @@ export default function ConfigView() {
       </div>
 
       {/* Database Status Box */}
-      <div className="bg-white border border-[#e6e5e0] rounded-xl p-6 space-y-4">
+      <div className="bg-white border border-[#e6e5e0] rounded-xl p-4 sm:p-6 space-y-4">
         <h3 className="text-xs font-mono font-bold text-[#26251e] uppercase tracking-wider flex items-center gap-2">
           <HardDrive className="w-4 h-4 text-[#f54e00]" />
           Banco de Dados Local (Dexie.js / IndexedDB)

@@ -83,10 +83,10 @@ export default function RedacoesTableView({ redacoes, isLoading = false, filterT
           )}
 
           {/* Filter Pills */}
-          <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5 custom-scrollbar">
+          <div className="flex items-center gap-1.5 overflow-x-auto pb-1 custom-scrollbar -mx-1 px-1">
             <button
               onClick={() => setFilterTab('todas')}
-              className={`px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap border transition-colors ${filterTab === 'todas'
+              className={`px-3.5 py-2 rounded-full text-xs font-medium whitespace-nowrap border transition-colors shrink-0 ${filterTab === 'todas'
                   ? 'bg-[#26251e] text-white border-[#26251e]'
                   : 'bg-[#fafaf7] border-[#e6e5e0] text-[#5a5852] hover:text-[#26251e]'
                 }`}
@@ -98,7 +98,7 @@ export default function RedacoesTableView({ redacoes, isLoading = false, filterT
               <>
                 <button
                   onClick={() => setFilterTab('identificadas')}
-                  className={`px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap border transition-colors ${filterTab === 'identificadas'
+                  className={`px-3.5 py-2 rounded-full text-xs font-medium whitespace-nowrap border transition-colors shrink-0 ${filterTab === 'identificadas'
                       ? 'bg-[#9fc9a2] text-[#26251e] border-[#9fc9a2]'
                       : 'bg-[#fafaf7] border-[#e6e5e0] text-[#5a5852] hover:text-[#26251e]'
                     }`}
@@ -107,7 +107,7 @@ export default function RedacoesTableView({ redacoes, isLoading = false, filterT
                 </button>
                 <button
                   onClick={() => setFilterTab('sem_nome')}
-                  className={`px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap border transition-colors flex items-center gap-1 ${filterTab === 'sem_nome'
+                  className={`px-3.5 py-2 rounded-full text-xs font-medium whitespace-nowrap border transition-colors shrink-0 flex items-center gap-1 ${filterTab === 'sem_nome'
                       ? 'bg-[#dfa88f] text-[#26251e] border-[#dfa88f]'
                       : 'bg-[#fafaf7] border-[#e6e5e0] text-[#5a5852] hover:text-[#26251e]'
                     }`}
@@ -120,7 +120,7 @@ export default function RedacoesTableView({ redacoes, isLoading = false, filterT
 
             <button
               onClick={() => setFilterTab('excelentes')}
-              className={`px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap border transition-colors ${filterTab === 'excelentes'
+              className={`px-3.5 py-2 rounded-full text-xs font-medium whitespace-nowrap border transition-colors shrink-0 ${filterTab === 'excelentes'
                   ? 'bg-[#c08532] text-white border-[#c08532]'
                   : 'bg-[#fafaf7] border-[#e6e5e0] text-[#5a5852] hover:text-[#26251e]'
                 }`}

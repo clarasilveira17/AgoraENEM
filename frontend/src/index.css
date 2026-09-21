@@ -110,6 +110,77 @@
   text-align: justify;
 }
 
+/* ==========================================================
+   AJUSTES GLOBAIS PARA DISPOSITIVOS MOVEIS
+   ========================================================== */
+
+/* Evita rolagem horizontal acidental em telas estreitas */
+html, body {
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+/* Areas de rolagem com inercia nativa e sem "scroll chaining" */
+.custom-scrollbar,
+.overflow-y-auto,
+.overflow-x-auto {
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+}
+
+/* Imagens nunca estouram o container no celular */
+img, svg, video, canvas {
+  max-width: 100%;
+  height: auto;
+}
+
+/* Nomes/emails longos quebram em vez de alargar a tela */
+h1, h2, h3, h4, h5, h6, p, span, strong, td, th, label, li {
+  overflow-wrap: break-word;
+}
+
+@media (max-width: 767px) {
+  /* iOS Safari aplica zoom automatico quando a fonte do campo e < 16px.
+     Forcar 16px elimina o "pulo" de zoom ao tocar em qualquer input. */
+  input,
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
+
+  /* Alvos de toque minimos confortaveis (WCAG 2.2 SC 2.5.8) */
+  button,
+  [role="tab"],
+  [role="button"],
+  a[href] {
+    min-height: 40px;
+  }
+
+  /* Botoes dentro de linhas compactas nao precisam esticar o layout */
+  button {
+    touch-action: manipulation;
+  }
+
+  /* Barras de abas/filtros roláveis: esconde a barra de scroll no celular */
+  .custom-scrollbar::-webkit-scrollbar {
+    height: 0;
+    width: 0;
+  }
+
+  /* Tabelas largas podem rolar lateralmente sem espremer as colunas */
+  table {
+    font-size: 12px;
+  }
+}
+
+/* Respeita a area segura (notch / barra de gestos) */
+.safe-bottom {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+.safe-top {
+  padding-top: env(safe-area-inset-top, 0px);
+}
+
 /* Official Print / PDF Styling (Editorial Document Design) */
 @media print {
   @page {
@@ -140,15 +211,17 @@
   #container-do-boletim,
   .folha-oficial-wrapper {
     display: block !important;
-    position: absolute;
-    left: 0;
-    top: 0;
+    position: absolute !important;
+    left: 0 !important;
+    top: 0 !important;
     width: 100% !important;
     max-width: 100% !important;
     margin: 0 !important;
     padding: 0 !important;
     background: #ffffff !important;
-    z-index: 9999999;
+    z-index: 9999999 !important;
+    pointer-events: auto !important;
+    transform: none !important;
   }
 
   .no-print, .btn-imprimir {

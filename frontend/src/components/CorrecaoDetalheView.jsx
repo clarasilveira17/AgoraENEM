@@ -8,8 +8,7 @@ import {
   RefreshCw, CheckCircle2, Clock, Share2, CheckCircle, ExternalLink,
   ZoomIn, ZoomOut, RotateCw, X
 } from 'lucide-react';
-import { jsPDF } from 'jspdf';
-import html2canvas from 'html2canvas';
+import { exportFolhaOficialPdf, printFolhaOficialPdf } from '../utils/pdfExport';
 import { updateNomeAluno } from '../db/db';
 import { useAuth } from '../context/AuthContext';
 import { authService } from '../services/authService';
@@ -125,7 +124,7 @@ export default function CorrecaoDetalheView({
   const [showSisedu, setShowSisedu] = useState(true);
   const [showWatermark, setShowWatermark] = useState(true);
   const [showSignature, setShowSignature] = useState(true);
-  const [pdfPageMode, setPdfPageMode] = useState('both'); // 'single' | 'both'
+  const [pdfPageMode, setPdfPageMode] = useState('single'); // 'single' | 'both'
   const [isCustomizingPdf, setIsCustomizingPdf] = useState(false);
 
   // Seleção e vinculação de estudante
@@ -344,38 +343,41 @@ export default function CorrecaoDetalheView({
       const studentNameClean = String(manualName || redacao.nome_aluno || 'Estudante').replace(/[^a-zA-Z0-9_]/g, '_');
       const filename = `Boletim_Redacao_${studentNameClean}_ID${redacao.id}.pdf`;
 
-      const canvasOptions = {
-        scale: 3,
-        useCORS: true,
-        logging: false,
-        backgroundColor: '#ffffff',
-        scrollX: 0,
-        scrollY: 0
-      };
-
-      const canvas1 = await html2canvas(page1El, canvasOptions);
-      const imgData1 = canvas1.toDataURL('image/png');
-
-      const pdf = new jsPDF({
-        orientation: 'portrait',
-        unit: 'mm',
-        format: 'a4',
-        compress: true
+      await exportFolhaOficialPdf({
+        page1El,
+        page2El,
+        includePage2: pdfPageMode === 'both',
+        filename
       });
-
-      pdf.addImage(imgData1, 'PNG', 0, 0, 210, 297, undefined, 'FAST');
-
-      if (page2El && page2El.style.display !== 'none' && window.getComputedStyle(page2El).display !== 'none') {
-        const canvas2 = await html2canvas(page2El, canvasOptions);
-        const imgData2 = canvas2.toDataURL('image/png');
-        pdf.addPage('a4', 'portrait');
-        pdf.addImage(imgData2, 'PNG', 0, 0, 210, 297, undefined, 'FAST');
-      }
-
-      pdf.save(filename);
     } catch (error) {
       console.error('Erro ao gerar PDF:', error);
       alert('Falha ao gerar o arquivo PDF: ' + error.message);
+    } finally {
+      setIsGeneratingPDF(false);
+    }
+  };
+
+  // Impressão do Boletim Oficial — gera o mesmo PDF do download e abre pra imprimir
+  // (ver src/utils/pdfExport.js para o porquê de não usar window.print() direto).
+  const handlePrintPDF = async () => {
+    const page1El = document.getElementById('pdf-export-page-1');
+    const page2El = document.getElementById('pdf-export-page-2');
+    if (!page1El) {
+      setActiveTab('pdf_preview');
+      alert('Carregando prévia do documento para impressão. Clique novamente em Imprimir.');
+      return;
+    }
+
+    setIsGeneratingPDF(true);
+    try {
+      await printFolhaOficialPdf({
+        page1El,
+        page2El,
+        includePage2: pdfPageMode === 'both'
+      });
+    } catch (error) {
+      console.error('Erro ao preparar impressão:', error);
+      alert('Falha ao preparar o documento para impressão: ' + error.message);
     } finally {
       setIsGeneratingPDF(false);
     }
@@ -421,25 +423,25 @@ export default function CorrecaoDetalheView({
       <div className="bg-[#ffffff] border border-[#e6e5e0] rounded-xl p-3.5 sm:p-4 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-3.5">
         
         {/* Lado Esquerdo: Botão Voltar & Breadcrumb */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 sm:gap-3 min-w-0">
           <button
             type="button"
             onClick={onBack}
-            className="px-3 py-1.5 bg-[#fafaf7] hover:bg-[#e6e5e0] border border-[#e6e5e0] text-[#26251e] text-xs font-mono font-medium rounded-lg transition-colors cursor-pointer flex items-center gap-1.5"
+            className="px-3 py-2 shrink-0 bg-[#fafaf7] hover:bg-[#e6e5e0] border border-[#e6e5e0] text-[#26251e] text-xs font-mono font-medium rounded-lg transition-colors cursor-pointer flex items-center gap-1.5"
             title="Voltar para a página anterior (Esc)"
           >
             <ArrowLeft className="w-4 h-4" />
             <span>Voltar</span>
           </button>
 
-          <div className="h-5 w-px bg-[#e6e5e0]" />
+          <div className="hidden sm:block h-5 w-px bg-[#e6e5e0]" />
 
-          <div className="flex items-center gap-1.5 text-xs font-mono text-[#807d72] truncate">
-            <span>Redações</span>
-            <span>/</span>
+          <div className="flex items-center gap-1.5 text-xs font-mono text-[#807d72] truncate min-w-0">
+            <span className="hidden sm:inline">Redações</span>
+            <span className="hidden sm:inline">/</span>
             <strong className="text-[#26251e] font-mono">#{String(redacao.id).padStart(4, '0')}</strong>
             <span>-</span>
-            <span className="truncate max-w-[200px] text-[#26251e] font-sans font-medium">
+            <span className="truncate max-w-[45vw] sm:max-w-[200px] text-[#26251e] font-sans font-medium">
               {manualName || redacao.nome_aluno || 'Estudante'}
             </span>
           </div>
@@ -489,12 +491,13 @@ export default function CorrecaoDetalheView({
           {/* Imprimir / PDF Vetorial */}
           <button
             type="button"
-            onClick={() => window.print()}
+            onClick={handlePrintPDF}
+            disabled={isGeneratingPDF}
             className="px-3 py-1.5 bg-[#ffffff] hover:bg-[#fafaf7] border border-[#e6e5e0] text-[#26251e] text-xs font-mono rounded-lg transition-colors cursor-pointer flex items-center gap-1.5"
             title="Imprimir direto ou salvar como PDF nativo do navegador"
           >
             <Printer className="w-3.5 h-3.5 text-[#807d72]" />
-            <span>Imprimir</span>
+            <span>{isGeneratingPDF ? 'Gerando...' : 'Imprimir'}</span>
           </button>
 
           {/* Baixar PDF Oficial */}
@@ -645,11 +648,11 @@ export default function CorrecaoDetalheView({
       {/* ======================================================== */}
       {/* 3. ABAS DE NAVEGAÇÃO DO BOLETIM                          */}
       {/* ======================================================== */}
-      <div className="bg-[#fafaf7] border border-[#e6e5e0] p-1.5 rounded-xl flex items-center gap-1 overflow-x-auto custom-scrollbar shadow-xs">
+      <div className="bg-[#fafaf7] border border-[#e6e5e0] p-1.5 rounded-xl flex items-center gap-1 overflow-x-auto custom-scrollbar shadow-xs -mx-3 px-3 sm:mx-0 sm:px-1.5">
         <button
           type="button"
           onClick={() => setActiveTab('enem')}
-          className={`px-4 py-2 rounded-lg text-xs font-mono font-semibold transition-all cursor-pointer whitespace-nowrap flex items-center gap-2 ${
+          className={`px-3 sm:px-4 py-2.5 rounded-lg text-xs font-mono font-semibold transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 sm:gap-2 shrink-0 ${
             activeTab === 'enem'
               ? 'bg-[#26251e] text-white shadow-xs'
               : 'text-[#807d72] hover:text-[#26251e]'
@@ -662,7 +665,7 @@ export default function CorrecaoDetalheView({
         <button
           type="button"
           onClick={() => setActiveTab('texto_folha')}
-          className={`px-4 py-2 rounded-lg text-xs font-mono font-semibold transition-all cursor-pointer whitespace-nowrap flex items-center gap-2 ${
+          className={`px-3 sm:px-4 py-2.5 rounded-lg text-xs font-mono font-semibold transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 sm:gap-2 shrink-0 ${
             activeTab === 'texto_folha'
               ? 'bg-[#26251e] text-white shadow-xs'
               : 'text-[#807d72] hover:text-[#26251e]'
@@ -675,7 +678,7 @@ export default function CorrecaoDetalheView({
         <button
           type="button"
           onClick={() => setActiveTab('sisedu')}
-          className={`px-4 py-2 rounded-lg text-xs font-mono font-semibold transition-all cursor-pointer whitespace-nowrap flex items-center gap-2 ${
+          className={`px-3 sm:px-4 py-2.5 rounded-lg text-xs font-mono font-semibold transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 sm:gap-2 shrink-0 ${
             activeTab === 'sisedu'
               ? 'bg-[#26251e] text-white shadow-xs'
               : 'text-[#807d72] hover:text-[#26251e]'
@@ -688,7 +691,7 @@ export default function CorrecaoDetalheView({
         <button
           type="button"
           onClick={() => setActiveTab('pdf_preview')}
-          className={`px-4 py-2 rounded-lg text-xs font-mono font-semibold transition-all cursor-pointer whitespace-nowrap flex items-center gap-2 ${
+          className={`px-3 sm:px-4 py-2.5 rounded-lg text-xs font-mono font-semibold transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 sm:gap-2 shrink-0 ${
             activeTab === 'pdf_preview'
               ? 'bg-[#26251e] text-white shadow-xs'
               : 'text-[#807d72] hover:text-[#26251e]'
@@ -797,10 +800,10 @@ export default function CorrecaoDetalheView({
       {/* ABA 2: FOLHA MANUSCRITA & TRANSCRIÇÃO PAUTADA            */}
       {/* ======================================================== */}
       {activeTab === 'texto_folha' && (
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start animate-fadeIn">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 lg:gap-5 items-start animate-fadeIn">
           
           {/* Coluna Esquerda: Transcrição Pautada (Linhas 01 a 30) */}
-          <div className="lg:col-span-6 bg-[#ffffff] border border-[#e6e5e0] rounded-xl p-5 space-y-3 shadow-xs">
+          <div className="lg:col-span-6 bg-[#ffffff] border border-[#e6e5e0] rounded-xl p-4 sm:p-5 space-y-3 shadow-xs min-w-0">
             <div className="flex items-center justify-between border-b border-[#e6e5e0] pb-3">
               <h3 className="text-sm font-semibold text-[#26251e] flex items-center gap-2">
                 <FileText className="w-4 h-4 text-[#f54e00]" />
@@ -1076,12 +1079,13 @@ export default function CorrecaoDetalheView({
 
               <button
                 type="button"
-                onClick={() => window.print()}
+                onClick={handlePrintPDF}
+            disabled={isGeneratingPDF}
                 className="px-3 py-1.5 bg-[#fafaf7] hover:bg-[#e6e5e0] border border-[#e6e5e0] text-[#26251e] text-xs font-mono rounded-lg transition-colors cursor-pointer flex items-center gap-1.5"
                 title="Imprimir direto ou salvar como PDF nativo do navegador"
               >
                 <Printer className="w-3.5 h-3.5 text-[#807d72]" />
-                <span>Imprimir</span>
+                <span>{isGeneratingPDF ? 'Gerando...' : 'Imprimir'}</span>
               </button>
 
               <button
@@ -1120,8 +1124,11 @@ export default function CorrecaoDetalheView({
             </div>
           )}
 
-          {/* Renderizador do Documento Oficial A4 (FolhaOficialRedacao) */}
-          <div className="bg-slate-800 rounded-xl p-4 sm:p-6 overflow-x-auto flex justify-center shadow-inner">
+          {/* Renderizador do Documento Oficial A4 (FolhaOficialRedacao) — Prévia em Tela.
+              Este mesmo nó (idPrefix="pdf-export") é usado tanto por "Baixar PDF" quanto
+              por "Imprimir" — ambos clonam o nó para um host isolado antes de rasterizar
+              (ver src/utils/pdfExport.js), então não precisam de uma cópia à parte. */}
+          <div className="no-print bg-slate-800 rounded-xl p-4 sm:p-6 overflow-x-auto flex justify-center shadow-inner">
             <div className="scale-90 sm:scale-100 origin-top">
               <FolhaOficialRedacao
                 redacao={redacao}
@@ -1140,36 +1147,13 @@ export default function CorrecaoDetalheView({
                 showSignature={showSignature}
                 pdfPageMode={pdfPageMode}
                 showPage2={pdfPageMode === 'both'}
-                idPrefix="pdf-live-preview"
+                idPrefix="pdf-export"
               />
             </div>
           </div>
 
         </div>
       )}
-
-      {/* Off-screen export container for instant 2-page PDF export and print */}
-      <div style={{ position: 'fixed', left: '-9999px', top: 0, opacity: 0, pointerEvents: 'none', zIndex: -100 }}>
-        <FolhaOficialRedacao
-          redacao={redacao}
-          manualName={manualName}
-          manualTurma={manualTurma}
-          notaEnemCalculada={notaEnemCalculada}
-          enem={enem}
-          siseduDescritores={siseduDescritores}
-          sisedu={sisedu}
-          fullTextContent={fullTextContent}
-          customEscola={customEscola}
-          customProfessor={customProfessor}
-          customRecado={customRecado}
-          showSisedu={showSisedu}
-          showWatermark={showWatermark}
-          showSignature={showSignature}
-          pdfPageMode="both"
-          showPage2={true}
-          idPrefix="pdf-export"
-        />
-      </div>
 
     </div>
   );

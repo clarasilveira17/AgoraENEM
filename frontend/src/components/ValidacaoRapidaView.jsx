@@ -342,7 +342,7 @@ export default function ValidacaoRapidaView({
       {/* ======================================================== */}
       {/* 2. BARRA DE FILTROS & ABAS DE NAVEGAÇÃO                  */}
       {/* ======================================================== */}
-      <div className="bg-[#fafaf7] border border-[#e6e5e0] p-3.5 rounded-xl flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3 shadow-xs">
+      <div className="bg-[#fafaf7] border border-[#e6e5e0] p-3 sm:p-3.5 rounded-xl flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3 shadow-xs">
 
         {/* Toggle Modo: Esteira vs Tabela */}
         <div className="flex items-center gap-1 bg-[#ffffff] border border-[#e6e5e0] p-1 rounded-lg text-xs font-medium">
@@ -541,7 +541,7 @@ export default function ValidacaoRapidaView({
             </div>
 
             {/* Grid Principal: Folha Manuscrita (Esq) vs Painel de Seleção (Dir) */}
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 lg:gap-5 items-start">
 
               {/* LADO ESQUERDO (7 Colunas): VISUALIZADOR COMPLETO DA FOLHA MANUSCRITA */}
               <div className="lg:col-span-7 bg-[#ffffff] border border-[#e6e5e0] rounded-xl p-4 sm:p-5 space-y-3 shadow-xs">
@@ -607,7 +607,7 @@ export default function ValidacaoRapidaView({
                 {/* Box da Imagem com Visualização Completa (Sem Cortes) */}
                 <div
                   ref={imageContainerRef}
-                  className="relative bg-slate-900 rounded-lg border border-slate-800 h-[680px] overflow-y-auto overflow-x-auto custom-scrollbar p-3 flex flex-col items-center"
+                  className="relative bg-slate-900 rounded-lg border border-slate-800 h-[60vh] min-h-[320px] lg:h-[680px] overflow-y-auto overflow-x-auto custom-scrollbar p-2 sm:p-3 flex flex-col items-center"
                 >
                   {isLoadingImage ? (
                     <div className="h-full flex flex-col items-center justify-center gap-3 text-slate-300 text-xs font-mono">
@@ -657,7 +657,7 @@ export default function ValidacaoRapidaView({
               </div>
 
               {/* LADO DIREITO (5 Colunas): PAINEL DE VALIDAÇÃO E SELEÇÃO DE ALUNO */}
-              <div className="lg:col-span-5 bg-[#ffffff] border border-[#e6e5e0] rounded-xl p-5 space-y-4 shadow-xs sticky top-4">
+              <div className="lg:col-span-5 bg-[#ffffff] border border-[#e6e5e0] rounded-xl p-4 sm:p-5 space-y-4 shadow-xs lg:sticky lg:top-4">
 
                 <div>
                   <h4 className="text-sm font-semibold text-[#26251e] flex items-center gap-2">
@@ -915,7 +915,7 @@ export default function ValidacaoRapidaView({
           </div>
 
           <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse text-xs">
+            <table className="w-full min-w-[640px] text-left border-collapse text-xs">
               <thead>
                 <tr className="border-b border-[#e6e5e0] bg-[#fafaf7] text-[#807d72] font-mono text-[11px] uppercase tracking-wider">
                   <th className="py-3 px-4 w-16 text-center">ID</th>
@@ -999,11 +999,11 @@ export default function ValidacaoRapidaView({
       {/* 5. MODAL DE TELA CHEIA (FULLSCREEN VIEWER)               */}
       {/* ======================================================== */}
       {isFullscreen && currentRedacao && (
-        <div className="fixed inset-0 z-50 bg-black/90 backdrop-blur-sm flex flex-col animate-fadeIn">
+        <div className="fixed inset-0 z-50 bg-black/90 backdrop-blur-sm flex flex-col animate-fadeIn safe-bottom">
 
           {/* Header do Modal */}
-          <div className="p-4 bg-slate-900 border-b border-slate-800 flex items-center justify-between text-white">
-            <div className="flex items-center gap-3">
+          <div className="safe-top p-3 sm:p-4 bg-slate-900 border-b border-slate-800 flex flex-wrap items-center justify-between gap-2 text-white">
+            <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-wrap">
               <span className="px-2 py-0.5 bg-[#f54e00] text-white font-mono font-bold text-xs rounded">
                 Redação #{currentRedacao.id}
               </span>

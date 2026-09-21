@@ -3,16 +3,16 @@ import { Award, Sparkles, BookOpen, Compass, ShieldCheck, GraduationCap, ArrowRi
 
 export default function ProjetoAgoraLandingView({ onOpenLoginModal }) {
   return (
-    <div className="max-w-6xl mx-auto space-y-10 py-4 sm:py-8 px-2 sm:px-4 text-[#26251e] font-sans">
+    <div className="max-w-6xl mx-auto space-y-6 sm:space-y-10 py-2 sm:py-8 px-0 sm:px-4 text-[#26251e] font-sans min-w-0">
       
       {/* Hero Editorial Band (Cursor Gothic style: warm cream, weight 400 headline, Cursor Orange CTA) */}
-      <div className="bg-[#ffffff] border border-[#e6e5e0] rounded-2xl p-6 sm:p-12 text-center relative overflow-hidden space-y-6">
+      <div className="bg-[#ffffff] border border-[#e6e5e0] rounded-2xl p-5 sm:p-12 text-center relative overflow-hidden space-y-4 sm:space-y-6">
         <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-mono font-medium bg-[#f7f7f4] border border-[#e6e5e0] text-[#26251e]">
           <Sparkles className="w-4 h-4 text-[#f54e00]" />
           Projeto Ágora Escolar • Tecnologia Preditiva & Formação Cidadã
         </div>
 
-        <h1 className="text-3xl sm:text-5xl font-normal text-[#26251e] tracking-tight max-w-4xl mx-auto leading-tight">
+        <h1 className="text-2xl sm:text-5xl font-normal text-[#26251e] tracking-tight max-w-4xl mx-auto leading-tight text-balance">
           Inteligência Artificial a Serviço da Redação ENEM & Pensamento Crítico
         </h1>
 
@@ -47,7 +47,7 @@ export default function ProjetoAgoraLandingView({ onOpenLoginModal }) {
       <div className="space-y-4">
         <div className="text-center max-w-xl mx-auto space-y-1">
           <span className="text-xs font-mono font-semibold uppercase text-[#807d72] tracking-wider">Metodologia Educacional</span>
-          <h2 className="text-2xl sm:text-3xl font-normal tracking-tight text-[#26251e]">
+          <h2 className="text-xl sm:text-3xl font-normal tracking-tight text-[#26251e]">
             Quatro Pilares do Projeto Ágora
           </h2>
         </div>
@@ -55,7 +55,7 @@ export default function ProjetoAgoraLandingView({ onOpenLoginModal }) {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           
           {/* Pilar 1 */}
-          <div className="bg-[#ffffff] border border-[#e6e5e0] p-6 rounded-xl space-y-3">
+          <div className="bg-[#ffffff] border border-[#e6e5e0] p-4 sm:p-6 rounded-xl space-y-3">
             <div className="w-10 h-10 rounded-lg bg-[#dfa88f]/30 border border-[#dfa88f] flex items-center justify-center text-[#26251e]">
               <Award className="w-5 h-5 text-[#c08532]" />
             </div>
@@ -66,7 +66,7 @@ export default function ProjetoAgoraLandingView({ onOpenLoginModal }) {
           </div>
 
           {/* Pilar 2 */}
-          <div className="bg-[#ffffff] border border-[#e6e5e0] p-6 rounded-xl space-y-3">
+          <div className="bg-[#ffffff] border border-[#e6e5e0] p-4 sm:p-6 rounded-xl space-y-3">
             <div className="w-10 h-10 rounded-lg bg-[#9fbbe0]/30 border border-[#9fbbe0] flex items-center justify-center text-[#26251e]">
               <Compass className="w-5 h-5 text-[#26251e]" />
             </div>
@@ -77,7 +77,7 @@ export default function ProjetoAgoraLandingView({ onOpenLoginModal }) {
           </div>
 
           {/* Pilar 3 */}
-          <div className="bg-[#ffffff] border border-[#e6e5e0] p-6 rounded-xl space-y-3">
+          <div className="bg-[#ffffff] border border-[#e6e5e0] p-4 sm:p-6 rounded-xl space-y-3">
             <div className="w-10 h-10 rounded-lg bg-[#9fc9a2]/40 border border-[#9fc9a2] flex items-center justify-center text-[#26251e]">
               <ShieldCheck className="w-5 h-5 text-[#1f8a65]" />
             </div>
@@ -88,7 +88,7 @@ export default function ProjetoAgoraLandingView({ onOpenLoginModal }) {
           </div>
 
           {/* Pilar 4 */}
-          <div className="bg-[#ffffff] border border-[#e6e5e0] p-6 rounded-xl space-y-3">
+          <div className="bg-[#ffffff] border border-[#e6e5e0] p-4 sm:p-6 rounded-xl space-y-3">
             <div className="w-10 h-10 rounded-lg bg-[#c0a8dd]/30 border border-[#c0a8dd] flex items-center justify-center text-[#26251e]">
               <FileText className="w-5 h-5 text-[#26251e]" />
             </div>
@@ -102,7 +102,7 @@ export default function ProjetoAgoraLandingView({ onOpenLoginModal }) {
       </div>
 
       {/* Matriz de Avaliação Cruzada (Visão Detalhada) */}
-      <div className="bg-[#ffffff] border border-[#e6e5e0] rounded-xl p-6 sm:p-8 space-y-6">
+      <div className="bg-[#ffffff] border border-[#e6e5e0] rounded-xl p-4 sm:p-8 space-y-5 sm:space-y-6">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-[#e6e5e0] pb-4">
           <div>
             <span className="text-xs font-mono text-[#807d72] uppercase font-semibold">Estrutura Pedagógica</span>
@@ -115,9 +115,9 @@ export default function ProjetoAgoraLandingView({ onOpenLoginModal }) {
           </span>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
           {/* Dimensão Discursiva */}
-          <div className="bg-[#fafaf7] border border-[#e6e5e0] p-5 rounded-lg space-y-3">
+          <div className="bg-[#fafaf7] border border-[#e6e5e0] p-4 sm:p-5 rounded-lg space-y-3">
             <div className="flex items-center gap-2 text-sm font-semibold text-[#26251e]">
               <BrainCircuit className="w-4 h-4 text-[#f54e00]" />
               Dimensão Discursiva & Argumentativa
@@ -139,7 +139,7 @@ export default function ProjetoAgoraLandingView({ onOpenLoginModal }) {
           </div>
 
           {/* Dimensão Ético-Moral */}
-          <div className="bg-[#fafaf7] border border-[#e6e5e0] p-5 rounded-lg space-y-3">
+          <div className="bg-[#fafaf7] border border-[#e6e5e0] p-4 sm:p-5 rounded-lg space-y-3">
             <div className="flex items-center gap-2 text-sm font-semibold text-[#26251e]">
               <HeartHandshake className="w-4 h-4 text-[#c08532]" />
               Dimensão Ético-Moral & Direitos Humanos

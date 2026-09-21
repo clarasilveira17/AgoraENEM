@@ -17,7 +17,7 @@ export default function Header({
   const { user, logout, isAdmin } = useAuth();
 
   return (
-    <header className="bg-[#f7f7f4] border-b border-[#e6e5e0] sticky top-0 z-20 px-3 sm:px-6 h-16 flex items-center justify-between gap-2 sm:gap-4 shrink-0">
+    <header className="bg-[#f7f7f4] border-b border-[#e6e5e0] sticky top-0 z-20 safe-top px-3 sm:px-6 h-14 sm:h-16 flex items-center justify-between gap-2 sm:gap-4 shrink-0">
 
       <div className="flex items-center gap-2 flex-1 min-w-0">
         {/* Mobile Menu Hambúrguer Button */}
@@ -26,7 +26,7 @@ export default function Header({
             type="button"
             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
             aria-label="Abrir menu de navegação"
-            className="p-2 rounded-md bg-[#ffffff] border border-[#e6e5e0] hover:bg-[#e6e5e0] text-[#26251e] md:hidden cursor-pointer shrink-0"
+            className="p-2.5 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-md bg-[#ffffff] border border-[#e6e5e0] hover:bg-[#e6e5e0] text-[#26251e] md:hidden cursor-pointer shrink-0"
             title="Abrir Menu"
           >
             <Menu className="w-5 h-5" aria-hidden="true" />
@@ -70,7 +70,7 @@ export default function Header({
             type="button"
             onClick={logout}
             aria-label="Sair da conta"
-            className="p-2 rounded-md hover:bg-red-50 hover:text-red-700 text-[#807d72] transition-colors cursor-pointer"
+            className="p-2.5 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-md hover:bg-red-50 hover:text-red-700 text-[#807d72] transition-colors cursor-pointer"
             title="Sair da Conta"
           >
             <LogOut className="w-4.5 h-4.5" aria-hidden="true" />
@@ -79,7 +79,7 @@ export default function Header({
           <button
             type="button"
             onClick={onOpenLoginModal}
-            className="h-8 sm:h-10 px-3.5 rounded-md text-xs font-medium bg-[#f54e00] hover:bg-[#d04200] text-white flex items-center gap-1.5 transition-all cursor-pointer shadow-xs"
+            className="h-10 px-4 rounded-md text-xs font-medium bg-[#f54e00] hover:bg-[#d04200] text-white flex items-center gap-1.5 transition-all cursor-pointer shadow-xs shrink-0"
           >
             <LogIn className="w-3.5 h-3.5" />
             <span>Entrar</span>
