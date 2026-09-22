@@ -406,8 +406,17 @@ function contarDesviosC1Robusto(c1) {
   const exemplos = Array.isArray(c1?.exemplos) ? c1.exemplos : [];
 
   // Tipos presentes nos exemplos (para detectar fantasmas)
+  // Filtra qualquer falso desvio que contenha hífen de translineação
+  const exemplosValidos = exemplos.filter(e => {
+    const cit = (e?.citacao_texto || '').trim();
+    if (cit.includes('-\\n') || cit.includes('- ') || cit.includes('-\n')) {
+      return false; // descarta falsos erros de translineação
+    }
+    return true;
+  });
+
   const tiposComExemplo = new Set(
-    exemplos
+    exemplosValidos
       .map(e => (e?.tipo || '').trim())
       .filter(Boolean)
   );
@@ -417,7 +426,6 @@ function contarDesviosC1Robusto(c1) {
   for (const tipo of C1_HARD) {
     const n = numeroSeguro(cat[tipo]);
     if (n > 0 && tiposComExemplo.has(tipo)) hardTotal += n;
-    // se n > 0 mas sem exemplo, ignora (reduz a 0)
   }
 
   // Contagem soft: soma bruta (com ou sem exemplo), capada
@@ -435,30 +443,30 @@ function contarDesviosC1Robusto(c1) {
     softBruto,
     softTotal,
     categoriasComExemplo: [...tiposComExemplo],
+    exemplos: exemplosValidos,
   };
 }
 
 /* ---- C1 ----
- * Bandas (com o totalEfetivo já capado):
- *   0-1      → 200 (excepcionalidade)
- *   2-4      → 160 (poucos)
- *   5-9      → 120 (alguns)
- *   10-14    → 80  (muitos)
- *   15+      → 40  (diversos e frequentes)
+ * Bandas oficiais INEP (com totalEfetivo capado e ponderado):
+ *   0-1 desvios e sintaxe excelente/boa   → 200 (excepcionalidade)
+ *   2-4 desvios (ou até 5 desvios leves) → 160 (bom domínio, poucos desvios)
+ *   5-10 desvios                         → 120 (domínio mediano)
+ *   11-16 desvios                        → 80  (domínio insuficiente)
+ *   17+ desvios                          → 40  (domínio precário)
  */
 function calcularNotaC1(c1) {
   const compromete = c1?.compromete_compreensao === true;
-  const exemplos = Array.isArray(c1?.exemplos) ? c1.exemplos : [];
   const cat = c1?.contagem_por_categoria || {};
 
-  const { totalEfetivo, hardTotal, softBruto, softTotal, categoriasComExemplo } =
+  const { totalEfetivo, hardTotal, softBruto, softTotal, categoriasComExemplo, exemplos } =
     contarDesviosC1Robusto(c1);
 
   let nota;
   if (totalEfetivo <= 1) nota = 200;
-  else if (totalEfetivo <= 4) nota = 160;
-  else if (totalEfetivo <= 9) nota = 120;
-  else if (totalEfetivo <= 14) nota = 80;
+  else if (totalEfetivo <= 5) nota = 160;
+  else if (totalEfetivo <= 10) nota = 120;
+  else if (totalEfetivo <= 16) nota = 80;
   else nota = 40;
 
   if (compromete) nota = Math.min(nota, 80);
@@ -487,8 +495,11 @@ function calcularNotaC2(c2) {
   if (abordagem === 'completa') {
     if (repertorio === 'produtivo') return { nota: 200 };
     if (repertorio === 'legitimado') return { nota: 160 };
-    if (repertorio === 'repertorio_de_bolso' || repertorio === 'motivadores') return { nota: 120 };
-    return { nota: 80 };
+    // Argumentação previsível / senso comum / repertório de bolso com abordagem completa = 120 (Nível 3 Oficial INEP)
+    if (repertorio === 'repertorio_de_bolso' || repertorio === 'motivadores' || repertorio === 'inexistente') {
+      return { nota: 120 };
+    }
+    return { nota: 120 };
   }
 
   if (repertorio === 'produtivo' || repertorio === 'legitimado') return { nota: 120 };
@@ -573,7 +584,7 @@ function calcularNotaC5(c5, c2) {
   const presentes = {};
   let qtd = 0;
   for (const el of ELEMENTOS_C5) {
-    const ok = c5?.[el]?.presente === true;
+    const ok = c5?.[el]?.presente === true && !!(c5?.[el]?.citacao_texto || '').trim();
     presentes[el] = ok;
     if (ok) qtd++;
   }
@@ -592,14 +603,14 @@ function calcularNotaC5(c5, c2) {
 }
 
 /* ============================================================================
- * ETAPA 4 — DEVOLUTIVA PEDAGÓGICA (PADRÃO CORRETOR HUMANO INEP 2026)
+ * ETAPA 4 — DEVOLUTIVA PEDAGÓGICA (CONCISA, DIRETA E HUMANA - PADRÃO INEP 2026)
  * ==========================================================================*/
 
 async function gerarDevolutiva(notas, fatos, textoBase, apiKey) {
   const genAI = new GoogleGenerativeAI(apiKey);
 
   const resumoNotas = `
-NOTAS OFICIAIS DO ENEM JÁ DEFINIDAS (UTILIZE ESTES VALORES EXATOS):
+NOTAS OFICIAIS DO ENEM JÁ CALCULADAS:
   Competência 1 = ${notas.c1} / 200
   Competência 2 = ${notas.c2} / 200
   Competência 3 = ${notas.c3} / 200
@@ -608,33 +619,32 @@ NOTAS OFICIAIS DO ENEM JÁ DEFINIDAS (UTILIZE ESTES VALORES EXATOS):
   TOTAL ENEM = ${notas.total} / 1000
 `;
 
-  const system = `Você é um experiente Professor e Corretor Oficial de Redação do ENEM (padrão INEP / MEC / Cartilha 2026).
-Sua devolutiva deve ter a densidade, a empatia pedagógica, o acolhimento e o rigor analítico dos comentários oficiais da banca do INEP.
-Você compreende a intenção do estudante, valoriza o que foi bem construído e oferece orientações cirúrgicas e práticas para a evolução textual.
+  const system = `Você é um avaliador de redação oficial do ENEM (graduado em Letras).
+Sua devolutiva deve ser CONCISA, PRECISA, RESPEITOSA e DIRETA AO PONTO, idêntica aos pareceres dos professores reais do Ensino Médio.
 
-DIRETRIZES DE ESCRITA:
-1. Mantenha tom profissional, encorajador, construtivo e fundamentado nas 5 competências.
-2. NUNCA classifique hifens de fim de linha ('-\\n') como erro.
-3. Ao citar trechos do aluno, copie com exatidão literal a partir dos fatos fornecidos.
-4. Explique com clareza o motivo de cada nota atribuída e como o estudante pode atingir os 200 pontos nas competências onde perdeu pontos.
+REGRAS DE REDAÇÃO:
+1. Seja objetivo: no máximo 2 a 3 frases por competência.
+2. Destaque o ponto central (o que garantiu a nota e o que faltou para o próximo nível).
+3. NUNCA cite translineações com hífen ('-\\n') como erros ortográficos.
+4. Ao exemplificar falhas, cite apenas o termo exato.
 
-FORMATO DE SAÍDA — JSON estrito sem formatação adicional:
+FORMATO DE SAÍDA — JSON estrito:
 {
-  "devolutiva_enem": "Visão Geral e Projeto de Texto: ...\\n\\n• Competência 1 (${notas.c1} pontos): ...\\n\\n• Competência 2 (${notas.c2} pontos): ...\\n\\n• Competência 3 (${notas.c3} pontos): ...\\n\\n• Competência 4 (${notas.c4} pontos): ...\\n\\n• Competência 5 (${notas.c5} pontos): ...\\n\\n• Plano de Ação Pedagógico: ...",
-  "devolutiva_sisedu": "Diagnóstico Curricular e Habilidades SPAECE/SISEDU: ...\\n\\n• Fragilidades Prioritárias: ...\\n\\n• Recomendações Didáticas para o Professor: ..."
+  "devolutiva_enem": "Visão Geral: [1 parágrafo conciso com avaliação da tese e tom]\\n\\n• C1 (${notas.c1} pts): [Análise concisa da norma padrão e sintaxe]\\n\\n• C2 (${notas.c2} pts): [Análise concisa do tema e repertório]\\n\\n• C3 (${notas.c3} pts): [Análise concisa do projeto de texto]\\n\\n• C4 (${notas.c4} pts): [Análise concisa dos recursos coesivos]\\n\\n• C5 (${notas.c5} pts): [Análise concisa dos 5 elementos da intervenção e o que faltou]\\n\\n• Dica Prática: [1 ou 2 orientações diretas para a próxima redação]",
+  "devolutiva_sisedu": "Diagnóstico SPAECE/SISEDU:\\n• Pontos Fortes: [breve]\\n• Fragilidades: [breve]\\n• Recomendação: [breve]"
 }`;
 
   const user = `${resumoNotas}
 
-FATOS TÉCNICOS COLETADOS:
+FATOS TÉCNICOS:
 ${JSON.stringify(fatos, null, 2)}
 
-TEXTO DA REDAÇÃO:
+TEXTO DO ESTUDANTE:
 """
 ${textoBase}
 """
 
-Redija a devolutiva pedagógica completa, rica e humanizada com base nessas notas e evidências textuais.`;
+Gere o parecer conciso e rigoroso.`;
 
   const result = await generateContentWithFallback(
     genAI,
