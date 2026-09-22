@@ -455,7 +455,7 @@ function contarDesviosC1Robusto(c1) {
  *   11-16 desvios                        → 80  (domínio insuficiente)
  *   17+ desvios                          → 40  (domínio precário)
  */
-function calcularNotaC1(c1) {
+export function calcularNotaC1(c1) {
   const compromete = c1?.compromete_compreensao === true;
   const cat = c1?.contagem_por_categoria || {};
 
@@ -485,7 +485,7 @@ function calcularNotaC1(c1) {
 }
 
 /* ---- C2 ---- */
-function calcularNotaC2(c2) {
+export function calcularNotaC2(c2) {
   const abordagem = c2?.abordagem_do_tema;
   const repertorio = c2?.tipo_repertorio;
 
@@ -508,7 +508,7 @@ function calcularNotaC2(c2) {
 }
 
 /* ---- C3 ---- */
-function calcularNotaC3(c3, c2) {
+export function calcularNotaC3(c3, c2) {
   const tangenciou = c2?.abordagem_do_tema === 'tangenciamento';
   const fugiu = c2?.abordagem_do_tema === 'fuga';
   if (fugiu) return { nota: 0 };
@@ -539,7 +539,7 @@ function calcularNotaC3(c3, c2) {
  *   7-9      → 80
  *   10+      → 40
  */
-function calcularNotaC4(c4) {
+export function calcularNotaC4(c4) {
   const inter = c4?.usa_conectivos_interparagrafos === true;
   const intra = c4?.usa_conectivos_intraparagrafos === true;
   const cat = c4?.contagem_por_categoria || {};
@@ -570,7 +570,7 @@ function calcularNotaC4(c4) {
 /* ---- C5 ---- */
 const ELEMENTOS_C5 = ['agente', 'acao', 'meio', 'efeito', 'detalhamento'];
 
-function calcularNotaC5(c5, c2) {
+export function calcularNotaC5(c5, c2) {
   const fugiu = c2?.abordagem_do_tema === 'fuga';
   const tangenciou = c2?.abordagem_do_tema === 'tangenciamento';
 
