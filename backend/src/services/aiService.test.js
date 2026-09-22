@@ -36,7 +36,9 @@ describe('AI Service - JSON Cleaning & Parsing', () => {
     const mock = getMockENEMEvaluation(1, 'Texto de teste', 'Pedro Alvares', '3º B');
     expect(mock.aluno).toBe('Pedro Alvares');
     expect(mock.turma).toBe('3º B');
-    expect(mock.avaliacoes.enem.nota_total_enem).toBeGreaterThan(0);
+    expect(mock.avaliacoes.enem.nota_total_enem).toBe(920);
     expect(mock.avaliacoes.enem.competencia_1.citacao_texto).toBeDefined();
+    expect(mock.avaliacoes.enem.competencia_5.elementos_finais.agente).toBe(true);
   });
 });
+
