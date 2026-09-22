@@ -142,6 +142,36 @@ async function cacheSet(hash, resultado) {
 }
 
 /* ============================================================================
+ * SANEAMENTO ORTOGRÁFICO — REDE DE SEGURANÇA INDEPENDENTE DO PROMPT
+ * ==========================================================================*/
+
+// Únicos diacríticos que existem na ortografia atual do português.
+const LETRAS_ACENTUADAS_VALIDAS = new Set('áàâãéêíóôõúçÁÀÂÃÉÊÍÓÔÕÚÇ');
+
+/**
+ * O modelo às vezes "alucina" um diacrítico que o português não usa
+ * (ex.: trema em 'ü', ou 'ï'/'ë'/'ä'/'ö'/'ñ' vindos de ruído visual do
+ * traço). O prompt já proíbe isso, mas prompts nem sempre são obedecidos
+ * à risca — então aplicamos aqui uma normalização determinística que NÃO
+ * depende do modelo: qualquer caractere acentuado que não esteja na lista
+ * de acentos válidos do português é reduzido à sua letra-base (ü → u,
+ * ï → i, ë → e, ä → a, ö → o, ñ → n), e os acentos válidos (á, ç etc.)
+ * são preservados intactos.
+ */
+function sanitizarOrtografiaPortugues(texto) {
+  if (typeof texto !== 'string' || texto.length === 0) return texto;
+  return texto
+    .normalize('NFC')
+    .split('')
+    .map(char => {
+      if (LETRAS_ACENTUADAS_VALIDAS.has(char)) return char;
+      const semDiacritico = char.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+      return semDiacritico.length === 1 ? semDiacritico : char;
+    })
+    .join('');
+}
+
+/* ============================================================================
  * ETAPA 1 — TRANSCRIÇÃO
  * ==========================================================================*/
 
@@ -150,11 +180,18 @@ const TRANSCRICAO_SYSTEM_PROMPT = `Você é um transcritor especializado em manu
 TAREFA: Transcreva EXATAMENTE o texto manuscrito na imagem, preservando as linhas físicas (Linha 01 a Linha 30) com a quebra de linha '\\n' correspondente.
 
 REGRAS DE LEITURA E CALIGRAFIA (MUITO IMPORTANTE):
-1. FIDELIDADE VISUAL: Transcreva o que está escrito no papel. Não invente acentos, não adicione tremas (ü) — que não existem no português atual —, nem crie letras que não estejam nitidamente desenhadas.
-2. AMBIGUIDADES CALIGRÁFICAS: A caligrafia cursiva pode fazer com que letras como 'o' e 'a' pareçam semelhantes, ou que o 'b' se assemelhe a um 's'. 
-   - SE a letra for ambígua, dê sempre o benefício da dúvida ao aluno e transcreva a forma correta e natural da palavra no contexto (ex: se o 'o' parecer um 'a', transcreva 'o').
-   - NUNCA invente incorreções ortográficas que o aluno não cometeu só porque o traço é feio.
-3. Não corrija a gramática real do aluno (como a omissão clara de uma letra numa palavra, ex: "igressar" sem 'n'), mas garanta que falhas puramente visuais da caligrafia não se tornem erros fantásticos no texto transcrito.
+1. FIDELIDADE VISUAL: Transcreva o que está escrito no papel. Não crie letras que não estejam nitidamente desenhadas.
+2. ALFABETO PERMITIDO (regra rígida): você só pode usar as 26 letras do português (a-z, A-Z) e as acentuações que realmente existem na ortografia atual: á à â ã é ê í ó ô õ ú ç (e maiúsculas). NUNCA escreva trema (ü) ou qualquer outro diacrítico como ï, ë, ä, ö, ñ — eles não existem mais no português. Se um traço parecer um trema, é sujeira do papel, sombra do traço ou pressão da caneta — ignore-o e leia a vogal normalmente.
+3. PARES DE LETRAS QUE A CALIGRAFIA CURSIVA ESCOLAR CONFUNDE COM FREQUÊNCIA — nestes casos, dê SEMPRE o benefício da dúvida ao aluno e escolha a leitura que resulta numa palavra real e coerente com o contexto:
+   - 'o' vs 'a' (traço de fechamento incompleto)
+   - 'b' vs 'v' vs 's' (curva ou haste mal fechada)
+   - 'n' vs 'u' (arco invertido, comum em letra apressada)
+   - 'm' vs 'n' vs 'rn' (contagem de hastes)
+   - 'e' vs 'i' vs 'c' (curva aberta ou fechada)
+   - 'r' vs 'n' (haste curta)
+   Regra prática: se a leitura literal do traço resultar numa não-palavra em português, e existir uma palavra real e graficamente parecida que faça sentido na frase, transcreva a palavra real. NUNCA invente incorreções ortográficas que o aluno não cometeu só porque o traço é feio.
+4. Não corrija a gramática real do aluno (como a omissão clara de uma letra numa palavra, ex: "igressar" sem 'n'), mas garanta que falhas puramente visuais da caligrafia não se tornem erros fantásticos no texto transcrito.
+5. REGISTRO DE DÚVIDAS: sempre que tiver que decidir entre duas leituras plausíveis para um mesmo trecho, registre isso em "duvidas_transcricao" (linha, trecho ambíguo, leitura adotada e motivo). Isso é só para auditoria humana — não penaliza o aluno nem muda sua transcrição principal.
 
 Responda APENAS com este JSON estrito, sem comentários, sem markdown:
 {
@@ -162,7 +199,8 @@ Responda APENAS com este JSON estrito, sem comentários, sem markdown:
   "aluno_detectado": "nome extraído do cabeçalho ou null",
   "turma_detectada": "turma extraída do cabeçalho ou null",
   "confianca_identificacao": "ALTA|MEDIA|BAIXA",
-  "motivo_incerteza_identificacao": "breve nota sobre legibilidade"
+  "motivo_incerteza_identificacao": "breve nota sobre legibilidade",
+  "duvidas_transcricao": [ { "linha": 1, "trecho_ambiguo": "...", "leitura_adotada": "...", "motivo": "..." } ]
 }`;
 
 export async function transcreverRedacao(imagemBase64, apiKey) {
@@ -187,7 +225,11 @@ export async function transcreverRedacao(imagemBase64, apiKey) {
     [{ inlineData: { data: base64Data, mimeType } }, 'Transcreva esta redação manuscrita.']
   );
 
-  return cleanAndParseJSON(result.response.text());
+  const transcricao = cleanAndParseJSON(result.response.text());
+  if (transcricao && typeof transcricao.texto_transcrito === 'string') {
+    transcricao.texto_transcrito = sanitizarOrtografiaPortugues(transcricao.texto_transcrito);
+  }
+  return transcricao;
 }
 
 /* ============================================================================
@@ -682,6 +724,7 @@ export async function agenteAvaliadorUnificado(
   let turmaDetectada = turmaFornecida;
   let confianca = 'ALTA';
   let motivoIncerteza = 'Texto fornecido diretamente';
+  let duvidasTranscricao = [];
 
   if ((!textoBase || textoBase.trim().length === 0) && imagemBase64 && imagemBase64.trim().length > 0) {
     const transcricao = await transcreverRedacao(imagemBase64, apiKey);
@@ -690,6 +733,7 @@ export async function agenteAvaliadorUnificado(
     turmaDetectada = turmaFornecida || transcricao.turma_detectada;
     confianca = transcricao.confianca_identificacao;
     motivoIncerteza = transcricao.motivo_incerteza_identificacao;
+    duvidasTranscricao = Array.isArray(transcricao.duvidas_transcricao) ? transcricao.duvidas_transcricao : [];
   }
 
   if (!textoBase || textoBase.trim().length === 0) {
@@ -707,6 +751,7 @@ export async function agenteAvaliadorUnificado(
         confianca_identificacao: confianca,
         motivo_incerteza_identificacao: motivoIncerteza,
         texto_transcrito: textoBase,
+        duvidas_transcricao: duvidasTranscricao,
         cache_hit: true,
         _hash: hash,
       };
@@ -738,6 +783,7 @@ export async function agenteAvaliadorUnificado(
     confianca_identificacao: confianca,
     motivo_incerteza_identificacao: motivoIncerteza,
     texto_transcrito: textoBase,
+    duvidas_transcricao: duvidasTranscricao,
 
     devolutiva_enem: devolutiva.devolutiva_enem,
     devolutiva_sisedu: devolutiva.devolutiva_sisedu,
