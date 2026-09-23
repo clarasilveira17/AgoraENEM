@@ -32,6 +32,20 @@ describe('AI Service - JSON Cleaning & Parsing', () => {
     expect(parsed.citacao_texto).toContain('Quarto de Despejo');
   });
 
+  it('should handle extra non-whitespace character after JSON (e.g. trailing commentary or second block)', () => {
+    const raw = '{\n  "devolutiva_enem": "Visão Geral: Bom texto.",\n  "devolutiva_sisedu": "Diagnóstico: Adequado."\n}\nObservações adicionais do modelo: Foi atribuída nota 800 { "extra": true }';
+    const parsed = cleanAndParseJSON(raw);
+    expect(parsed.devolutiva_enem).toContain('Visão Geral');
+    expect(parsed.devolutiva_sisedu).toContain('Diagnóstico');
+  });
+
+  it('should handle markdown block with trailing commentary after code fence', () => {
+    const raw = '```json\n{\n  "c1": { "nota": 160 },\n  "c2": { "nota": 200 }\n}\n```\nAqui está a avaliação completa!';
+    const parsed = cleanAndParseJSON(raw);
+    expect(parsed.c1.nota).toBe(160);
+    expect(parsed.c2.nota).toBe(200);
+  });
+
   it('should generate valid mock ENEM evaluations when API key is missing', () => {
     const mock = getMockENEMEvaluation(1, 'Texto de teste', 'Pedro Alvares', '3º B');
     expect(mock.aluno).toBe('Pedro Alvares');

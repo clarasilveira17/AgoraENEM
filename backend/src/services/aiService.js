@@ -3,8 +3,66 @@ import crypto from 'crypto';
 import { generateContentWithFallback } from '../config/gemini.js';
 
 /* ============================================================================
- * PARSER / REPARO DE JSON
+ * PARSER / REPARO DE JSON ROBUSTO
  * ==========================================================================*/
+
+function extractBalancedJson(str) {
+  if (!str || typeof str !== 'string') return null;
+
+  // Se houver bloco markdown ```json ... ```, extrai o conteúdo do primeiro bloco
+  const mdMatch = str.match(/```(?:json)?\s*([\s\S]*?)\s*```/i);
+  const targetStr = mdMatch ? mdMatch[1].trim() : str.trim();
+
+  const firstBrace = targetStr.indexOf('{');
+  const firstBracket = targetStr.indexOf('[');
+
+  let startIdx = -1;
+  let openChar = '';
+  let closeChar = '';
+
+  if (firstBrace !== -1 && (firstBracket === -1 || firstBrace < firstBracket)) {
+    startIdx = firstBrace;
+    openChar = '{';
+    closeChar = '}';
+  } else if (firstBracket !== -1) {
+    startIdx = firstBracket;
+    openChar = '[';
+    closeChar = ']';
+  } else {
+    return targetStr;
+  }
+
+  let depth = 0;
+  let inString = false;
+  let isEscaped = false;
+
+  for (let i = startIdx; i < targetStr.length; i++) {
+    const char = targetStr[i];
+
+    if (inString) {
+      if (isEscaped) {
+        isEscaped = false;
+      } else if (char === '\\') {
+        isEscaped = true;
+      } else if (char === '"') {
+        inString = false;
+      }
+    } else {
+      if (char === '"') {
+        inString = true;
+      } else if (char === openChar) {
+        depth++;
+      } else if (char === closeChar) {
+        depth--;
+        if (depth === 0) {
+          return targetStr.slice(startIdx, i + 1);
+        }
+      }
+    }
+  }
+
+  return targetStr.slice(startIdx);
+}
 
 function repairJsonString(jsonStr) {
   let result = '';
@@ -48,34 +106,112 @@ export function cleanAndParseJSON(rawText) {
   if (!rawText || typeof rawText !== 'string') {
     throw new Error('Texto de resposta inválido ou vazio para conversão em JSON.');
   }
-  let cleaned = rawText.trim()
-    .replace(/^```(?:json)?\s*/i, '')
-    .replace(/\s*```$/i, '')
-    .trim();
 
-  const startIdx = cleaned.indexOf('{');
-  const endIdx = cleaned.lastIndexOf('}');
-  if (startIdx !== -1 && endIdx !== -1 && endIdx > startIdx) {
-    cleaned = cleaned.substring(startIdx, endIdx + 1);
+  const rawTrimmed = rawText.trim();
+
+  // Tentativa 0: Parse direto se já for JSON puro
+  try {
+    return JSON.parse(rawTrimmed);
+  } catch (e) {
+    const matchPos = e.message.match(/position\s+(\d+)/i);
+    if (matchPos && matchPos[1]) {
+      const pos = parseInt(matchPos[1], 10);
+      if (pos > 0 && pos < rawTrimmed.length) {
+        try {
+          return JSON.parse(rawTrimmed.slice(0, pos));
+        } catch (_) {}
+      }
+    }
   }
 
-  try { return JSON.parse(cleaned); } catch (e) {
+  // Tentativa 1: Extrair bloco balanceado
+  let cleaned = extractBalancedJson(rawTrimmed) || rawTrimmed;
+
+  try {
+    return JSON.parse(cleaned);
+  } catch (e) {
+    const matchPos = e.message.match(/position\s+(\d+)/i);
+    if (matchPos && matchPos[1]) {
+      const pos = parseInt(matchPos[1], 10);
+      if (pos > 0 && pos < cleaned.length) {
+        try {
+          return JSON.parse(cleaned.slice(0, pos));
+        } catch (_) {}
+      }
+    }
     console.warn(`[JSON Parser] Tentativa 1 falhou: ${e.message}`);
   }
-  try { return JSON.parse(repairJsonString(cleaned)); } catch (e) {
+
+  // Tentativa 2: Reparar strings com caracteres de controle e aspas
+  try {
+    const repaired = repairJsonString(cleaned);
+    return JSON.parse(repaired);
+  } catch (e) {
+    const matchPos = e.message.match(/position\s+(\d+)/i);
+    if (matchPos && matchPos[1]) {
+      const pos = parseInt(matchPos[1], 10);
+      if (pos > 0 && pos < cleaned.length) {
+        try {
+          return JSON.parse(repairJsonString(cleaned.slice(0, pos)));
+        } catch (_) {}
+      }
+    }
     console.warn(`[JSON Parser] Tentativa 2 falhou: ${e.message}`);
   }
-  const lines = cleaned.split(/\r?\n/).map(line => {
-    const m = line.match(/^(\s*"[a-zA-Z0-9_]+"\s*:\s*")(.*)("(?:,\s*|\s*))$/);
-    if (m) {
-      const [, prefix, content, suffix] = m;
-      const safe = content.replace(/[\u0000-\u001F]/g, ' ').replace(/(?<!\\)"/g, "'");
-      return prefix + safe + suffix;
+
+  // Tentativa 3: Sanitização linha a linha com regex
+  try {
+    const lines = cleaned.split(/\r?\n/).map(line => {
+      const m = line.match(/^(\s*"[a-zA-Z0-9_]+"\s*:\s*")(.*)("(?:,\s*|\s*))$/);
+      if (m) {
+        const [, prefix, content, suffix] = m;
+        const safe = content.replace(/[\u0000-\u001F]/g, ' ').replace(/(?<!\\)"/g, "'");
+        return prefix + safe + suffix;
+      }
+      return line.replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g, '');
+    });
+    const finalClean = lines.join('\n').replace(/,\s*([}\]])/g, '$1');
+    return JSON.parse(finalClean);
+  } catch (e) {
+    const matchPos = e.message.match(/position\s+(\d+)/i);
+    if (matchPos && matchPos[1]) {
+      const pos = parseInt(matchPos[1], 10);
+      if (pos > 0 && pos < cleaned.length) {
+        try {
+          const lines = cleaned.slice(0, pos).split(/\r?\n/).map(line => {
+            const m = line.match(/^(\s*"[a-zA-Z0-9_]+"\s*:\s*")(.*)("(?:,\s*|\s*))$/);
+            if (m) {
+              const [, prefix, content, suffix] = m;
+              const safe = content.replace(/[\u0000-\u001F]/g, ' ').replace(/(?<!\\)"/g, "'");
+              return prefix + safe + suffix;
+            }
+            return line.replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g, '');
+          });
+          const finalClean = lines.join('\n').replace(/,\s*([}\]])/g, '$1');
+          return JSON.parse(finalClean);
+        } catch (_) {}
+      }
     }
-    return line.replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g, '');
-  });
-  const finalClean = lines.join('\n').replace(/,\s*([}\]])/g, '$1');
-  return JSON.parse(finalClean);
+    console.warn(`[JSON Parser] Tentativa 3 falhou: ${e.message}`);
+  }
+
+  // Tentativa 4: Fechamento forçado de JSON truncado
+  try {
+    let truncated = cleaned.trim().replace(/,\s*$/, '');
+    const openBraces = (truncated.match(/{/g) || []).length;
+    const closeBraces = (truncated.match(/}/g) || []).length;
+    if (openBraces > closeBraces) {
+      if ((truncated.match(/"/g) || []).length % 2 !== 0) {
+        truncated += '"';
+      }
+      truncated += '}'.repeat(openBraces - closeBraces);
+      return JSON.parse(truncated);
+    }
+  } catch (e) {
+    console.warn(`[JSON Parser] Tentativa 4 falhou: ${e.message}`);
+  }
+
+  throw new Error(`Falha ao converter resposta da IA em formato JSON válido: ${rawText.substring(0, 150)}...`);
 }
 
 /* ============================================================================
