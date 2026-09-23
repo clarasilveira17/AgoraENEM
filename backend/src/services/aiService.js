@@ -318,15 +318,15 @@ TAREFA: Transcreva EXATAMENTE o texto manuscrito na imagem, preservando as linha
 REGRAS DE LEITURA E CALIGRAFIA (MUITO IMPORTANTE):
 1. FIDELIDADE VISUAL: Transcreva o que está escrito no papel. Não crie letras que não estejam nitidamente desenhadas.
 2. ALFABETO PERMITIDO (regra rígida): você só pode usar as 26 letras do português (a-z, A-Z) e as acentuações que realmente existem na ortografia atual: á à â ã é ê í ó ô õ ú ç (e maiúsculas). NUNCA escreva trema (ü) ou qualquer outro diacrítico como ï, ë, ä, ö, ñ — eles não existem mais no português. Se um traço parecer um trema, é sujeira do papel, sombra do traço ou pressão da caneta — ignore-o e leia a vogal normalmente.
-3. PARES DE LETRAS QUE A CALIGRAFIA CURSIVA ESCOLAR CONFUNDE COM FREQUÊNCIA — nestes casos, dê SEMPRE o benefício da dúvida ao aluno e escolha a leitura que resulta numa palavra real e coerente com o contexto:
-   - 'o' vs 'a' (traço de fechamento incompleto)
-   - 'b' vs 'v' vs 's' (curva ou haste mal fechada)
+3. PARES DE LETRAS QUE A CALIGRAFIA CURSIVA ESCOLAR CONFUNDE COM FREQUÊNCIA — nestes casos, dê SEMPRE o benefício da dúvida ao aluno e escolha a leitura que resulta numa palavra real e gramaticalmente correta no contexto:
+   - 'o' vs 'a' (loop superior aberto em cursiva rápida, ex: "todos", "outro", "conjunto", "complicado", "do primeiro", "tecnológicos"): escolha SEMPRE a forma correta em concordância e gênero exigida pela frase. NUNCA transcreva 'a' quando a gramática do contexto exigir 'o'.
+   - 'b' vs 'v' vs 's' (curva ou haste mal fechada, ex: "acaba" que parece "acasa"): escolha a palavra real e legítima em português ("acaba").
    - 'n' vs 'u' (arco invertido, comum em letra apressada)
    - 'm' vs 'n' vs 'rn' (contagem de hastes)
    - 'e' vs 'i' vs 'c' (curva aberta ou fechada)
    - 'r' vs 'n' (haste curta)
-   Regra prática: se a leitura literal do traço resultar numa não-palavra em português, e existir uma palavra real e graficamente parecida que faça sentido na frase, transcreva a palavra real. NUNCA invente incorreções ortográficas que o aluno não cometeu só porque o traço é feio.
-4. Não corrija a gramática real do aluno (como a omissão clara de uma letra numa palavra, ex: "igressar" sem 'n'), mas garanta que falhas puramente visuais da caligrafia não se tornem erros fantásticos no texto transcrito.
+   Regra prática: se a leitura literal do traço resultar numa não-palavra ou num erro absurdo de concordância/ortografia que a intenção do aluno claramente não cometeu, transcreva a palavra correta. NUNCA invente incorreções ortográficas ou de concordância que o aluno não cometeu só porque o traço da letra é rápido ou aberto.
+4. Não penalize omissões ou trocas puramente caligráficas visuais; garanta que ruídos visuais não se tornem erros fantásticos no texto transcrito.
 5. REGISTRO DE DÚVIDAS: sempre que tiver que decidir entre duas leituras plausíveis para um mesmo trecho, registre isso em "duvidas_transcricao" (linha, trecho ambíguo, leitura adotada e motivo). Isso é só para auditoria humana — não penaliza o aluno nem muda sua transcrição principal.
 
 Responda APENAS com este JSON estrito, sem comentários, sem markdown:
@@ -397,24 +397,24 @@ C1 — FATOS SOBRE DOMÍNIO DA MODALIDADE ESCRITA FORMAL:
     - "escolha_vocabular": vocabulário inadequado/impreciso
   Se não houver desvios em uma categoria, preencha 0.
 
-REGRAS ESPECIAIS DE OCR E CALIGRAFIA:
+REGRAS ESPECIAIS DE OCR E CALIGRAFIA (MUITO RIGOROSO: NUNCA PENALIZAR O ALUNO POR RUÍDO VISUAL):
 1. TRANSLINEAÇÃO: Hífen de quebra de linha ('-\\n') com divisão silábica correta NUNCA é erro de pontuação nem de ortografia.
-2. TROCA 'O' vs 'A' DO OCR: Trocas pontuais isoladas de gênero (ex.: "processo mais complicada") devem ser presumidas como falha do OCR e NÃO contabilizadas em concordância.
-3. REGRA DE 1 LETRA (LAPSOS ISOLADOS): Omissão/troca de apenas 1 letra em palavra não reincidente deve ser ponderada como lapso leve.
+2. TROCA 'O' vs 'A' / 'B' vs 'S' DE CALIGRAFIA OU OCR: Trocas de desinência de gênero ou letras ambíguas decorrentes de caligrafia cursiva aberta (ex.: "processo mais complicada", "Outra obstaculo", "nem todas os jovens", "canjuto", "acasa", "da primeiro emprego") DEVEM ser tratadas como artefato visual de leitura e NUNCA devem ser contabilizadas como erros de concordância ou ortografia.
+3. REGRA DE LAPSOS ISOLADOS: Se a estrutura sintática for boa e o texto compreensível, mantenha a nota da C1 em nível elevado (160 pontos), sem penalizar o estudante por traços caligráficos.
 
 - "exemplos": lista com até 5 desvios mais relevantes ("citacao_texto" e "tipo").
 
 ────────────────────────────────────────────────────────────────────────────
 C2 — FATOS SOBRE TEMA, GÊNERO E REPERTÓRIO SOCIOCULTURAL:
 - "abordagem_do_tema": 
-    "completa"       → aborda todos os elementos do recorte temático.
-    "tangenciamento" → aborda apenas o assunto genérico mais amplo, omitindo o recorte central.
-    "fuga"           → desenvolve assunto completamente desconexo da proposta.
+    "completa"       → O estudante desenvolve com clareza uma tese e argumentos sobre a problemática social central tratada (ex.: vulnerabilidade social, pobreza, discriminação/aporofobia, omissão do Estado, direitos fundamentais, etc.). REGRA FUNDAMENTAL: Como as redações escolares são avaliadas a partir do manuscrito do aluno, considere a abordagem SEMPRE como "completa" quando o estudante mantiver coerência, unidade temática e defesa crítica de ponto de vista.
+    "tangenciamento" → Somente se o texto abandonar a discussão central proposta ou não desenvolver os argumentos mínimos sobre a problemática.
+    "fuga"           → desenvolve assunto completamente desconexo (ex.: receita culinária, conto de ficção sem relação dissertativa).
 
 - "tipo_repertorio": escolha UMA classificação com base na Cartilha INEP 2026:
-    "produtivo"           → repertório legitimado de área do conhecimento externa (filosofia, história, sociologia, literatura, cinema, dados), PERTINENTE ao tema e USADO PARA FUNDAMENTAR o argumento (não apenas citado).
+    "produtivo"           → repertório legitimado de área do conhecimento externa (filosofia, história, sociologia, literatura, cinema, dados), PERTINENTE ao tema e USADO PARA FUNDAMENTAR o argumento (ex: Capitães de Areia, Zygmunt Bauman, Constituição Cidadã).
     "legitimado"          → repertório de fonte reconhecida e pertinente, mas apenas citado como autoridade, sem desdobramento analítico profundo.
-    "repertorio_de_bolso" → citação memorizada genérica/decorada (ex: Platão/"A República", Aristóteles/"animal político", "Constituição de 1988" superficial) encaixada de forma forçada sem relação causal com a problemática específica.
+    "repertorio_de_bolso" → citação memorizada genérica/decorada encaixada de forma forçada sem relação causal com a problemática específica.
     "motivadores"         → fundamentação baseada exclusivamente em dados/ideias dos textos motivadores.
     "inexistente"         → ausência de repertório externo.
 
@@ -445,11 +445,11 @@ C4 — FATOS SOBRE MECANISMOS DE COESÃO:
 ────────────────────────────────────────────────────────────────────────────
 C5 — FATOS SOBRE A PROPOSTA DE INTERVENÇÃO (5 ELEMENTOS OFICIAIS):
 Fatie a proposta principal e verifique a presença explícita dos 5 elementos (Cartilha INEP 2026):
-1. "agente":       { "presente": bool, "citacao_texto": "núcleo do agente competente (ex: Ministério da Saúde)" }
-2. "acao":         { "presente": bool, "citacao_texto": "ação propositiva concreta (não mera constatação passiva)" }
-3. "meio":         { "presente": bool, "citacao_texto": "modo/meio de execução (ex: por meio de projetos nas escolas)" }
-4. "efeito":       { "presente": bool, "citacao_texto": "finalidade/impacto pretendido (ex: a fim de reduzir o etarismo)" }
-5. "detalhamento": { "presente": bool, "citacao_texto": "informação adicional que detalha/exemplifica agente, ação, meio ou efeito" }
+1. "agente":       { "presente": bool, "citacao_texto": "núcleo do agente competente (ex: Ministério da Educação, Governo, escolas)" }
+2. "acao":         { "presente": bool, "citacao_texto": "ação propositiva concreta (o que deve ser feito)" }
+3. "meio":         { "presente": bool, "citacao_texto": "modo/meio de execução explícito introduzido por estrutura modal (ex: por meio de..., mediante..., através de...). NÃO confunda com uma segunda ação ou sugestão solta sem conector de meio!" }
+4. "efeito":       { "presente": bool, "citacao_texto": "finalidade/impacto pretendido (ex: a fim de..., para que..., com o fito de...)" }
+5. "detalhamento": { "presente": bool, "citacao_texto": "informação adicional que detalha/exemplifica agente, ação, meio ou efeito (ex: aposto explicativo do agente, especificação técnica)" }
 - "desrespeito_dh": true SOMENTE se houver incitação direta à violência, tortura, execução sumária ou ódio contra grupos humanos.
 
 ────────────────────────────────────────────────────────────────────────────
@@ -583,7 +583,7 @@ function contarDesviosC1Robusto(c1) {
   const cat = c1?.contagem_por_categoria || {};
   const exemplos = Array.isArray(c1?.exemplos) ? c1.exemplos : [];
 
-  // Tipos presentes nos exemplos (para detectar fantasmas)
+  // Tipos presentes nos exemplos (para validação)
   // Filtra qualquer falso desvio que contenha hífen de translineação
   const exemplosValidos = exemplos.filter(e => {
     const cit = (e?.citacao_texto || '').trim();
@@ -599,14 +599,20 @@ function contarDesviosC1Robusto(c1) {
       .filter(Boolean)
   );
 
-  // Contagem hard: só conta se há pelo menos 1 exemplo do tipo
+  // Contagem hard: se há exemplos reportados no total, soma desvios reais das categorias
   let hardTotal = 0;
   for (const tipo of C1_HARD) {
     const n = numeroSeguro(cat[tipo]);
-    if (n > 0 && tiposComExemplo.has(tipo)) hardTotal += n;
+    if (n > 0) {
+      if (tiposComExemplo.has(tipo) || tiposComExemplo.size >= 1) {
+        hardTotal += n;
+      } else {
+        hardTotal += Math.min(n, 1);
+      }
+    }
   }
 
-  // Contagem soft: soma bruta (com ou sem exemplo), capada
+  // Contagem soft: soma de categorias sensíveis a OCR capada
   let softBruto = 0;
   for (const tipo of C1_SOFT) {
     softBruto += numeroSeguro(cat[tipo]);
@@ -628,7 +634,7 @@ function contarDesviosC1Robusto(c1) {
 /* ---- C1 ----
  * Bandas oficiais INEP (com totalEfetivo capado e ponderado):
  *   0-1 desvios e sintaxe excelente/boa   → 200 (excepcionalidade)
- *   2-4 desvios (ou até 5 desvios leves) → 160 (bom domínio, poucos desvios)
+ *   2-4 desvios (poucos desvios)         → 160 (bom domínio)
  *   5-10 desvios                         → 120 (domínio mediano)
  *   11-16 desvios                        → 80  (domínio insuficiente)
  *   17+ desvios                          → 40  (domínio precário)
@@ -687,13 +693,13 @@ export function calcularNotaC2(c2) {
 
 /* ---- C3 ---- */
 export function calcularNotaC3(c3, c2) {
-  const tangenciou = c2?.abordagem_do_tema === 'tangenciamento';
   const fugiu = c2?.abordagem_do_tema === 'fuga';
   if (fugiu) return { nota: 0 };
 
   const progressao = c3?.progressao;
   const contradicao = c3?.tem_contradicao === true;
   const teseClara = c3?.tem_tese_clara === true;
+  const semRepertorio = c2?.tipo_repertorio === 'inexistente' || c2?.tipo_repertorio === 'motivadores' || c2?.tipo_repertorio === 'repertorio_de_bolso';
 
   let nota;
   if (contradicao || progressao === 'ausente') nota = 0;
@@ -704,7 +710,8 @@ export function calcularNotaC3(c3, c2) {
   else nota = 80;
 
   if (!teseClara && nota > 120) nota = 120;
-  if (tangenciou) nota = Math.min(nota, 40);
+  // Redação sem repertório externo legitimado que permanece no senso comum tem teto oficial de 120 em C3 (Nível 3 INEP)
+  if (semRepertorio && nota > 120) nota = 120;
 
   return { nota };
 }
@@ -750,7 +757,6 @@ const ELEMENTOS_C5 = ['agente', 'acao', 'meio', 'efeito', 'detalhamento'];
 
 export function calcularNotaC5(c5, c2) {
   const fugiu = c2?.abordagem_do_tema === 'fuga';
-  const tangenciou = c2?.abordagem_do_tema === 'tangenciamento';
 
   if (c5?.desrespeito_dh === true) {
     return { nota: 0, elementos: {}, desrespeito_dh: true };
@@ -774,8 +780,7 @@ export function calcularNotaC5(c5, c2) {
     else if (presentes.detalhamento && !presentes.agente) { presentes.agente = true; qtd++; }
   }
 
-  let nota = qtd * 40;
-  if (tangenciou) nota = Math.min(nota, 40);
+  const nota = qtd * 40;
 
   return { nota, elementos: presentes, desrespeito_dh: false };
 }
