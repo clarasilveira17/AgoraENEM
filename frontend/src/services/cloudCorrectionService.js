@@ -85,13 +85,17 @@ export async function processRedacoesCloud(items, onProgress, defaults = {}) {
       attempts++;
       
       if (onProgress) {
-        onProgress({
+        const statusText = attempts > 1
+          ? `Tentativa ${attempts}/${MAX_RETRIES}...`
+          : (totalItems > 1 ? `Avaliando foto ${i + 1} de ${totalItems}...` : 'Avaliando com IA...');
+        
+        onProgress(i + 1, totalItems, {
           currentIndex: i + 1,
           total: totalItems,
           currentItem: item,
           attempt: attempts,
           maxAttempts: MAX_RETRIES,
-          status: attempts > 1 ? `Tentativa ${attempts}/${MAX_RETRIES}...` : 'Avaliando...',
+          status: statusText,
           allResults
         });
       }
@@ -118,13 +122,14 @@ export async function processRedacoesCloud(items, onProgress, defaults = {}) {
           if (isRateOrDemand && attempts < MAX_RETRIES) {
             const waitTime = attempts * 6000; // 6s, 12s
             if (onProgress) {
-              onProgress({
+              const waitStatus = `Aguardando cota (${waitTime / 1000}s) para foto ${i + 1}/${totalItems}...`;
+              onProgress(i + 1, totalItems, {
                 currentIndex: i + 1,
                 total: totalItems,
                 currentItem: item,
                 attempt: attempts,
                 maxAttempts: MAX_RETRIES,
-                status: `Limite de cota atingido. Aguardando ${waitTime / 1000}s para reavaliar...`,
+                status: waitStatus,
                 allResults
               });
             }
@@ -150,13 +155,14 @@ export async function processRedacoesCloud(items, onProgress, defaults = {}) {
           if (isRetryable && attempts < MAX_RETRIES) {
             const waitTime = attempts * 7000;
             if (onProgress) {
-              onProgress({
+              const retryStatus = `Alta demanda no Gemini. Repetindo foto ${i + 1}/${totalItems} em ${waitTime / 1000}s...`;
+              onProgress(i + 1, totalItems, {
                 currentIndex: i + 1,
                 total: totalItems,
                 currentItem: item,
                 attempt: attempts,
                 maxAttempts: MAX_RETRIES,
-                status: `Alta demanda no Gemini. Repetindo em ${waitTime / 1000}s...`,
+                status: retryStatus,
                 allResults
               });
             }

@@ -76,15 +76,18 @@ export default function UploaderView({ onRedacaoSaved }) {
         turma_manual: manualTurma.trim() || null
       }));
 
-      const res = await processRedacoesCloud(itemsToSave, (progress) => {
-        const { currentIndex, total, currentItem, status, attempt, maxAttempts, allResults } = progress;
+      const res = await processRedacoesCloud(itemsToSave, (cur, tot, progressObj) => {
+        const data = (typeof cur === 'object' && cur !== null)
+          ? cur
+          : (progressObj || { currentIndex: cur, total: tot, status: `Avaliando foto ${cur} de ${tot}...` });
+        const { currentIndex, total, currentItem, status, attempt, maxAttempts, allResults } = data;
         
         setProgressState({
-          current: currentIndex,
-          total,
-          statusText: status,
-          attempt,
-          maxAttempts
+          current: currentIndex || cur || 1,
+          total: total || tot || selectedFiles.length,
+          statusText: status || `Avaliando foto ${cur} de ${tot}...`,
+          attempt: attempt || 1,
+          maxAttempts: maxAttempts || 1
         });
 
         if (currentItem && currentItem.id) {
@@ -235,9 +238,12 @@ export default function UploaderView({ onRedacaoSaved }) {
         turma_manual: manualTurma.trim() || null
       }));
 
-      await processRedacoesCloud(itemsToSave, (progress) => {
-        const { currentIndex, total, currentItem, status, allResults } = progress;
-        setProgressState({ current: currentIndex, total, statusText: status });
+      await processRedacoesCloud(itemsToSave, (cur, tot, progressObj) => {
+        const data = (typeof cur === 'object' && cur !== null)
+          ? cur
+          : (progressObj || { currentIndex: cur, total: tot, status: `Avaliando foto ${cur} de ${tot}...` });
+        const { currentIndex, total, currentItem, status, allResults } = data;
+        setProgressState({ current: currentIndex || cur || 1, total: total || tot || failedFiles.length, statusText: status || `Avaliando foto ${cur} de ${tot}...` });
 
         if (currentItem && currentItem.id) {
           setFileStatuses((prev) => ({

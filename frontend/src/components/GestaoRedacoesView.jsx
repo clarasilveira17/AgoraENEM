@@ -119,8 +119,14 @@ export default function GestaoRedacoesView({
 
         const res = await processRedacoesCloud(
           itemsToProcess,
-          (cur, total) => {
-            setProgressText(`Avaliando ${cur} de ${total}...`);
+          (cur, total, meta) => {
+            if (typeof cur === 'object' && cur !== null) {
+              setProgressText(cur.status || `Avaliando foto ${cur.currentIndex || 1} de ${cur.total || 1}...`);
+            } else if (meta && meta.status) {
+              setProgressText(meta.status);
+            } else {
+              setProgressText(`Avaliando foto ${cur} de ${total}...`);
+            }
           },
           {
             usuarioId: isEstudante && user ? user.id : null,
