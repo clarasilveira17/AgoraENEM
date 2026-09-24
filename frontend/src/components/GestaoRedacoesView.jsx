@@ -28,6 +28,7 @@ export default function GestaoRedacoesView({
   // ==========================================
   const [mode, setMode] = useState('imagem'); // 'imagem' | 'texto'
   const [selectedFiles, setSelectedFiles] = useState([]);
+  const [fileStatuses, setFileStatuses] = useState({});
   const [typedText, setTypedText] = useState('');
   const [manualName, setManualName] = useState(isEstudante && user ? user.nome : '');
   const [manualTurma, setManualTurma] = useState(isEstudante && user?.turma ? user.turma : '');
@@ -70,11 +71,12 @@ export default function GestaoRedacoesView({
     const files = Array.from(e.target.files || []);
     if (files.length === 0) return;
 
-    const filePromises = files.map((file) => {
+    const filePromises = files.map((file, idx) => {
       return new Promise((resolve) => {
         const reader = new FileReader();
         reader.onload = (ev) => {
           resolve({
+            id: `img_${Date.now()}_${idx}_${Math.random().toString(36).substr(2, 6)}`,
             name: file.name,
             size: (file.size / 1024).toFixed(1) + ' KB',
             base64: ev.target?.result,
@@ -94,6 +96,59 @@ export default function GestaoRedacoesView({
     setSelectedFiles(prev => prev.filter((_, i) => i !== index));
   };
 
+  const handleRetrySingleFile = async (file) => {
+    setFileStatuses((prev) => ({
+      ...prev,
+      [file.id]: { status: 'PROCESSING', statusText: 'Reavaliando com Gemini...' }
+    }));
+    try {
+      const res = await processRedacoesCloud(
+        [{
+          id: file.id,
+          name: file.name,
+          imagem_base64: file.base64,
+          tipo_input: 'imagem',
+          nome_manual: manualName.trim() || null,
+          turma_manual: manualTurma.trim() || null
+        }],
+        null,
+        {
+          usuarioId: isEstudante && user ? user.id : null,
+          nomePadrao: isEstudante && user ? user.nome : (manualName || null),
+          turmaPadrao: isEstudante && user?.turma ? user.turma : (manualTurma || null)
+        }
+      );
+      const r = (res.results && res.results[0]) || {};
+      if (r.status === 'success') {
+        setFileStatuses((prev) => ({
+          ...prev,
+          [file.id]: {
+            status: 'SUCCESS',
+            nota: r.extracted?.nota_final ?? r.extracted?.avaliacoes?.enem?.nota_total_enem,
+            aluno: r.extracted?.aluno
+          }
+        }));
+      } else {
+        setFileStatuses((prev) => ({
+          ...prev,
+          [file.id]: {
+            status: 'ERROR',
+            error: r.error || 'Falha ao avaliar foto.'
+          }
+        }));
+      }
+      if (onRedacaoSaved) onRedacaoSaved();
+    } catch (err) {
+      setFileStatuses((prev) => ({
+        ...prev,
+        [file.id]: {
+          status: 'ERROR',
+          error: err.message
+        }
+      }));
+    }
+  };
+
   const handleStartProcessing = async () => {
     if (mode === 'imagem' && selectedFiles.length === 0) {
       setFeedback({ type: 'error', message: 'Selecione ao menos uma imagem de redação.' });
@@ -105,12 +160,23 @@ export default function GestaoRedacoesView({
     }
 
     setIsProcessing(true);
-    setProgressText('Inicializando motor de inteligência artificial...');
+    setProgressText('Inicializando fila com rate-limiting seguro (~12 req/min)...');
     setFeedback(null);
+
+    // Marca todos os arquivos como pendentes na fila
+    if (mode === 'imagem') {
+      const initialStatuses = {};
+      selectedFiles.forEach((f) => {
+        initialStatuses[f.id] = { status: 'PENDING', statusText: 'Na fila' };
+      });
+      setFileStatuses(initialStatuses);
+    }
 
     try {
       if (mode === 'imagem') {
         const itemsToProcess = selectedFiles.map((f) => ({
+          id: f.id,
+          name: f.name,
           imagem_base64: f.base64,
           tipo_input: 'imagem',
           nome_manual: manualName.trim() || null,
@@ -120,12 +186,36 @@ export default function GestaoRedacoesView({
         const res = await processRedacoesCloud(
           itemsToProcess,
           (cur, total, meta) => {
-            if (typeof cur === 'object' && cur !== null) {
-              setProgressText(cur.status || `Avaliando foto ${cur.currentIndex || 1} de ${cur.total || 1}...`);
-            } else if (meta && meta.status) {
-              setProgressText(meta.status);
-            } else {
-              setProgressText(`Avaliando foto ${cur} de ${total}...`);
+            const data = (typeof cur === 'object' && cur !== null) ? cur : (meta || { currentIndex: cur, total });
+            const { currentIndex, total: tot, currentItem, status, attempt, allResults } = data;
+
+            setProgressText(status || `Avaliando foto ${cur} de ${total}...`);
+
+            if (currentItem && currentItem.id) {
+              setFileStatuses((prev) => ({
+                ...prev,
+                [currentItem.id]: {
+                  status: status?.includes('Aguardando') || status?.includes('Repetindo') ? 'WAITING_RETRY' : 'PROCESSING',
+                  statusText: status,
+                  attempt
+                }
+              }));
+            }
+
+            if (Array.isArray(allResults)) {
+              allResults.forEach((r) => {
+                if (r.id) {
+                  setFileStatuses((prev) => ({
+                    ...prev,
+                    [r.id]: {
+                      status: r.status === 'success' ? 'SUCCESS' : 'ERROR',
+                      nota: r.extracted?.nota_final ?? r.extracted?.avaliacoes?.enem?.nota_total_enem,
+                      aluno: r.extracted?.aluno,
+                      error: r.error
+                    }
+                  }));
+                }
+              });
             }
           },
           {
@@ -136,7 +226,7 @@ export default function GestaoRedacoesView({
         );
 
         setFeedback({
-          type: res.errorCount > 0 && res.successCount === 0 ? 'error' : 'success',
+          type: res.errorCount > 0 && res.successCount === 0 ? 'error' : (res.errorCount > 0 ? 'warning' : 'success'),
           message: res.message || `${res.successCount} redação(ões) processada(s) com sucesso!`
         });
         setSelectedFiles([]);
@@ -437,27 +527,112 @@ export default function GestaoRedacoesView({
                     </button>
                   </div>
 
-                  <div className="max-h-36 overflow-y-auto space-y-1.5 custom-scrollbar pr-1">
-                    {selectedFiles.map((file, idx) => (
-                      <div
-                        key={idx}
-                        className="flex items-center justify-between bg-[#fafaf7] border border-[#e6e5e0] rounded-md p-2 text-xs"
-                      >
-                        <div className="flex items-center gap-2 truncate">
-                          <ImageIcon className="w-3.5 h-3.5 text-[#807d72] shrink-0" />
-                          <span className="truncate text-[#26251e] font-mono text-[11px]">{file.name}</span>
-                          <span className="text-[10px] font-mono text-[#807d72]">({file.size})</span>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => handleRemoveFile(idx)}
-                          className="text-[#807d72] hover:text-[#cf2d56] p-1 cursor-pointer"
+                  <div className="max-h-56 overflow-y-auto space-y-2 custom-scrollbar pr-1">
+                    {selectedFiles.map((file, idx) => {
+                      const fileStatus = fileStatuses[file.id] || {};
+                      const isFileProcessing = fileStatus.status === 'PROCESSING';
+                      const isFileWaiting = fileStatus.status === 'WAITING_RETRY';
+                      const isFileSuccess = fileStatus.status === 'SUCCESS';
+                      const isFileError = fileStatus.status === 'ERROR';
+
+                      return (
+                        <div
+                          key={file.id || idx}
+                          className={`flex items-center justify-between bg-[#ffffff] border ${
+                            isFileError ? 'border-red-300 bg-red-50/20' :
+                            isFileSuccess ? 'border-emerald-300 bg-emerald-50/20' :
+                            isFileProcessing ? 'border-blue-300 bg-blue-50/20 animate-pulse' :
+                            'border-[#e6e5e0]'
+                          } rounded-lg p-2 text-xs transition-all shadow-2xs`}
                         >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-                    ))}
+                          <div className="flex items-center gap-2.5 truncate flex-1 min-w-0">
+                            {/* Miniatura Real da Foto */}
+                            {file.base64 ? (
+                              <img
+                                src={file.base64}
+                                alt={file.name}
+                                className="w-10 h-10 object-cover rounded-md border border-[#e6e5e0] shrink-0 bg-[#fafaf7]"
+                              />
+                            ) : (
+                              <div className="w-10 h-10 rounded-md bg-[#fafaf7] border border-[#e6e5e0] flex items-center justify-center shrink-0">
+                                <ImageIcon className="w-4 h-4 text-[#807d72]" />
+                              </div>
+                            )}
+
+                            <div className="truncate flex-1 min-w-0">
+                              <p className="truncate text-[#26251e] font-mono text-[11px] font-medium leading-tight">
+                                {file.name}
+                              </p>
+                              <p className="text-[10px] font-mono text-[#807d72] mt-0.5">
+                                {file.size}
+                              </p>
+                            </div>
+                          </div>
+
+                          {/* Status / Ações da Foto */}
+                          <div className="flex items-center gap-2 shrink-0 ml-2">
+                            {isFileProcessing && (
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-mono font-medium bg-blue-100 text-blue-800 border border-blue-200">
+                                <Loader2 className="w-3 h-3 animate-spin text-blue-600" />
+                                Avaliando...
+                              </span>
+                            )}
+
+                            {isFileWaiting && (
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-mono font-medium bg-amber-100 text-amber-800 border border-amber-200">
+                                <Clock className="w-3 h-3 text-amber-600" />
+                                Aguardando cota
+                              </span>
+                            )}
+
+                            {isFileSuccess && (
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">
+                                <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                                {fileStatus.nota !== undefined ? `${fileStatus.nota} pts` : 'OK'}
+                              </span>
+                            )}
+
+                            {isFileError && (
+                              <div className="flex items-center gap-1.5">
+                                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-mono font-medium bg-red-100 text-red-700 border border-red-200" title={fileStatus.error}>
+                                  <AlertTriangle className="w-3 h-3 text-red-600" />
+                                  Falha
+                                </span>
+                                <button
+                                  type="button"
+                                  onClick={() => handleRetrySingleFile(file)}
+                                  className="px-2 py-1 rounded bg-red-600 hover:bg-red-700 text-white text-[10px] font-mono font-bold flex items-center gap-1 transition-colors cursor-pointer shadow-2xs"
+                                  title="Reprocessar foto no Gemini"
+                                >
+                                  <RefreshCw className="w-2.5 h-2.5" />
+                                  Retry
+                                </button>
+                              </div>
+                            )}
+
+                            {!isProcessing && !isFileSuccess && (
+                              <button
+                                type="button"
+                                onClick={() => handleRemoveFile(idx)}
+                                className="text-[#807d72] hover:text-[#cf2d56] p-1 cursor-pointer transition-colors"
+                                title="Remover imagem"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
+                </div>
+              )}
+
+              {/* Indicador de Segurança de Rate Limit */}
+              {selectedFiles.length > 1 && (
+                <div className="bg-[#fafaf7] border border-[#e6e5e0] rounded-md px-3 py-1.5 text-[10.5px] font-mono text-[#807d72] flex items-center justify-between">
+                  <span>🔒 Taxa Segura: ~12 fotos/min</span>
+                  <span className="text-[#1f8a65] font-semibold">Gemini Pacing Ativo</span>
                 </div>
               )}
 
