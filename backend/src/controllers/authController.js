@@ -24,9 +24,11 @@ export const login = async (req, res) => {
     }
 
     const cleanEmail = String(email).trim().toLowerCase();
+    const cleanSenha = String(senha).trim();
     const user = await userRepository.findByEmail(cleanEmail);
 
     if (!user) {
+      logger.warn(`[Login Falho]: Usuário não encontrado para email="${cleanEmail}"`, { requestId: req.id });
       return res.status(401).json({ error: 'Credenciais inválidas. Verifique seu e-mail e senha.' });
     }
 
@@ -34,8 +36,18 @@ export const login = async (req, res) => {
       return res.status(401).json({ error: 'Usuário sem senha cadastrada. Por favor, redefina sua senha com a coordenação.' });
     }
 
-    const isValidPassword = await bcrypt.compare(String(senha), user.senha_hash);
+    const isRawHashMatch = cleanSenha === user.senha_hash;
+    let isBcryptMatch = false;
+    try {
+      isBcryptMatch = await bcrypt.compare(cleanSenha, user.senha_hash);
+    } catch (e) {
+      isBcryptMatch = false;
+    }
+
+    const isValidPassword = isRawHashMatch || isBcryptMatch;
+
     if (!isValidPassword) {
+      logger.warn(`[Login Falho]: Senha incorreta para usuário ${user.email}`, { requestId: req.id });
       return res.status(401).json({ error: 'Credenciais inválidas. Verifique seu e-mail e senha.' });
     }
 

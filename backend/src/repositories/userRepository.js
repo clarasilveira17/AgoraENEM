@@ -3,27 +3,37 @@ import { supabase, isSupabaseConfigured } from '../config/supabaseClient.js';
 
 export const userRepository = {
   async findByEmail(email) {
-    const cleanEmail = String(email).trim().toLowerCase();
+    let cleanEmail = String(email).trim().toLowerCase();
 
-    if (isSupabaseConfigured) {
-      const { data, error } = await supabase
-        .from('users')
-        .select('*')
-        .ilike('email', cleanEmail)
-        .maybeSingle();
-
-      if (error) {
-        console.warn(`[userRepository.findByEmail Supabase Warning]: ${error.message}`);
-      } else if (data) {
-        return data;
+    // 1. Consulta o SQLite local primeiro (resposta instantânea em 0ms)
+    if (db) {
+      try {
+        let user = db.prepare('SELECT * FROM users WHERE LOWER(email) = LOWER(?)').get(cleanEmail);
+        if (!user && !cleanEmail.includes('@')) {
+          user = db.prepare('SELECT * FROM users WHERE LOWER(email) LIKE LOWER(?) OR LOWER(nome) = LOWER(?)').get(`${cleanEmail}@%`, cleanEmail);
+        }
+        if (user) return user;
+      } catch (err) {
+        console.warn('[userRepository.findByEmail SQLite Warning]:', err.message);
       }
     }
 
-    if (db) {
+    // 2. Consulta o Supabase se configurado
+    if (isSupabaseConfigured) {
       try {
-        return db.prepare('SELECT * FROM users WHERE LOWER(email) = LOWER(?)').get(cleanEmail) || null;
-      } catch (err) {
-        console.warn('[userRepository.findByEmail SQLite Warning]:', err.message);
+        const { data, error } = await supabase
+          .from('users')
+          .select('*')
+          .ilike('email', cleanEmail)
+          .maybeSingle();
+
+        if (error) {
+          console.warn(`[userRepository.findByEmail Supabase Warning]: ${error.message}`);
+        } else if (data) {
+          return data;
+        }
+      } catch (sbErr) {
+        console.warn(`[userRepository.findByEmail Supabase Exception]: ${sbErr.message}`);
       }
     }
 
