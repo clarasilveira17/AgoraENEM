@@ -415,7 +415,7 @@ export default function DiagnosticoFeiraView({ redacoes = [], rankingRedacoes = 
               <div className="p-2.5 bg-rose-50 border border-rose-200 rounded-lg text-xs text-rose-900 flex items-start gap-2">
                 <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
                 <div>
-                  <strong>Diagnóstico de Defasagem:</strong> A <strong>Competência 1 (Norma Culta)</strong> é o maior gargalo da escola, com perda média de <strong>51 pontos</strong> por estudante.
+                  <strong>Diagnóstico de Defasagem:</strong> A <strong>{defasagemStats.maiorDefasagem ? `${defasagemStats.maiorDefasagem.code} (${defasagemStats.maiorDefasagem.nome})` : 'Competência mais crítica'}</strong> é o maior gargalo identificado, com perda média de <strong>{defasagemStats.maiorDefasagem?.perdaMedia || 0} pontos</strong> por estudante ({defasagemStats.maiorDefasagem?.pctDefasagem || 0}% de defasagem).
                 </div>
               </div>
             </div>
@@ -458,7 +458,7 @@ export default function DiagnosticoFeiraView({ redacoes = [], rankingRedacoes = 
               <div className="p-2.5 bg-emerald-50 border border-emerald-200 rounded-lg text-xs text-emerald-900 flex items-start gap-2">
                 <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
                 <div>
-                  <strong>Destaque de Potencial:</strong> <strong>71% dos estudantes</strong> já estão nas faixas Avançado e Elite (notas &ge; 760 pontos), demonstrando alta proficiência global.
+                  <strong>Destaque de Potencial:</strong> <strong>{melhoriaStats.taxaAprovacao}% dos estudantes</strong> ({(melhoriaStats.faixas[0]?.count || 0) + (melhoriaStats.faixas[1]?.count || 0)} de {melhoriaStats.totalEstudantes} alunos) já estão nas faixas Avançado e Elite (notas &ge; 760 pontos), demonstrando alta proficiência global.
                 </div>
               </div>
             </div>
