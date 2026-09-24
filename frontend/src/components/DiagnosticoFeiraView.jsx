@@ -7,16 +7,15 @@ import {
   BarChart3, 
   GraduationCap, 
   Download, 
-  Printer, 
   CheckCircle2, 
   HelpCircle, 
   ArrowUpRight, 
   ArrowDownRight, 
   Lightbulb, 
-  Target,
-  Layers,
-  Filter,
-  Users,
+  Target, 
+  Layers, 
+  Filter, 
+  Users, 
   Brain
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
@@ -191,10 +190,6 @@ export default function DiagnosticoFeiraView({ redacoes = [], rankingRedacoes = 
     }).sort((a, b) => b.pctInicial - a.pctInicial); // Mais críticos primeiro
   }, [filteredList]);
 
-  const handlePrint = () => {
-    window.print();
-  };
-
   return (
     <div className="space-y-6 animate-fadeIn pb-12">
       
@@ -232,17 +227,6 @@ export default function DiagnosticoFeiraView({ redacoes = [], rankingRedacoes = 
                 ))}
               </select>
             </div>
-
-            {/* Botão de Impressão / Apresentação */}
-            <button
-              type="button"
-              onClick={handlePrint}
-              className="px-4 py-2 bg-[#26251e] hover:bg-[#3d3c35] text-white font-medium text-xs rounded-lg transition-all flex items-center gap-2 cursor-pointer shadow-xs"
-              title="Exportar Painel para Apresentação"
-            >
-              <Printer className="w-4 h-4" />
-              <span>Imprimir / Pôster Feira</span>
-            </button>
           </div>
         </div>
 
