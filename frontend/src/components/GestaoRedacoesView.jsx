@@ -944,6 +944,7 @@ export default function GestaoRedacoesView({
             {/* Filter Pills */}
             <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5 custom-scrollbar text-xs font-mono">
               <button
+                type="button"
                 onClick={() => setFilterTab('todas')}
                 className={`px-2.5 py-1 rounded-md transition-colors cursor-pointer ${
                   filterTab === 'todas'
@@ -957,6 +958,7 @@ export default function GestaoRedacoesView({
               {isAdmin && (
                 <>
                   <button
+                    type="button"
                     onClick={() => setFilterTab('conferidas')}
                     className={`px-2.5 py-1 rounded-md transition-colors cursor-pointer ${
                       filterTab === 'conferidas'
@@ -968,6 +970,7 @@ export default function GestaoRedacoesView({
                   </button>
 
                   <button
+                    type="button"
                     onClick={() => setFilterTab('sem_nome')}
                     className={`px-2.5 py-1 rounded-md transition-colors cursor-pointer ${
                       filterTab === 'sem_nome'
@@ -977,10 +980,26 @@ export default function GestaoRedacoesView({
                   >
                     Sem Nome ({semNomeCount})
                   </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setFilterTab('duplicatas')}
+                    className={`px-2.5 py-1 rounded-md transition-colors cursor-pointer flex items-center gap-1.5 ${
+                      filterTab === 'duplicatas'
+                        ? 'bg-[#c08532]/25 text-[#9a641f] border border-[#c08532] font-bold shadow-xs'
+                        : totalDuplicatasCount > 0
+                        ? 'bg-amber-50/70 border border-amber-300 text-amber-800 hover:bg-amber-100/70 font-semibold'
+                        : 'bg-[#fafaf7] border border-[#e6e5e0] text-[#807d72] hover:text-[#26251e]'
+                    }`}
+                  >
+                    <Copy className="w-3 h-3" />
+                    <span>Duplicatas ({totalDuplicatasCount})</span>
+                  </button>
                 </>
               )}
 
               <button
+                type="button"
                 onClick={() => setFilterTab('excelentes')}
                 className={`px-2.5 py-1 rounded-md transition-colors cursor-pointer ${
                   filterTab === 'excelentes'
@@ -994,9 +1013,9 @@ export default function GestaoRedacoesView({
           </div>
 
           {/* ======================================================= */}
-          {/* LISTA DE CARDS DE REDAÇÃO (ROLÁVEL)                     */}
+          {/* SEÇÃO DEDICADA DE DUPLICATAS OU LISTA GERAL             */}
           {/* ======================================================= */}
-          <div className="space-y-2.5 max-h-[620px] overflow-y-auto custom-scrollbar pr-1">
+          <div className="space-y-3 max-h-[620px] overflow-y-auto custom-scrollbar pr-1">
             {isLoading ? (
               <div className="space-y-2 animate-pulse">
                 {[1, 2, 3, 4, 5].map((n) => (
@@ -1009,6 +1028,172 @@ export default function GestaoRedacoesView({
                   </div>
                 ))}
               </div>
+            ) : filterTab === 'duplicatas' ? (
+              /* ======================================================= */
+              /* MODO: SEÇÃO AGRUPADA DE DUPLICATAS                      */
+              /* ======================================================= */
+              <div className="space-y-4">
+                {/* Banner Informativo da Seção */}
+                <div className="bg-amber-50/70 border border-amber-200/90 rounded-xl p-3.5 sm:p-4 text-xs font-mono text-amber-950 space-y-1 shadow-2xs">
+                  <div className="flex items-center gap-2 font-bold text-amber-900">
+                    <Layers className="w-4 h-4 text-[#c08532] shrink-0" />
+                    <span>Detecção Inteligente de Duplicatas</span>
+                  </div>
+                  <p className="text-[11px] text-amber-800/90 leading-relaxed">
+                    Foram encontrados <strong>{filteredDuplicateGroups.length} aluno(s)/grupo(s)</strong> com múltiplos envios cadastrados ({totalDuplicatasCount} redações no total). Compare as versões abaixo, mantenha a melhor nota ou a redação conferida e exclua envios duplicados.
+                  </p>
+                </div>
+
+                {filteredDuplicateGroups.length === 0 ? (
+                  <div className="bg-[#fafaf7] border border-[#e6e5e0] rounded-xl p-8 text-center text-[#807d72]">
+                    <CheckCircle2 className="w-8 h-8 mx-auto mb-2 text-[#1f8a65]" aria-hidden="true" />
+                    <p className="text-xs font-semibold text-[#26251e]">Nenhuma duplicata encontrada</p>
+                    <p className="text-[11px] text-[#807d72] mt-0.5">
+                      {localSearch || selectedTurma !== 'todas'
+                        ? 'Nenhuma duplicata corresponde aos filtros aplicados.'
+                        : 'Todas as redações no banco pertencem a envios únicos.'}
+                    </p>
+                  </div>
+                ) : (
+                  filteredDuplicateGroups.map((group) => {
+                    const topScore = group.items[0]?.nota_final;
+                    return (
+                      <div
+                        key={group.key}
+                        className="bg-[#ffffff] border border-[#e6e5e0] rounded-xl p-3.5 sm:p-4 space-y-3 shadow-xs hover:border-[#cfcdc4] transition-all"
+                      >
+                        {/* Cabeçalho do Grupo de Aluno */}
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-[#f1f0ea] pb-2.5">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <div className="p-1 rounded bg-[#fafaf7] border border-[#e6e5e0] text-[#26251e]">
+                              <User className="w-3.5 h-3.5 text-[#f54e00]" />
+                            </div>
+                            <span className="font-bold text-xs text-[#26251e]">
+                              {group.title}
+                            </span>
+                            {group.turma && (
+                              <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-[#fafaf7] border border-[#e6e5e0] text-[#807d72]">
+                                {group.turma}
+                              </span>
+                            )}
+                            <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-amber-100 text-amber-800 border border-amber-200">
+                              {group.items.length} envios
+                            </span>
+                          </div>
+
+                          {topScore !== undefined && topScore !== null && (
+                            <div className="text-[11px] font-mono text-[#807d72] sm:text-right">
+                              Maior nota: <strong className="text-[#1f8a65] font-bold">{topScore} pts</strong>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Cards Comparativos dos Envios do Grupo */}
+                        <div className="grid grid-cols-1 gap-2.5">
+                          {group.items.map((item, itemIdx) => {
+                            const isConferida = Boolean(item.data_validacao || item.validado_por);
+                            const score = Number(item.nota_final ?? 0);
+                            const isHighest = itemIdx === 0 && group.items.length > 1;
+                            const textPreview = (item.texto_digitado || item.extracted_data?.texto_transcrito || '').trim();
+
+                            let scoreColor = 'text-[#f54e00] bg-[#f54e00]/10 border-[#f54e00]/20';
+                            if (score >= 800) scoreColor = 'text-[#1f8a65] bg-[#1f8a65]/10 border-[#1f8a65]/20';
+                            else if (score >= 600) scoreColor = 'text-[#c08532] bg-[#c08532]/10 border-[#c08532]/20';
+
+                            return (
+                              <div
+                                key={item.id}
+                                className={`rounded-lg p-3 border text-xs transition-all ${
+                                  isHighest
+                                    ? 'bg-[#fafaf7] border-emerald-300/80 shadow-2xs'
+                                    : 'bg-[#ffffff] border-[#e6e5e0]'
+                                }`}
+                              >
+                                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+                                  
+                                  {/* Info Principal */}
+                                  <div className="space-y-1 flex-1 min-w-0">
+                                    <div className="flex items-center gap-1.5 flex-wrap">
+                                      <span className="font-mono text-[11px] font-bold text-[#807d72]">
+                                        #{String(item.id).padStart(4, '0')}
+                                      </span>
+
+                                      {isHighest && (
+                                        <span className="text-[9.5px] font-mono font-bold px-1.5 py-0.2 rounded bg-emerald-100 text-emerald-800 border border-emerald-300 inline-flex items-center gap-0.5">
+                                          ★ Maior Nota
+                                        </span>
+                                      )}
+
+                                      {isConferida ? (
+                                        <span className="text-[9.5px] font-mono font-bold px-1.5 py-0.2 rounded bg-[#9fc9a2]/25 text-[#1f8a65] border border-[#9fc9a2] inline-flex items-center gap-0.5">
+                                          <Check className="w-2.5 h-2.5" /> Conferida
+                                        </span>
+                                      ) : (
+                                        <span className="text-[9.5px] font-mono font-bold px-1.5 py-0.2 rounded bg-[#f54e00]/10 text-[#f54e00] border border-[#f54e00]/20">
+                                          Pendente
+                                        </span>
+                                      )}
+
+                                      <span className="text-[9.5px] font-mono px-1.5 py-0.2 rounded bg-[#fafaf7] border border-[#e6e5e0] text-[#807d72]">
+                                        {item.tipo_input === 'texto' ? 'Texto Digitado' : 'Foto Manuscrita'}
+                                      </span>
+                                    </div>
+
+                                    <div className="flex items-center gap-2 text-[10.5px] font-mono text-[#807d72]">
+                                      <span>{item.turma_aluno || item.extracted_data?.turma || 'Sem Turma'}</span>
+                                      <span>•</span>
+                                      <span>Envio: {item.data_captura ? new Date(item.data_captura).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }) : 'Hoje'}</span>
+                                    </div>
+
+                                    {/* Trecho do Texto Transcrito/Digitado */}
+                                    {textPreview && (
+                                      <p className="text-[11px] text-[#4a483f] line-clamp-2 bg-[#ffffff] p-1.5 rounded border border-[#e6e5e0]/60 font-serif italic mt-1">
+                                        "{textPreview}"
+                                      </p>
+                                    )}
+                                  </div>
+
+                                  {/* Nota e Ações */}
+                                  <div className="flex items-center justify-between sm:justify-end gap-2 shrink-0 pt-1 sm:pt-0">
+                                    <div className={`px-2.5 py-1 rounded-md border font-mono font-bold text-xs ${scoreColor}`}>
+                                      <span>{score}</span>
+                                      <span className="text-[9px] font-normal ml-0.5">pts</span>
+                                    </div>
+
+                                    <div className="flex items-center gap-1">
+                                      <button
+                                        type="button"
+                                        onClick={() => onSelectRedacao && onSelectRedacao(item)}
+                                        className="px-2.5 py-1 rounded bg-[#fafaf7] hover:bg-[#e6e5e0] border border-[#e6e5e0] text-[#26251e] text-[11px] font-mono transition-colors cursor-pointer flex items-center gap-1 font-semibold"
+                                        title="Abrir Boletim Oficial desta redação"
+                                      >
+                                        <Eye className="w-3 h-3 text-[#f54e00]" />
+                                        <span>Ver</span>
+                                      </button>
+
+                                      {isAdmin && onDeleteRedacao && (
+                                        <button
+                                          type="button"
+                                          onClick={() => onDeleteRedacao(item.id)}
+                                          className="p-1.5 rounded hover:bg-red-100 text-[#807d72] hover:text-[#cf2d56] transition-colors cursor-pointer border border-transparent hover:border-red-200"
+                                          title="Excluir esta duplicata"
+                                        >
+                                          <Trash2 className="w-3.5 h-3.5" />
+                                        </button>
+                                      )}
+                                    </div>
+                                  </div>
+
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
             ) : filteredRedacoes.length === 0 ? (
               <div className="bg-[#fafaf7] border border-[#e6e5e0] rounded-xl p-8 text-center text-[#807d72]">
                 <FileText className="w-8 h-8 mx-auto mb-2 text-[#807d72]" aria-hidden="true" />
@@ -1018,10 +1203,14 @@ export default function GestaoRedacoesView({
                 </p>
               </div>
             ) : (
+              /* ======================================================= */
+              /* MODO: LISTAGEM PADRÃO DO BANCO COM BADGES               */
+              /* ======================================================= */
               filteredRedacoes.map((item) => {
                 const isIdentified = item.nome_detectado && item.nome_aluno;
                 const isConferida = Boolean(item.data_validacao || item.validado_por);
                 const score = Number(item.nota_final ?? 0);
+                const dupInfo = duplicateMap[item.id];
 
                 let scoreColor = 'text-[#f54e00] bg-[#f54e00]/10 border-[#f54e00]/20';
                 if (score >= 800) scoreColor = 'text-[#1f8a65] bg-[#1f8a65]/10 border-[#1f8a65]/20';
@@ -1035,7 +1224,7 @@ export default function GestaoRedacoesView({
                   >
                     {/* Informações Principais */}
                     <div className="space-y-1 min-w-0 flex-1">
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 flex-wrap">
                         <span className="font-mono text-xs font-bold text-[#807d72]">
                           #{String(item.id).padStart(4, '0')}
                         </span>
@@ -1058,6 +1247,21 @@ export default function GestaoRedacoesView({
                         ) : (
                           <span className="text-[9.5px] font-mono font-bold px-1.5 py-0.2 rounded bg-[#f54e00]/10 text-[#f54e00] border border-[#f54e00]/20">
                             Pendente
+                          </span>
+                        )}
+
+                        {/* Badge de Duplicata Detectada */}
+                        {dupInfo?.isDuplicate && (
+                          <span
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setFilterTab('duplicatas');
+                              if (item.nome_aluno) setLocalSearch(item.nome_aluno);
+                            }}
+                            className="text-[9.5px] font-mono font-medium px-1.5 py-0.2 rounded bg-amber-100 text-amber-800 border border-amber-300 inline-flex items-center gap-1 cursor-pointer hover:bg-amber-200 transition-colors"
+                            title="Clique para gerenciar duplicatas deste aluno"
+                          >
+                            <Copy className="w-2.5 h-2.5" /> Duplicata ({dupInfo.totalCount} envios)
                           </span>
                         )}
                       </div>
@@ -1113,3 +1317,4 @@ export default function GestaoRedacoesView({
     </div>
   );
 }
+

@@ -249,7 +249,7 @@ export default function DiagnosticoFeiraView({ redacoes = [], rankingRedacoes = 
                 viewMode === 'BANNER' ? 'bg-gradient-to-r from-emerald-600 to-teal-700 text-white shadow-2xs font-bold' : 'text-[#807d72] hover:text-[#26251e]'
               }`}
             >
-              🎯 Gráficos do Banner (Oficial)
+              Gráficos do Banner (Oficial)
             </button>
             <button
               type="button"
@@ -351,10 +351,6 @@ export default function DiagnosticoFeiraView({ redacoes = [], rankingRedacoes = 
       {/* ======================================================== */}
       {(viewMode === 'BANNER' || viewMode === 'AMBOS') && (
         <div className="bg-[#ffffff] border-2 border-emerald-500/80 rounded-2xl p-6 sm:p-8 space-y-7 shadow-md relative overflow-hidden">
-          <div className="absolute top-0 right-0 bg-emerald-600 text-white text-[10px] font-mono font-bold px-3 py-1 rounded-bl-lg">
-            FORMATO OFICIAL BANNER FEIRA 2026
-          </div>
-
           <div className="space-y-2 border-b border-[#e6e5e0] pb-4">
             <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded text-xs font-mono font-bold bg-emerald-100 text-emerald-900 border border-emerald-300">
               <Sparkles className="w-3.5 h-3.5" />
@@ -508,7 +504,7 @@ export default function DiagnosticoFeiraView({ redacoes = [], rankingRedacoes = 
                           c.status === 'ALERTA' ? 'bg-amber-100 text-amber-800 border border-amber-300' :
                           'bg-emerald-100 text-emerald-800 border border-emerald-300'
                         }`}>
-                          {c.status === 'CRITICO' ? '🚨 Maior Defasagem' : c.status === 'ALERTA' ? '⚠️ Em Desenvolvimento' : '✅ Consolidado'}
+                          {c.status === 'CRITICO' ? 'Maior Defasagem' : c.status === 'ALERTA' ? 'Em Desenvolvimento' : 'Consolidado'}
                         </span>
                       </td>
                     </tr>
@@ -605,7 +601,7 @@ export default function DiagnosticoFeiraView({ redacoes = [], rankingRedacoes = 
                   <div className="flex justify-between items-center text-[10px] text-[#807d72] font-mono pt-0.5">
                     <span>0 pts (Defasagem Total)</span>
                     <span className="text-rose-700 font-medium">
-                      {comp.status === 'CRITICO' ? '🚨 Requer intervenção urgente em sala' : comp.status === 'ALERTA' ? '⚠️ Em fase de consolidação' : '✅ Desempenho seguro'}
+                      {comp.status === 'CRITICO' ? 'Requer intervenção pedagógica prioritária' : comp.status === 'ALERTA' ? 'Em fase de consolidação' : 'Desempenho seguro'}
                     </span>
                     <span>200 pts (Domínio Total)</span>
                   </div>
