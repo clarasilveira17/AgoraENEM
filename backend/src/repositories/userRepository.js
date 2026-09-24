@@ -93,6 +93,26 @@ export const userRepository = {
     return estudantes;
   },
 
+  async getNextAvailableId() {
+    if (isSupabaseConfigured) {
+      try {
+        const { data, error } = await supabase
+          .from('users')
+          .select('id')
+          .order('id', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (!error && data && data.id) {
+          return Number(data.id) + 1;
+        }
+      } catch (err) {
+        console.warn('[userRepository] Falha ao consultar MAX(id):', err.message);
+      }
+    }
+    return 1;
+  },
+
   async createUser({ nome, email, senhaHash, role = 'ESTUDANTE', turma = '' }) {
     const cleanEmail = String(email).trim().toLowerCase();
     const cleanNome = String(nome).trim();
@@ -100,17 +120,42 @@ export const userRepository = {
 
     if (isSupabaseConfigured) {
       try {
-        const { data, error } = await supabase
+        let payload = {
+          nome: cleanNome,
+          email: cleanEmail,
+          senha_hash: senhaHash,
+          role,
+          turma: cleanTurma
+        };
+
+        let { data, error } = await supabase
           .from('users')
-          .insert({
-            nome: cleanNome,
-            email: cleanEmail,
-            senha_hash: senhaHash,
-            role,
-            turma: cleanTurma
-          })
+          .insert(payload)
           .select('id, nome, email, role, turma')
           .single();
+
+        // Fallback de sequence desincronizada do Postgres
+        if (error && (error.code === '23505' || String(error.message).includes('users_pkey'))) {
+          console.warn('[userRepository.createUser] Conflito de users_pkey detectado. Recuperando com MAX(id) + 1...');
+          let attempts = 0;
+          while (attempts < 3) {
+            attempts++;
+            const nextId = await this.getNextAvailableId() + (attempts - 1);
+            const retryRes = await supabase
+              .from('users')
+              .insert({ ...payload, id: nextId })
+              .select('id, nome, email, role, turma')
+              .single();
+
+            if (!retryRes.error && retryRes.data) {
+              data = retryRes.data;
+              error = null;
+              break;
+            } else {
+              error = retryRes.error;
+            }
+          }
+        }
 
         if (!error && data) return data;
         if (error) console.warn(`[userRepository.createUser Supabase Error]: ${error.message} - tentando fallback SQLite.`);
@@ -144,38 +189,65 @@ export const userRepository = {
 
     if (isSupabaseConfigured) {
       try {
-        const { data, error } = await supabase
+        const { data: existing } = await supabase
           .from('users')
-          .upsert({
+          .select('id')
+          .ilike('email', cleanEmail)
+          .maybeSingle();
+
+        if (existing) {
+          const { data, error } = await supabase
+            .from('users')
+            .update({
+              nome: cleanNome,
+              turma: cleanTurma,
+              senha_hash: senhaHash
+            })
+            .eq('id', existing.id)
+            .select('id, nome, email, turma, role')
+            .single();
+
+          if (!error && data) return data;
+        } else {
+          return await this.createUser({
             nome: cleanNome,
             email: cleanEmail,
             turma: cleanTurma,
             role: 'ESTUDANTE',
-            senha_hash: senhaHash
-          }, { onConflict: 'email' })
-          .select('id, nome, email, turma, role')
-          .single();
-
-        if (!error && data) return data;
-        if (error) console.warn(`[userRepository.upsertStudent Supabase Error]: ${error.message} - tentando fallback SQLite.`);
+            senhaHash
+          });
+        }
       } catch (sbErr) {
         console.warn(`[userRepository.upsertStudent Supabase Exception]: ${sbErr.message} - tentando fallback SQLite.`);
       }
     }
 
     if (db) {
-      const info = db.prepare(`
-        INSERT INTO users (nome, email, senha_hash, role, turma)
-        VALUES (?, ?, ?, 'ESTUDANTE', ?)
-      `).run(cleanNome, cleanEmail, senhaHash, cleanTurma);
+      const existing = db.prepare('SELECT id FROM users WHERE LOWER(email) = LOWER(?)').get(cleanEmail);
+      if (existing) {
+        db.prepare('UPDATE users SET nome = ?, turma = ?, senha_hash = ? WHERE id = ?')
+          .run(cleanNome, cleanTurma, senhaHash, existing.id);
+        return {
+          id: existing.id,
+          nome: cleanNome,
+          email: cleanEmail,
+          turma: cleanTurma,
+          role: 'ESTUDANTE'
+        };
+      } else {
+        const info = db.prepare(`
+          INSERT INTO users (nome, email, senha_hash, role, turma)
+          VALUES (?, ?, ?, 'ESTUDANTE', ?)
+        `).run(cleanNome, cleanEmail, senhaHash, cleanTurma);
 
-      return {
-        id: info.lastInsertRowid,
-        nome: cleanNome,
-        email: cleanEmail,
-        turma: cleanTurma,
-        role: 'ESTUDANTE'
-      };
+        return {
+          id: info.lastInsertRowid,
+          nome: cleanNome,
+          email: cleanEmail,
+          turma: cleanTurma,
+          role: 'ESTUDANTE'
+        };
+      }
     }
 
     throw new Error('Nenhum banco de dados disponível.');
