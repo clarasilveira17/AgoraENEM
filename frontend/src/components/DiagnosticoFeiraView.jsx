@@ -109,7 +109,7 @@ export default function DiagnosticoFeiraView({ redacoes = [], rankingRedacoes = 
   }, [filteredList]);
 
   // ==========================================
-  // CÁLCULOS DE DIAGNÓSTICO DE MELHORIA / EVOLUÇÃO
+  // CÁLCULOS DE DIAGNÓSTICO DE DESEMPENHO & FAIXAS
   // ==========================================
   const melhoriaStats = useMemo(() => {
     if (filteredList.length === 0) {
@@ -117,8 +117,7 @@ export default function DiagnosticoFeiraView({ redacoes = [], rankingRedacoes = 
         faixas: [],
         mediaGlobal: 0,
         taxaAprovacao: 0,
-        alunosEmEvolucao: 0,
-        evolucaoMediaEstimada: 0
+        totalEstudantes: 0
       };
     }
 
@@ -139,45 +138,13 @@ export default function DiagnosticoFeiraView({ redacoes = [], rankingRedacoes = 
       return { ...f, count, pct };
     });
 
-    // Comparativo de evolução de estudantes com mais de 1 redação
-    const studentMap = new Map();
-    filteredList.forEach(r => {
-      const name = (r.nome_aluno || '').trim().toLowerCase();
-      if (!name) return;
-      if (!studentMap.has(name)) studentMap.set(name, []);
-      studentMap.get(name).push(r);
-    });
-
-    let evolucoesPositivas = 0;
-    let totalComMultiplas = 0;
-    let somaGanhos = 0;
-
-    studentMap.forEach(reds => {
-      if (reds.length >= 2) {
-        totalComMultiplas++;
-        // Ordena por data
-        const sorted = [...reds].sort((a, b) => new Date(a.data_captura) - new Date(b.data_captura));
-        const inicial = Number(sorted[0].nota_final || 0);
-        const final = Number(sorted[sorted.length - 1].nota_final || 0);
-        const ganho = final - inicial;
-        if (ganho > 0) {
-          evolucoesPositivas++;
-          somaGanhos += ganho;
-        }
-      }
-    });
-
-    const ganhoMedio = totalComMultiplas > 0 ? Math.round(somaGanhos / (evolucoesPositivas || 1)) : 80;
     const taxaAprovacao = Math.round(((faixas[0].count + faixas[1].count) / (notas.length || 1)) * 100);
 
     return {
       faixas,
       mediaGlobal,
       taxaAprovacao,
-      totalComMultiplas,
-      evolucoesPositivas,
-      ganhoMedio,
-      pctEvolucaoPositiva: totalComMultiplas > 0 ? Math.round((evolucoesPositivas / totalComMultiplas) * 100) : 75
+      totalEstudantes: filteredList.length
     };
   }, [filteredList]);
 
@@ -327,13 +294,13 @@ export default function DiagnosticoFeiraView({ redacoes = [], rankingRedacoes = 
         {/* KPI 1: Maior Defasagem Identificada */}
         <div className="bg-[#ffffff] border border-rose-200 p-5 rounded-xl shadow-xs space-y-2">
           <div className="flex items-center justify-between text-xs text-rose-800 font-semibold uppercase tracking-wider">
-            <span>Maior Gargalo / Defasagem</span>
+            <span>Maior Defasagem</span>
             <AlertTriangle className="w-4 h-4 text-rose-600" />
           </div>
           <div className="text-2xl font-black font-mono text-rose-600 flex items-baseline gap-1.5">
             <span>{defasagemStats.maiorDefasagem?.code || '—'}</span>
             <span className="text-xs font-normal text-rose-800">
-              (-{defasagemStats.maiorDefasagem?.perdaMedia || 0} pts perdidos)
+              (média {defasagemStats.maiorDefasagem?.media || 0}/200 pts)
             </span>
           </div>
           <p className="text-[11px] text-[#807d72] line-clamp-1">
@@ -355,32 +322,32 @@ export default function DiagnosticoFeiraView({ redacoes = [], rankingRedacoes = 
           </p>
         </div>
 
-        {/* KPI 3: Ganho Médio de Pontuação */}
+        {/* KPI 3: Média Geral da Redação Diagnóstica */}
         <div className="bg-[#ffffff] border border-blue-200 p-5 rounded-xl shadow-xs space-y-2">
           <div className="flex items-center justify-between text-xs text-blue-800 font-semibold uppercase tracking-wider">
-            <span>Ganho Médio por Estudante</span>
-            <TrendingUp className="w-4 h-4 text-blue-600" />
+            <span>Média Geral Diagnóstica</span>
+            <BarChart3 className="w-4 h-4 text-blue-600" />
           </div>
           <div className="text-2xl font-black font-mono text-blue-700 flex items-baseline gap-1">
-            <span>+{melhoriaStats.ganhoMedio}</span>
-            <span className="text-xs font-normal text-blue-800">pts de evolução</span>
+            <span>{melhoriaStats.mediaGlobal}</span>
+            <span className="text-xs font-normal text-blue-800">/ 1000 pts</span>
           </div>
           <p className="text-[11px] text-[#807d72]">
-            Média de crescimento entre a 1ª e a última redação
+            Pontuação média da escola na 1ª redação diagnóstica
           </p>
         </div>
 
-        {/* KPI 4: Perda Média Global */}
+        {/* KPI 4: Total de Estudantes Avaliados */}
         <div className="bg-[#ffffff] border border-[#e6e5e0] p-5 rounded-xl shadow-xs space-y-2">
           <div className="flex items-center justify-between text-xs text-[#807d72] font-semibold uppercase tracking-wider">
-            <span>Perda Média por Competência</span>
-            <Target className="w-4 h-4 text-[#807d72]" />
+            <span>Estudantes Avaliados</span>
+            <Users className="w-4 h-4 text-[#807d72]" />
           </div>
           <div className="text-2xl font-black font-mono text-[#26251e]">
-            {defasagemStats.mediaGeralPerda} pts
+            {melhoriaStats.totalEstudantes}
           </div>
           <p className="text-[11px] text-[#807d72]">
-            Espaço de melhoria médio em cada critério ENEM (0-200)
+            Total de alunos participantes do diagnóstico
           </p>
         </div>
 
@@ -406,7 +373,7 @@ export default function DiagnosticoFeiraView({ redacoes = [], rankingRedacoes = 
             </div>
 
             <span className="px-3 py-1 bg-rose-50 border border-rose-200 rounded-full text-xs font-mono font-bold text-rose-800 self-start sm:self-auto">
-              Perda Total Média: {1000 - melhoriaStats.mediaGlobal} pts
+              Perda Média Global: {1000 - melhoriaStats.mediaGlobal} pts
             </span>
           </div>
 
@@ -495,7 +462,7 @@ export default function DiagnosticoFeiraView({ redacoes = [], rankingRedacoes = 
       )}
 
       {/* ======================================================== */}
-      {/* SEÇÃO 2: DIAGNÓSTICO DE MELHORIA & EVOLUÇÃO              */}
+      {/* SEÇÃO 2: MAPEAMENTO DE PROFICIÊNCIA & POTENCIAL           */}
       {/* ======================================================== */}
       {(viewMode === 'AMBOS' || viewMode === 'MELHORIA') && (
         <div className="bg-[#ffffff] border border-emerald-200/80 rounded-2xl p-6 sm:p-7 space-y-6 shadow-xs">
@@ -503,18 +470,18 @@ export default function DiagnosticoFeiraView({ redacoes = [], rankingRedacoes = 
             <div className="space-y-1">
               <div className="inline-flex items-center gap-1.5 text-xs font-mono font-bold text-emerald-700">
                 <TrendingUp className="w-4 h-4" />
-                <span>EIXO 2: ANÁLISE DE MELHORIA & EVOLUÇÃO TEXTUAL</span>
+                <span>EIXO 2: MAPEAMENTO DE PROFICIÊNCIA & POTENCIAL DE MELHORIA</span>
               </div>
               <h2 className="text-lg sm:text-xl font-bold text-[#26251e]">
-                Distribuição de Performance & Ganho de Aprendizagem
+                Distribuição das Notas Diagnósticas por Níveis ENEM
               </h2>
               <p className="text-xs text-[#807d72]">
-                Comprovação científica da eficácia da correção com IA na elevação das notas dos estudantes.
+                Classificação da proficiência dos estudantes para direcionamento pedagógico e oportunidades de reescrita.
               </p>
             </div>
 
             <span className="px-3 py-1 bg-emerald-50 border border-emerald-200 rounded-full text-xs font-mono font-bold text-emerald-800 self-start sm:self-auto">
-              Evolução Positiva: {melhoriaStats.pctEvolucaoPositiva}% dos alunos
+              Amostra: {melhoriaStats.totalEstudantes} estudantes avaliados
             </span>
           </div>
 
@@ -544,28 +511,28 @@ export default function DiagnosticoFeiraView({ redacoes = [], rankingRedacoes = 
           <div className="bg-emerald-50/30 border border-emerald-200 p-5 rounded-xl space-y-3">
             <h3 className="text-sm font-bold text-emerald-950 flex items-center gap-2">
               <Sparkles className="w-4 h-4 text-emerald-600" />
-              Evidências Estatísticas de Sucesso para a Feira de Ciências:
+              Impacto Pedagógico & Evidências para a Feira de Ciências:
             </h3>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
               <div className="bg-white p-3.5 rounded-lg border border-emerald-200/60 space-y-1">
                 <span className="font-mono font-bold text-emerald-700 text-sm block">1. Feedback Imediato</span>
                 <p className="text-[#5a5852]">
-                  Tempo de retorno reduzido de <strong>15 dias</strong> para <strong>menos de 20 segundos</strong>, permitindo reescrita ativa.
+                  Tempo de retorno reduzido de <strong>15 dias</strong> para <strong>menos de 20 segundos</strong>, permitindo que o aluno receba a devolutiva na mesma aula.
                 </p>
               </div>
 
               <div className="bg-white p-3.5 rounded-lg border border-emerald-200/60 space-y-1">
-                <span className="font-mono font-bold text-emerald-700 text-sm block">2. Superação de Defasagem</span>
+                <span className="font-mono font-bold text-emerald-700 text-sm block">2. Diagnóstico Preciso</span>
                 <p className="text-[#5a5852]">
-                  Alunos que reescreveram suas redações aumentaram a nota em média <strong>+{melhoriaStats.ganhoMedio} pontos</strong>.
+                  Mapeamento individualizado por competência (C1 a C5) e descritor SISEDU, guiando o professor nas lacunas exatas de cada aluno.
                 </p>
               </div>
 
               <div className="bg-white p-3.5 rounded-lg border border-emerald-200/60 space-y-1">
                 <span className="font-mono font-bold text-emerald-700 text-sm block">3. Equidade Educacional</span>
                 <p className="text-[#5a5852]">
-                  100% dos alunos da escola pública passam a ter correção detalhada por competência individualizada.
+                  Garantia de que 100% dos alunos da escola pública tenham acesso a correções detalhadas e alinhadas aos critérios oficiais do INEP.
                 </p>
               </div>
             </div>
