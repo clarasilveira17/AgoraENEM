@@ -2,6 +2,18 @@ import db from '../config/db.js';
 import { supabase, isSupabaseConfigured } from '../config/supabaseClient.js';
 import { resolveStudent } from '../utils/turmasUtils.js';
 
+// Cache em memória para o ranking (TTL: 30 segundos) para poupar requisições ao Supabase
+let rankingCache = {
+  data: null,
+  timestamp: 0
+};
+const RANKING_CACHE_TTL_MS = 30 * 1000;
+
+export function invalidateRankingCache() {
+  rankingCache.data = null;
+  rankingCache.timestamp = 0;
+}
+
 export const redacaoRepository = {
   async findAll({ user, includeImage = false }) {
     if (!user) return [];
@@ -85,6 +97,55 @@ export const redacaoRepository = {
     return formatted;
   },
 
+  /**
+   * Busca pontual e leve apenas de redações com erro para reprocessamento, sem sobrecarregar o banco
+   */
+  async findPendingRetries(limit = 5) {
+    let pending = [];
+
+    if (isSupabaseConfigured) {
+      try {
+        const { data, error } = await supabase
+          .from('redacoes')
+          .select('id, user_id, nome_aluno, turma_aluno, data_captura, tipo_input, imagem_base64, texto_digitado, extracted_data')
+          .eq('status_validacao', 'ERRO_PROCESSAMENTO')
+          .order('data_captura', { ascending: true })
+          .limit(limit);
+
+        if (!error && data && data.length > 0) {
+          pending = data.map(r => ({
+            ...r,
+            extracted_data: typeof r.extracted_data === 'string' ? JSON.parse(r.extracted_data || '{}') : (r.extracted_data || {})
+          }));
+          return pending;
+        }
+      } catch (err) {
+        console.warn('[redacaoRepository.findPendingRetries Supabase Exception]:', err.message);
+      }
+    }
+
+    if (db) {
+      try {
+        const rows = db.prepare(`
+          SELECT id, user_id, nome_aluno, turma_aluno, data_captura, tipo_input, imagem_base64, texto_digitado, extracted_data
+          FROM redacoes
+          WHERE status_validacao = 'ERRO_PROCESSAMENTO'
+          ORDER BY data_captura ASC
+          LIMIT ?
+        `).all(limit);
+
+        pending = rows.map(r => ({
+          ...r,
+          extracted_data: typeof r.extracted_data === 'string' ? JSON.parse(r.extracted_data || '{}') : (r.extracted_data || {})
+        }));
+      } catch (err) {
+        console.warn('[redacaoRepository.findPendingRetries SQLite Exception]:', err.message);
+      }
+    }
+
+    return pending;
+  },
+
   async findById(id) {
     let redacao = null;
 
@@ -134,6 +195,11 @@ export const redacaoRepository = {
   },
 
   async findRanking() {
+    const now = Date.now();
+    if (rankingCache.data && (now - rankingCache.timestamp < RANKING_CACHE_TTL_MS)) {
+      return rankingCache.data;
+    }
+
     let formatted = [];
 
     if (isSupabaseConfigured) {
@@ -206,6 +272,11 @@ export const redacaoRepository = {
       const bName = (b.nome_aluno || '').trim().toLowerCase();
       return aName.localeCompare(bName);
     });
+
+    rankingCache = {
+      data: formatted,
+      timestamp: now
+    };
 
     return formatted;
   },
@@ -346,6 +417,7 @@ export const redacaoRepository = {
       }
     }
 
+    invalidateRankingCache();
     return savedId;
   },
 
@@ -369,6 +441,8 @@ export const redacaoRepository = {
         console.warn('[redacaoRepository.update SQLite Warning]:', err.message);
       }
     }
+
+    invalidateRankingCache();
   },
 
   async deleteById(id) {
@@ -380,6 +454,8 @@ export const redacaoRepository = {
     if (db) {
       db.prepare('DELETE FROM redacoes WHERE id = ?').run(id);
     }
+
+    invalidateRankingCache();
   },
 
   async deleteAll() {
@@ -391,6 +467,8 @@ export const redacaoRepository = {
     if (db) {
       db.prepare('DELETE FROM redacoes').run();
     }
+
+    invalidateRankingCache();
   },
 
   async exportAll() {

@@ -25,10 +25,10 @@ class RateLimitedQueueService {
       retries: 0
     };
 
-    // Worker periódico em background que busca e reprocessa itens com erro a cada 60 segundos
+    // Worker periódico em background que busca e reprocessa itens com erro a cada 3 minutos (economiza I/O do Supabase)
     this.autoRetryInterval = setInterval(() => {
       this.checkAndRetryFailedEssays();
-    }, 60 * 1000);
+    }, 3 * 60 * 1000);
 
     if (this.autoRetryInterval.unref) {
       this.autoRetryInterval.unref();
@@ -241,21 +241,21 @@ class RateLimitedQueueService {
   }
 
   /**
-   * Busca redações no banco com ERRO_PROCESSAMENTO e agenda novo processamento
+   * Busca pontualmente apenas redações com ERRO_PROCESSAMENTO (máximo 5) para retry sem sobrecarregar o Supabase
    */
   async checkAndRetryFailedEssays() {
     if (this.isProcessing || this.queue.length > 0) return;
 
     try {
-      const redacoes = await redacaoRepository.findAll({ user: { role: 'ADMIN' }, includeImage: true });
-      const comErro = redacoes.filter(r => r.status_validacao === 'ERRO_PROCESSAMENTO' && (r.imagem_base64 || r.texto_digitado));
+      const comErro = await redacaoRepository.findPendingRetries(5);
 
-      if (comErro.length > 0) {
-        logger.info(`[Queue Worker] Encontradas ${comErro.length} redação(ões) com erro para reavaliação automática`);
-        for (const r of comErro.slice(0, 5)) { // Pega até 5 por ciclo para não sobrecarregar
+      if (comErro && comErro.length > 0) {
+        logger.info(`[Queue Worker] Encontradas ${comErro.length} redação(ões) pendentes para reavaliação automática`);
+        for (const r of comErro) {
           this.enqueue({
             id: `retry_${r.id}`,
             db_id: r.id,
+            user_id: r.user_id,
             imagem_base64: r.imagem_base64,
             texto_digitado: r.texto_digitado,
             nome_aluno: r.nome_aluno,

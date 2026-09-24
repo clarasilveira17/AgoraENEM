@@ -20,7 +20,7 @@ export const supabase = isSupabaseConfigured
       global: {
         fetch: (url, options = {}) => {
           const controller = new AbortController();
-          const timeoutId = setTimeout(() => controller.abort(), 2000);
+          const timeoutId = setTimeout(() => controller.abort(), 12000);
           const signal = options.signal ? AbortSignal.any([options.signal, controller.signal]) : controller.signal;
           return fetch(url, {
             ...options,
