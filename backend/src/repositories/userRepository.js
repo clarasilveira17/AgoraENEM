@@ -12,7 +12,11 @@ export const userRepository = {
         .ilike('email', cleanEmail)
         .maybeSingle();
 
-      if (!error && data) return data;
+      if (error) {
+        console.warn(`[userRepository.findByEmail Supabase Warning]: ${error.message}`);
+      } else if (data) {
+        return data;
+      }
     }
 
     if (db) {
@@ -85,20 +89,24 @@ export const userRepository = {
     const cleanTurma = String(turma).trim();
 
     if (isSupabaseConfigured) {
-      const { data, error } = await supabase
-        .from('users')
-        .insert({
-          nome: cleanNome,
-          email: cleanEmail,
-          senha_hash: senhaHash,
-          role,
-          turma: cleanTurma
-        })
-        .select('id, nome, email, role, turma')
-        .single();
+      try {
+        const { data, error } = await supabase
+          .from('users')
+          .insert({
+            nome: cleanNome,
+            email: cleanEmail,
+            senha_hash: senhaHash,
+            role,
+            turma: cleanTurma
+          })
+          .select('id, nome, email, role, turma')
+          .single();
 
-      if (error) throw new Error(`Erro ao cadastrar usuário no Supabase: ${error.message}`);
-      return data;
+        if (!error && data) return data;
+        if (error) console.warn(`[userRepository.createUser Supabase Error]: ${error.message} - tentando fallback SQLite.`);
+      } catch (sbErr) {
+        console.warn(`[userRepository.createUser Supabase Exception]: ${sbErr.message} - tentando fallback SQLite.`);
+      }
     }
 
     if (db) {
@@ -125,20 +133,24 @@ export const userRepository = {
     const cleanTurma = String(turma || 'Geral').trim();
 
     if (isSupabaseConfigured) {
-      const { data, error } = await supabase
-        .from('users')
-        .upsert({
-          nome: cleanNome,
-          email: cleanEmail,
-          turma: cleanTurma,
-          role: 'ESTUDANTE',
-          senha_hash: senhaHash
-        }, { onConflict: 'email' })
-        .select('id, nome, email, turma, role')
-        .single();
+      try {
+        const { data, error } = await supabase
+          .from('users')
+          .upsert({
+            nome: cleanNome,
+            email: cleanEmail,
+            turma: cleanTurma,
+            role: 'ESTUDANTE',
+            senha_hash: senhaHash
+          }, { onConflict: 'email' })
+          .select('id, nome, email, turma, role')
+          .single();
 
-      if (error) throw new Error(`Erro no Supabase: ${error.message}`);
-      return data;
+        if (!error && data) return data;
+        if (error) console.warn(`[userRepository.upsertStudent Supabase Error]: ${error.message} - tentando fallback SQLite.`);
+      } catch (sbErr) {
+        console.warn(`[userRepository.upsertStudent Supabase Exception]: ${sbErr.message} - tentando fallback SQLite.`);
+      }
     }
 
     if (db) {

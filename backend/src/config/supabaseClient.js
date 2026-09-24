@@ -15,7 +15,20 @@ const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY
 export const isSupabaseConfigured = !!(SUPABASE_URL && SUPABASE_KEY);
 
 export const supabase = isSupabaseConfigured
-  ? createClient(SUPABASE_URL, SUPABASE_KEY)
+  ? createClient(SUPABASE_URL, SUPABASE_KEY, {
+      auth: { persistSession: false },
+      global: {
+        fetch: (url, options = {}) => {
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 2000);
+          const signal = options.signal ? AbortSignal.any([options.signal, controller.signal]) : controller.signal;
+          return fetch(url, {
+            ...options,
+            signal
+          }).finally(() => clearTimeout(timeoutId));
+        }
+      }
+    })
   : null;
 
 if (isSupabaseConfigured) {
