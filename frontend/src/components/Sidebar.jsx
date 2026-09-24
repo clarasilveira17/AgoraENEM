@@ -85,6 +85,7 @@ export default function Sidebar({ activeView, setActiveView, isMobileMenuOpen, s
       title: 'Geral',
       items: [
         { id: 'dashboard', label: 'Dashboard & Métricas', icon: LayoutDashboard },
+        { id: 'diagnostico', label: 'Diagnóstico & Feira de Ciências', icon: TrendingUp },
         { id: 'ranking', label: 'Ranking Oficial de Notas', icon: Trophy }
       ]
     },
@@ -106,6 +107,7 @@ export default function Sidebar({ activeView, setActiveView, isMobileMenuOpen, s
       title: 'Geral',
       items: [
         { id: 'dashboard', label: 'Minhas Notas & Desempenho', icon: LayoutDashboard },
+        { id: 'diagnostico', label: 'Diagnóstico & Evolução', icon: TrendingUp },
         { id: 'ranking', label: 'Ranking & Classificação', icon: Trophy }
       ]
     },

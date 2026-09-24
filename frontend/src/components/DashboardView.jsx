@@ -2,7 +2,7 @@ import React, { useMemo } from 'react';
 import { Award, Sparkles, UserCheck, AlertTriangle, FileText, ChevronRight, GraduationCap, PlusCircle, TrendingUp, BarChart3, Trophy, Crown, Medal, ArrowRight } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
-export default function DashboardView({ redacoes, rankingRedacoes = [], isLoading = false, onSelectRedacao, onNavigateToUpload, onNavigateToRanking, onNavigateToSemNome }) {
+export default function DashboardView({ redacoes, rankingRedacoes = [], isLoading = false, onSelectRedacao, onNavigateToUpload, onNavigateToRanking, onNavigateToSemNome, onNavigateToDiagnostico }) {
   const { user, isAdmin } = useAuth();
 
   const totalCount = redacoes.length;
@@ -204,6 +204,17 @@ export default function DashboardView({ redacoes, rankingRedacoes = [], isLoadin
           </div>
 
           <div className="flex flex-wrap items-center gap-2 shrink-0">
+            {onNavigateToDiagnostico && (
+              <button
+                type="button"
+                onClick={onNavigateToDiagnostico}
+                className="w-full sm:w-auto px-4 py-2.5 border border-emerald-300 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 font-medium text-xs rounded-md transition-all cursor-pointer flex items-center justify-center gap-2 shadow-xs"
+              >
+                <TrendingUp className="w-4 h-4 text-emerald-600" />
+                <span>Painel Feira de Ciências</span>
+              </button>
+            )}
+
             {onNavigateToRanking && (
               <button
                 type="button"
@@ -228,6 +239,38 @@ export default function DashboardView({ redacoes, rankingRedacoes = [], isLoadin
           </div>
         </div>
       </div>
+
+      {/* SCIENCE FAIR CALLOUT BANNER */}
+      {onNavigateToDiagnostico && (
+        <div 
+          onClick={onNavigateToDiagnostico}
+          className="bg-gradient-to-r from-emerald-500/10 via-amber-500/10 to-rose-500/10 border border-emerald-300/80 rounded-xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs hover:border-emerald-400 transition-all cursor-pointer group"
+        >
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-xs">
+              <TrendingUp className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-bold text-[#26251e] group-hover:text-emerald-700 transition-colors">
+                  Apresentação Feira de Ciências 2026: Diagnóstico de Defasagem & Melhoria Textual
+                </span>
+                <span className="px-2 py-0.5 rounded-full text-[9px] font-mono font-bold bg-emerald-100 text-emerald-800 uppercase">
+                  Novo
+                </span>
+              </div>
+              <p className="text-[11px] text-[#5a5852] mt-0.5">
+                Veja o gráfico de onde os alunos mais perdem pontos (defasagem ENEM/SISEDU) e as evidências quantitativas de melhoria das notas.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-1 text-xs font-mono font-bold text-emerald-800 group-hover:translate-x-1 transition-transform shrink-0">
+            <span>Abrir Painel Científico</span>
+            <ArrowRight className="w-4 h-4" />
+          </div>
+        </div>
+      )}
 
       {/* ADMIN ATTENTION BANNER: Unlinked Essays Pending */}
       {isAdmin && unidentifiedCount > 0 && onNavigateToSemNome && (

@@ -11,6 +11,7 @@ import { X, Award, Loader2, Menu } from 'lucide-react';
 
 // Code-splitting via React.lazy() para otimizacao de performance e Core Web Vitals (Fase 3)
 const DashboardView = lazy(() => import('./components/DashboardView'));
+const DiagnosticoFeiraView = lazy(() => import('./components/DiagnosticoFeiraView'));
 const GestaoRedacoesView = lazy(() => import('./components/GestaoRedacoesView'));
 const ConfigView = lazy(() => import('./components/ConfigView'));
 const RankingView = lazy(() => import('./components/RankingView'));
@@ -28,7 +29,7 @@ function AppContent() {
       const parts = raw.split('/');
       return { view: 'correcao', id: parts[1] || null };
     }
-    const validViews = ['dashboard', 'ranking', 'novo', 'validacao', 'tabela', 'sem_nome', 'config'];
+    const validViews = ['dashboard', 'diagnostico', 'ranking', 'novo', 'validacao', 'tabela', 'sem_nome', 'config'];
     return { view: validViews.includes(raw) ? raw : 'dashboard', id: null };
   };
 
@@ -313,6 +314,15 @@ function AppContent() {
                   onNavigateToUpload={() => handleSetActiveView('tabela')}
                   onNavigateToRanking={() => handleSetActiveView('ranking')}
                   onNavigateToSemNome={() => handleSetActiveView('validacao')}
+                  onNavigateToDiagnostico={() => handleSetActiveView('diagnostico')}
+                />
+              )}
+
+              {activeView === 'diagnostico' && (
+                <DiagnosticoFeiraView
+                  redacoes={redacoes}
+                  rankingRedacoes={rankingRedacoes}
+                  onSelectRedacao={handleSelectRedacao}
                 />
               )}
 
