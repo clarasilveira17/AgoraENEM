@@ -1,6 +1,9 @@
 import React, { useState, useRef } from 'react';
-import { Upload, FileText, CheckCircle2, AlertCircle, Loader2, Image as ImageIcon, Plus, Trash2, Edit3, User, GraduationCap, Sparkles } from 'lucide-react';
-import { processRedacoesCloud } from '../services/cloudCorrectionService';
+import { 
+  Upload, FileText, CheckCircle2, AlertCircle, Loader2, Image as ImageIcon, 
+  Trash2, Edit3, User, GraduationCap, Sparkles, RefreshCw, ShieldCheck, Clock, AlertTriangle 
+} from 'lucide-react';
+import { processRedacoesCloud, reprocessarRedacao } from '../services/cloudCorrectionService';
 
 export default function UploaderView({ onRedacaoSaved }) {
   const [mode, setMode] = useState('imagem');
@@ -9,7 +12,8 @@ export default function UploaderView({ onRedacaoSaved }) {
   const [manualName, setManualName] = useState('');
   const [manualTurma, setManualTurma] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
-  const [progressText, setProgressText] = useState('');
+  const [progressState, setProgressState] = useState(null);
+  const [fileStatuses, setFileStatuses] = useState({});
   const [feedback, setFeedback] = useState(null);
   const fileInputRef = useRef(null);
 
@@ -21,14 +25,17 @@ export default function UploaderView({ onRedacaoSaved }) {
     const files = Array.from(event.target.files || []);
     if (files.length === 0) return;
 
-    const filePromises = files.map((file) => {
+    const filePromises = files.map((file, idx) => {
       return new Promise((resolve) => {
         const reader = new FileReader();
         reader.onload = (e) => {
+          const fileId = `file_${Date.now()}_${idx}_${Math.random().toString(36).substring(7)}`;
           resolve({
+            id: fileId,
             name: file.name,
             size: (file.size / 1024).toFixed(1) + ' KB',
-            base64: e.target?.result
+            base64: e.target?.result,
+            status: 'IDLE' // IDLE | PROCESSING | WAITING_RETRY | SUCCESS | ERROR
           });
         };
         reader.readAsDataURL(file);
@@ -40,46 +47,134 @@ export default function UploaderView({ onRedacaoSaved }) {
     });
   };
 
-  const handleRemoveFile = (index) => {
-    setSelectedFiles((prev) => prev.filter((_, i) => i !== index));
+  const handleRemoveFile = (id) => {
+    setSelectedFiles((prev) => prev.filter((f) => f.id !== id));
+    setFileStatuses((prev) => {
+      const next = { ...prev };
+      delete next[id];
+      return next;
+    });
   };
 
   const handleSaveImages = async () => {
     if (selectedFiles.length === 0) return;
     setIsProcessing(true);
     setFeedback(null);
-    setProgressText('Iniciando avaliação...');
+    setProgressState({
+      current: 0,
+      total: selectedFiles.length,
+      statusText: 'Iniciando fila com rate-limiting seguro...'
+    });
 
     try {
       const itemsToSave = selectedFiles.map((f) => ({
+        id: f.id,
+        name: f.name,
         imagem_base64: f.base64,
         tipo_input: 'imagem',
         nome_manual: manualName.trim() || null,
         turma_manual: manualTurma.trim() || null
       }));
 
-      const res = await processRedacoesCloud(itemsToSave, (cur, total) => {
-        setProgressText(`Avaliando Lote ${cur} de ${total}...`);
+      const res = await processRedacoesCloud(itemsToSave, (progress) => {
+        const { currentIndex, total, currentItem, status, attempt, maxAttempts, allResults } = progress;
+        
+        setProgressState({
+          current: currentIndex,
+          total,
+          statusText: status,
+          attempt,
+          maxAttempts
+        });
+
+        if (currentItem && currentItem.id) {
+          setFileStatuses((prev) => ({
+            ...prev,
+            [currentItem.id]: {
+              status: status.includes('Aguardando') || status.includes('Repetindo') ? 'WAITING_RETRY' : 'PROCESSING',
+              statusText: status,
+              attempt
+            }
+          }));
+        }
+
+        // Atualiza status dos que já finalizaram
+        if (Array.isArray(allResults)) {
+          allResults.forEach((r) => {
+            if (r.id) {
+              setFileStatuses((prev) => ({
+                ...prev,
+                [r.id]: {
+                  status: r.status === 'success' ? 'SUCCESS' : 'ERROR',
+                  nota: r.extracted?.nota_final,
+                  aluno: r.extracted?.aluno,
+                  error: r.error
+                }
+              }));
+            }
+          });
+        }
       });
 
       setFeedback({
-        type: 'success',
-        message: res.message || `${selectedFiles.length} redação(ões) avaliada(s) e salvas na nuvem com sucesso!`
+        type: res.errorCount === 0 ? 'success' : 'warning',
+        message: res.message
       });
 
-      setSelectedFiles([]);
-      setManualName('');
-      setManualTurma('');
-      if (fileInputRef.current) fileInputRef.current.value = '';
       if (onRedacaoSaved) onRedacaoSaved();
     } catch (error) {
       setFeedback({
         type: 'error',
-        message: `Erro na correção: ${error.message || 'Falha ao processar redação.'}`
+        message: `Erro no processamento: ${error.message || 'Falha ao avaliar redações.'}`
       });
     } finally {
       setIsProcessing(false);
-      setProgressText('');
+      setProgressState(null);
+    }
+  };
+
+  const handleRetrySingle = async (file) => {
+    setFileStatuses((prev) => ({
+      ...prev,
+      [file.id]: { status: 'PROCESSING', statusText: 'Reavaliando com Gemini...' }
+    }));
+
+    try {
+      const res = await processRedacoesCloud([{
+        id: file.id,
+        name: file.name,
+        imagem_base64: file.base64,
+        tipo_input: 'imagem',
+        nome_manual: manualName.trim() || null,
+        turma_manual: manualTurma.trim() || null
+      }]);
+
+      const result = res.results?.[0];
+      if (result && result.status === 'success') {
+        setFileStatuses((prev) => ({
+          ...prev,
+          [file.id]: {
+            status: 'SUCCESS',
+            nota: result.extracted?.nota_final,
+            aluno: result.extracted?.aluno
+          }
+        }));
+      } else {
+        setFileStatuses((prev) => ({
+          ...prev,
+          [file.id]: {
+            status: 'ERROR',
+            error: result?.error || 'Erro na reavaliação'
+          }
+        }));
+      }
+
+      if (onRedacaoSaved) onRedacaoSaved();
+    } catch (err) {
+      setFileStatuses((prev) => ({
+        ...prev,
+        [file.id]: { status: 'ERROR', error: err.message }
+      }));
     }
   };
 
@@ -87,7 +182,7 @@ export default function UploaderView({ onRedacaoSaved }) {
     if (!typedText.trim()) return;
     setIsProcessing(true);
     setFeedback(null);
-    setProgressText('Avaliando texto...');
+    setProgressState({ current: 1, total: 1, statusText: 'Avaliando texto com IA...' });
 
     try {
       const res = await processRedacoesCloud([{
@@ -113,7 +208,68 @@ export default function UploaderView({ onRedacaoSaved }) {
       });
     } finally {
       setIsProcessing(false);
-      setProgressText('');
+      setProgressState(null);
+    }
+  };
+
+  const hasFailedItems = selectedFiles.some(f => fileStatuses[f.id]?.status === 'ERROR');
+
+  const handleRetryAllFailed = async () => {
+    const failedFiles = selectedFiles.filter(f => fileStatuses[f.id]?.status === 'ERROR');
+    if (failedFiles.length === 0) return;
+
+    setIsProcessing(true);
+    setProgressState({
+      current: 0,
+      total: failedFiles.length,
+      statusText: 'Reprocessando redações com falha...'
+    });
+
+    try {
+      const itemsToSave = failedFiles.map((f) => ({
+        id: f.id,
+        name: f.name,
+        imagem_base64: f.base64,
+        tipo_input: 'imagem',
+        nome_manual: manualName.trim() || null,
+        turma_manual: manualTurma.trim() || null
+      }));
+
+      await processRedacoesCloud(itemsToSave, (progress) => {
+        const { currentIndex, total, currentItem, status, allResults } = progress;
+        setProgressState({ current: currentIndex, total, statusText: status });
+
+        if (currentItem && currentItem.id) {
+          setFileStatuses((prev) => ({
+            ...prev,
+            [currentItem.id]: {
+              status: status.includes('Aguardando') ? 'WAITING_RETRY' : 'PROCESSING',
+              statusText: status
+            }
+          }));
+        }
+
+        if (Array.isArray(allResults)) {
+          allResults.forEach((r) => {
+            if (r.id) {
+              setFileStatuses((prev) => ({
+                ...prev,
+                [r.id]: {
+                  status: r.status === 'success' ? 'SUCCESS' : 'ERROR',
+                  nota: r.extracted?.nota_final,
+                  aluno: r.extracted?.aluno,
+                  error: r.error
+                }
+              }));
+            }
+          });
+        }
+      });
+
+      if (onRedacaoSaved) onRedacaoSaved();
+    } finally {
+      setIsProcessing(false);
+      setProgressState(null);
     }
   };
 
@@ -121,14 +277,21 @@ export default function UploaderView({ onRedacaoSaved }) {
     <div className="max-w-4xl mx-auto space-y-6 text-[#26251e]">
       
       {/* Module Title Header */}
-      <div className="bg-[#ffffff] border border-[#e6e5e0] rounded-xl p-6 shadow-none">
-        <h2 className="text-2xl font-normal text-[#26251e] tracking-tight flex items-center gap-2">
-          <Upload className="w-5 h-5 text-[#f54e00]" />
-          Módulo de Envio & Lançamento de Redações
-        </h2>
-        <p className="text-xs text-[#5a5852] mt-1">
-          Suporte a fotos/imagens de redações manuscritas (Lote) ou entrada por texto digitado
-        </p>
+      <div className="bg-[#ffffff] border border-[#e6e5e0] rounded-xl p-6 shadow-none flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h2 className="text-2xl font-normal text-[#26251e] tracking-tight flex items-center gap-2">
+            <Upload className="w-5 h-5 text-[#f54e00]" />
+            Módulo de Envio & Lançamento de Redações
+          </h2>
+          <p className="text-xs text-[#5a5852] mt-1">
+            Fila inteligente com controle de cota (RPM) e recuperação automática contra sobrecargas
+          </p>
+        </div>
+
+        <div className="flex items-center gap-2 bg-[#fafaf7] border border-[#e6e5e0] px-3 py-1.5 rounded-lg text-xs text-[#5a5852]">
+          <ShieldCheck className="w-4 h-4 text-[#9fc9a2]" />
+          <span>Controle de cota: <strong>~12 req/min</strong></span>
+        </div>
       </div>
 
       {/* Input Form Box */}
@@ -199,7 +362,7 @@ export default function UploaderView({ onRedacaoSaved }) {
           </div>
         </div>
 
-        {/* Mode 1: Image Batch Upload */}
+        {/* Mode 1: Image Batch Upload with Interactive Queue Cards */}
         {mode === 'imagem' && (
           <div className="space-y-4">
             <input
@@ -225,41 +388,145 @@ export default function UploaderView({ onRedacaoSaved }) {
               </p>
             </div>
 
-            {/* Selected Files List */}
-            {selectedFiles.length > 0 && (
-              <div className="space-y-2">
-                <div className="text-xs font-semibold text-[#807d72] uppercase tracking-wider flex justify-between items-center">
-                  <span>Imagens Selecionadas ({selectedFiles.length})</span>
-                  <button
-                    type="button"
-                    onClick={() => setSelectedFiles([])}
-                    className="text-[#cf2d56] hover:underline text-xs font-normal cursor-pointer"
-                  >
-                    Limpar tudo
-                  </button>
+            {/* Live Progress Bar during Batch Processing */}
+            {progressState && (
+              <div className="bg-[#fafaf7] border border-[#e6e5e0] rounded-lg p-4 space-y-2">
+                <div className="flex justify-between items-center text-xs font-medium">
+                  <span className="flex items-center gap-2 text-[#26251e]">
+                    <Loader2 className="w-3.5 h-3.5 animate-spin text-[#f54e00]" />
+                    {progressState.statusText || 'Processando lote...'}
+                  </span>
+                  <span className="font-mono text-[#5a5852]">
+                    {progressState.current} de {progressState.total} ({Math.round((progressState.current / progressState.total) * 100)}%)
+                  </span>
                 </div>
+                <div className="w-full bg-[#e6e5e0] rounded-full h-2 overflow-hidden">
+                  <div 
+                    className="bg-[#f54e00] h-full transition-all duration-300"
+                    style={{ width: `${Math.round((progressState.current / progressState.total) * 100)}%` }}
+                  />
+                </div>
+              </div>
+            )}
 
-                <div className="max-h-48 overflow-y-auto space-y-2 custom-scrollbar pr-1">
-                  {selectedFiles.map((file, idx) => (
-                    <div
-                      key={idx}
-                      className="flex items-center justify-between bg-[#fafaf7] border border-[#e6e5e0] rounded-md p-3 text-xs"
-                    >
-                      <div className="flex items-center gap-2.5 truncate">
-                        <ImageIcon className="w-4 h-4 text-[#807d72] shrink-0" aria-hidden="true" />
-                        <span className="truncate text-[#26251e] font-mono">{file.name}</span>
-                        <span className="text-xs font-mono text-[#807d72]">({file.size})</span>
-                      </div>
+            {/* Selected Files Queue Cards */}
+            {selectedFiles.length > 0 && (
+              <div className="space-y-3">
+                <div className="text-xs font-semibold text-[#807d72] uppercase tracking-wider flex justify-between items-center">
+                  <span>Fila de Fotos ({selectedFiles.length})</span>
+                  <div className="flex items-center gap-3">
+                    {hasFailedItems && !isProcessing && (
                       <button
                         type="button"
-                        onClick={() => handleRemoveFile(idx)}
-                        aria-label={`Remover arquivo ${file.name}`}
-                        className="text-[#807d72] hover:text-[#cf2d56] transition-colors p-1 cursor-pointer"
+                        onClick={handleRetryAllFailed}
+                        className="text-[#f54e00] hover:underline text-xs font-semibold flex items-center gap-1 cursor-pointer"
                       >
-                        <Trash2 className="w-4 h-4" aria-hidden="true" />
+                        <RefreshCw className="w-3 h-3" />
+                        Reprocessar Falhas
                       </button>
-                    </div>
-                  ))}
+                    )}
+                    <button
+                      type="button"
+                      disabled={isProcessing}
+                      onClick={() => { setSelectedFiles([]); setFileStatuses({}); }}
+                      className="text-[#cf2d56] hover:underline text-xs font-normal cursor-pointer disabled:opacity-50"
+                    >
+                      Limpar tudo
+                    </button>
+                  </div>
+                </div>
+
+                <div className="max-h-72 overflow-y-auto space-y-2 custom-scrollbar pr-1">
+                  {selectedFiles.map((file) => {
+                    const statusInfo = fileStatuses[file.id] || { status: 'IDLE' };
+                    const isItemProcessing = statusInfo.status === 'PROCESSING';
+                    const isItemWaiting = statusInfo.status === 'WAITING_RETRY';
+                    const isItemSuccess = statusInfo.status === 'SUCCESS';
+                    const isItemError = statusInfo.status === 'ERROR';
+
+                    return (
+                      <div
+                        key={file.id}
+                        className={`flex items-center justify-between border rounded-lg p-3 text-xs transition-all ${
+                          isItemSuccess
+                            ? 'bg-[#f4f9f4] border-[#9fc9a2]'
+                            : isItemError
+                            ? 'bg-[#fff5f5] border-[#dfa88f]'
+                            : isItemProcessing || isItemWaiting
+                            ? 'bg-[#fffbf5] border-[#f54e00]'
+                            : 'bg-[#fafaf7] border-[#e6e5e0]'
+                        }`}
+                      >
+                        <div className="flex items-center gap-3 truncate">
+                          {file.base64 ? (
+                            <img
+                              src={file.base64}
+                              alt={file.name}
+                              className="w-10 h-10 object-cover rounded border border-[#cfcdc4] shrink-0"
+                            />
+                          ) : (
+                            <ImageIcon className="w-5 h-5 text-[#807d72] shrink-0" aria-hidden="true" />
+                          )}
+                          <div className="truncate">
+                            <p className="truncate text-[#26251e] font-mono font-medium">{file.name}</p>
+                            <div className="flex items-center gap-2 mt-0.5">
+                              <span className="text-[11px] font-mono text-[#807d72]">{file.size}</span>
+                              
+                              {/* Status Badges */}
+                              {isItemProcessing && (
+                                <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-[#f54e00]">
+                                  <Loader2 className="w-3 h-3 animate-spin" />
+                                  Avaliando com IA...
+                                </span>
+                              )}
+                              {isItemWaiting && (
+                                <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-[#d04200]">
+                                  <Clock className="w-3 h-3 animate-pulse" />
+                                  {statusInfo.statusText || 'Aguardando cota...'}
+                                </span>
+                              )}
+                              {isItemSuccess && (
+                                <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-[#2d7a32]">
+                                  <CheckCircle2 className="w-3 h-3" />
+                                  Nota: <strong>{statusInfo.nota ?? 0} pts</strong> {statusInfo.aluno ? `(${statusInfo.aluno})` : ''}
+                                </span>
+                              )}
+                              {isItemError && (
+                                <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-[#cf2d56]" title={statusInfo.error}>
+                                  <AlertTriangle className="w-3 h-3" />
+                                  Erro na avaliação
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-2 shrink-0">
+                          {isItemError && !isProcessing && (
+                            <button
+                              type="button"
+                              onClick={() => handleRetrySingle(file)}
+                              className="px-2.5 py-1 bg-[#26251e] text-white rounded text-[11px] font-medium flex items-center gap-1 hover:bg-black cursor-pointer"
+                              title="Tentar avaliar novamente esta foto"
+                            >
+                              <RefreshCw className="w-3 h-3" />
+                              Repetir
+                            </button>
+                          )}
+                          {!isProcessing && (
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveFile(file.id)}
+                              aria-label={`Remover arquivo ${file.name}`}
+                              className="text-[#807d72] hover:text-[#cf2d56] transition-colors p-1.5 cursor-pointer"
+                            >
+                              <Trash2 className="w-4 h-4" aria-hidden="true" />
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             )}
@@ -273,7 +540,7 @@ export default function UploaderView({ onRedacaoSaved }) {
               {isProcessing ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" />
-                  <span>Corrigindo com Inteligência Artificial...</span>
+                  <span>Processando Fila de Redações...</span>
                 </>
               ) : (
                 <>
@@ -339,6 +606,8 @@ export default function UploaderView({ onRedacaoSaved }) {
             className={`p-4 rounded-md border text-xs flex items-center gap-2.5 animate-fadeIn ${
               feedback.type === 'success'
                 ? 'bg-[#9fc9a2] border-[#9fc9a2] text-[#26251e]'
+                : feedback.type === 'warning'
+                ? 'bg-[#fff3cd] border-[#ffeeba] text-[#856404]'
                 : 'bg-[#dfa88f] border-[#dfa88f] text-[#26251e]'
             }`}
           >
@@ -356,3 +625,4 @@ export default function UploaderView({ onRedacaoSaved }) {
     </div>
   );
 }
+

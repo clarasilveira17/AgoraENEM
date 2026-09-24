@@ -1,6 +1,7 @@
 import { authService } from './authService';
 
 const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || '/api/corrigir';
+const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 
 /**
  * Converte um File ou Blob para Base64 Data URL de forma assíncrona
@@ -17,8 +18,7 @@ function readFileAsBase64(file) {
 }
 
 /**
- * Direct Cloud Submission & AI Evaluation (No offline IndexedDB storage)
- * Sends images or typed essays directly to /api/corrigir which saves straight to Supabase cloud.
+ * Processamento de Redações na Nuvem com Pacing Seguro de RPM (1 por vez) e Retry Automático
  */
 export async function processRedacoesCloud(items, onProgress, defaults = {}) {
   if (!items || items.length === 0) {
@@ -57,6 +57,7 @@ export async function processRedacoesCloud(items, onProgress, defaults = {}) {
 
       return {
         id: item.id || `upload_${Date.now()}_${idx}`,
+        name: item.name || `Redação ${idx + 1}`,
         imagem_base64: imagemBase64,
         texto_digitado: textoDigitado,
         tipo_input: tipoInput,
@@ -68,61 +69,130 @@ export async function processRedacoesCloud(items, onProgress, defaults = {}) {
     })
   );
 
-  // Chunk items into max 2 per request to strictly respect Vercel's 4.5MB serverless payload limit
-  const CHUNK_SIZE = 2;
-  const chunks = [];
-  for (let i = 0; i < normalizedItems.length; i += CHUNK_SIZE) {
-    chunks.push(normalizedItems.slice(i, i + CHUNK_SIZE));
-  }
-
   let successCount = 0;
   let errorCount = 0;
   const allResults = [];
+  const totalItems = normalizedItems.length;
 
-  for (let c = 0; c < chunks.length; c++) {
-    const chunk = chunks[c];
-    if (onProgress) {
-      onProgress(c + 1, chunks.length);
-    }
+  for (let i = 0; i < totalItems; i++) {
+    const item = normalizedItems[i];
+    let attempts = 0;
+    const MAX_RETRIES = 3;
+    let itemSuccess = false;
+    let lastResult = null;
 
-    const payload = { redacoes: chunk };
+    while (attempts < MAX_RETRIES && !itemSuccess) {
+      attempts++;
+      
+      if (onProgress) {
+        onProgress({
+          currentIndex: i + 1,
+          total: totalItems,
+          currentItem: item,
+          attempt: attempts,
+          maxAttempts: MAX_RETRIES,
+          status: attempts > 1 ? `Tentativa ${attempts}/${MAX_RETRIES}...` : 'Avaliando...',
+          allResults
+        });
+      }
 
-    const response = await fetch(BACKEND_URL, {
-      method: 'POST',
-      headers,
-      body: JSON.stringify(payload)
-    });
-
-    if (!response.ok) {
-      const errText = await response.text().catch(() => '');
-      let errMsg = `Servidor retornou status ${response.status}: ${response.statusText}`;
       try {
-        const parsed = JSON.parse(errText);
-        if (parsed.error) errMsg = parsed.error;
-      } catch (e) {}
-      throw new Error(errMsg);
+        const payload = { redacoes: [item] };
+        const response = await fetch(BACKEND_URL, {
+          method: 'POST',
+          headers,
+          body: JSON.stringify(payload)
+        });
+
+        if (!response.ok) {
+          const errText = await response.text().catch(() => '');
+          let errMsg = `Servidor retornou status ${response.status}: ${response.statusText}`;
+          try {
+            const parsed = JSON.parse(errText);
+            if (parsed.error) errMsg = parsed.error;
+          } catch (e) {}
+
+          const isRateOrDemand = response.status === 429 || response.status === 503 ||
+                                 errMsg.includes('cota') || errMsg.includes('demand') || errMsg.includes('overloaded');
+
+          if (isRateOrDemand && attempts < MAX_RETRIES) {
+            const waitTime = attempts * 6000; // 6s, 12s
+            if (onProgress) {
+              onProgress({
+                currentIndex: i + 1,
+                total: totalItems,
+                currentItem: item,
+                attempt: attempts,
+                maxAttempts: MAX_RETRIES,
+                status: `Limite de cota atingido. Aguardando ${waitTime / 1000}s para reavaliar...`,
+                allResults
+              });
+            }
+            await sleep(waitTime);
+            continue;
+          }
+
+          throw new Error(errMsg);
+        }
+
+        const data = await response.json();
+        const result = (data.results && data.results[0]) || { status: 'success', id: item.id };
+        lastResult = result;
+
+        if (result.status === 'success') {
+          itemSuccess = true;
+          successCount++;
+        } else {
+          // Erro retornado pela API Gemini dentro do 200
+          const errMsg = result.error || 'Falha na avaliação';
+          const isRetryable = errMsg.includes('503') || errMsg.includes('429') || errMsg.includes('demand') || errMsg.includes('cota');
+          
+          if (isRetryable && attempts < MAX_RETRIES) {
+            const waitTime = attempts * 7000;
+            if (onProgress) {
+              onProgress({
+                currentIndex: i + 1,
+                total: totalItems,
+                currentItem: item,
+                attempt: attempts,
+                maxAttempts: MAX_RETRIES,
+                status: `Alta demanda no Gemini. Repetindo em ${waitTime / 1000}s...`,
+                allResults
+              });
+            }
+            await sleep(waitTime);
+            continue;
+          }
+
+          errorCount++;
+          break;
+        }
+      } catch (err) {
+        lastResult = {
+          id: item.id,
+          status: 'error',
+          error: err.message
+        };
+
+        if (attempts < MAX_RETRIES) {
+          const waitTime = attempts * 5000;
+          await sleep(waitTime);
+          continue;
+        } else {
+          errorCount++;
+          break;
+        }
+      }
     }
 
-    let data;
-    try {
-      const text = await response.text();
-      data = JSON.parse(text);
-    } catch (parseError) {
-      throw new Error('Erro ao processar lote: o servidor não retornou JSON válido.');
+    if (lastResult) {
+      allResults.push(lastResult);
     }
 
-    const results = data.results || [];
-    allResults.push(...results);
-
-    results.forEach(r => {
-      if (r.status === 'success') successCount++;
-      else errorCount++;
-    });
-  }
-
-  if (successCount === 0 && errorCount > 0) {
-    const firstError = allResults.find(r => r.error)?.error || 'Falha ao processar redação na nuvem.';
-    throw new Error(firstError);
+    // Pacing seguro entre fotos (3.5 segundos = ~12 fotos/minuto, seguro contra 15 RPM)
+    if (i < totalItems - 1) {
+      await sleep(3500);
+    }
   }
 
   return {
@@ -130,7 +200,63 @@ export async function processRedacoesCloud(items, onProgress, defaults = {}) {
     errorCount,
     results: allResults,
     message: errorCount > 0
-      ? `${successCount} redação(ões) avaliada(s) com sucesso, ${errorCount} com erro.`
-      : `${successCount} redação(ões) avaliada(s) e gravada(s) na nuvem Supabase com sucesso!`
+      ? `${successCount} redação(ões) avaliada(s) com sucesso. ${errorCount} com erro (salvas no sistema para retry).`
+      : `${successCount} redação(ões) avaliada(s) e gravada(s) na nuvem com sucesso!`
   };
 }
+
+/**
+ * Reprocessa uma redação individual que estava com ERRO_PROCESSAMENTO
+ */
+export async function reprocessarRedacao(id) {
+  const token = authService.getToken();
+  const response = await fetch(`/api/redacoes/${id}/reprocessar`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+    }
+  });
+
+  const data = await response.json();
+  if (!response.ok) {
+    throw new Error(data.error || 'Falha ao reprocessar redação.');
+  }
+  return data;
+}
+
+/**
+ * Dispara o reprocessamento em lote de todas as redações com erro
+ */
+export async function reprocessarTodasFalhas() {
+  const token = authService.getToken();
+  const response = await fetch('/api/redacoes/reprocessar-erros', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+    }
+  });
+
+  const data = await response.json();
+  if (!response.ok) {
+    throw new Error(data.error || 'Falha ao reprocessar redações com erro.');
+  }
+  return data;
+}
+
+/**
+ * Obtém o status da fila de background no backend
+ */
+export async function obterStatusFila() {
+  const token = authService.getToken();
+  const response = await fetch('/api/queue/status', {
+    headers: {
+      ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+    }
+  });
+
+  if (!response.ok) return null;
+  return response.json();
+}
+

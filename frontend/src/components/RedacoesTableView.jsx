@@ -1,7 +1,8 @@
 import React, { useState, useMemo } from 'react';
-import { FileText, UserX, Award, Trash2, ChevronRight, AlertTriangle, Compass, CheckCircle2, Clock, Filter, X } from 'lucide-react';
+import { FileText, UserX, Award, Trash2, ChevronRight, AlertTriangle, Compass, CheckCircle2, Clock, Filter, X, RefreshCw } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { TURMAS_ESCOLA, normalizeTurma } from '../constants/turmas';
+import { reprocessarRedacao } from '../services/cloudCorrectionService';
 
 export default function RedacoesTableView({ redacoes, isLoading = false, filterTab, setFilterTab, onSelectRedacao, onDeleteRedacao, searchQuery }) {
   const { isAdmin, isEstudante } = useAuth();
@@ -33,10 +34,15 @@ export default function RedacoesTableView({ redacoes, isLoading = false, filterT
       if (filterTab === 'sem_nome') return !item.user_id || !item.nome_aluno;
       if (filterTab === 'excelentes') return item.nota_final >= 800;
       if (filterTab === 'baixas') return item.is_synced && item.nota_final < 600;
+      if (filterTab === 'erros') return item.status_validacao === 'ERRO_PROCESSAMENTO';
 
       return true;
     });
   }, [redacoes, selectedTurma, searchQuery, filterTab]);
+
+  const erroCount = useMemo(() => {
+    return redacoes.filter(r => r.status_validacao === 'ERRO_PROCESSAMENTO').length;
+  }, [redacoes]);
 
   return (
     <div className="space-y-4">
@@ -127,6 +133,19 @@ export default function RedacoesTableView({ redacoes, isLoading = false, filterT
             >
               Notas ≥ 800
             </button>
+
+            {isAdmin && erroCount > 0 && (
+              <button
+                onClick={() => setFilterTab('erros')}
+                className={`px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap border transition-colors flex items-center gap-1.5 ${filterTab === 'erros'
+                    ? 'bg-red-600 text-white border-red-600'
+                    : 'bg-red-50 border-red-200 text-red-700 hover:bg-red-100'
+                  }`}
+              >
+                <AlertTriangle className="w-3.5 h-3.5" />
+                Falhas IA ({erroCount})
+              </button>
+            )}
           </div>
         </div>
       </div>
@@ -155,6 +174,7 @@ export default function RedacoesTableView({ redacoes, isLoading = false, filterT
         ) : (
           filteredRedacoes.map((item) => {
             const isIdentified = item.nome_detectado && item.nome_aluno;
+            const isError = item.status_validacao === 'ERRO_PROCESSAMENTO';
             let ext = item.extracted_data || {};
             if (typeof ext === 'string') {
               try { ext = JSON.parse(ext); } catch(e) { ext = {}; }
@@ -170,9 +190,9 @@ export default function RedacoesTableView({ redacoes, isLoading = false, filterT
             return (
               <div
                 key={item.id}
-                onClick={() => item.is_synced && onSelectRedacao(item)}
-                className={`bg-[#ffffff] hover:bg-[#fafaf7] border border-[#e6e5e0] hover:border-[#cfcdc4] rounded-xl p-3.5 sm:p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 sm:gap-4 transition-all shadow-2xs ${
-                  item.is_synced ? 'cursor-pointer' : ''
+                onClick={() => !isError && item.is_synced && onSelectRedacao(item)}
+                className={`bg-[#ffffff] hover:bg-[#fafaf7] border ${isError ? 'border-red-300 bg-red-50/20' : 'border-[#e6e5e0] hover:border-[#cfcdc4]'} rounded-xl p-3.5 sm:p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 sm:gap-4 transition-all shadow-2xs ${
+                  !isError && item.is_synced ? 'cursor-pointer' : ''
                 }`}
               >
                 {/* Header Row on Mobile / Left Info on Desktop */}
@@ -186,6 +206,11 @@ export default function RedacoesTableView({ redacoes, isLoading = false, filterT
                       <span className="font-semibold text-xs sm:text-sm text-[#26251e] truncate">
                         {item.nome_aluno}
                       </span>
+                    ) : isError ? (
+                      <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-red-700 bg-red-100 border border-red-200 px-2 py-0.5 rounded-full shrink-0">
+                        <AlertTriangle className="w-3 h-3 text-red-600" />
+                        Falha no Gemini
+                      </span>
                     ) : (
                       <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-[#c08532] bg-[#dfa88f]/30 border border-[#dfa88f] px-2 py-0.5 rounded-full shrink-0">
                         <UserX className="w-3 h-3 text-[#c08532]" />
@@ -195,7 +220,7 @@ export default function RedacoesTableView({ redacoes, isLoading = false, filterT
                   </div>
 
                   {/* Score Pill on Mobile Header (shown on mobile right, hidden on desktop sm:) */}
-                  {item.is_synced && enemScore !== null && enemScore !== undefined && (
+                  {!isError && item.is_synced && enemScore !== null && enemScore !== undefined && (
                     <div className="sm:hidden px-2.5 py-0.5 rounded-lg bg-[#fafaf7] border border-[#e6e5e0] text-center font-mono shrink-0">
                       <span className="text-xs font-bold text-[#f54e00]">{enemScore}</span>
                       <span className="text-[9px] text-[#807d72] ml-0.5">pts</span>
@@ -222,7 +247,11 @@ export default function RedacoesTableView({ redacoes, isLoading = false, filterT
 
                     <span>•</span>
 
-                    {item.is_synced ? (
+                    {isError ? (
+                      <span className="px-2 py-0.5 rounded-full bg-red-100 border border-red-300 text-red-700 text-[9.5px] font-mono font-bold">
+                        ERRO PROCESSAMENTO
+                      </span>
+                    ) : item.is_synced ? (
                       <span className="px-2 py-0.5 rounded-full bg-[#9fc9a2]/40 border border-[#9fc9a2] text-[#1f8a65] text-[9.5px] font-mono font-bold">
                         CORRIGIDO
                       </span>
@@ -236,7 +265,7 @@ export default function RedacoesTableView({ redacoes, isLoading = false, filterT
                   {/* Desktop Score Pill & Action Buttons */}
                   <div className="flex items-center gap-2 shrink-0" onClick={(e) => e.stopPropagation()}>
                     {/* Score Pill (Desktop Only) */}
-                    {item.is_synced && enemScore !== null && enemScore !== undefined && (
+                    {!isError && item.is_synced && enemScore !== null && enemScore !== undefined && (
                       <div className="hidden sm:block px-3 py-1.5 rounded-xl bg-[#fafaf7] border border-[#e6e5e0] text-center font-mono">
                         <span className="text-sm sm:text-base font-bold text-[#f54e00]">{enemScore}</span>
                         <span className="text-[10px] text-[#807d72] ml-0.5 font-normal">pts</span>
@@ -244,26 +273,48 @@ export default function RedacoesTableView({ redacoes, isLoading = false, filterT
                     )}
 
                     <div className="flex items-center gap-1.5">
-                      {isAdmin && !item.user_id && (
+                      {isError ? (
                         <button
                           type="button"
-                          onClick={() => item.is_synced && onSelectRedacao(item)}
-                          className="px-2.5 py-1 rounded-lg bg-amber-500 hover:bg-amber-600 text-white font-semibold text-xs flex items-center gap-1 transition-colors cursor-pointer shadow-2xs"
-                          title="Vincular a um aluno"
+                          onClick={async () => {
+                            try {
+                              await reprocessarRedacao(item.id);
+                              alert(`Redação #${item.id} reprocessada com sucesso! Recarregando...`);
+                              window.location.reload();
+                            } catch (err) {
+                              alert(`Erro ao reprocessar: ${err.message}`);
+                            }
+                          }}
+                          className="px-2.5 py-1 rounded-lg bg-red-600 hover:bg-red-700 text-white font-semibold text-xs flex items-center gap-1 transition-colors cursor-pointer shadow-2xs"
+                          title="Reprocessar no Gemini"
                         >
-                          <UserX className="w-3.5 h-3.5" />
-                          <span>Vincular Aluno</span>
+                          <RefreshCw className="w-3.5 h-3.5" />
+                          <span>Tentar Novamente</span>
                         </button>
-                      )}
+                      ) : (
+                        <>
+                          {isAdmin && !item.user_id && (
+                            <button
+                              type="button"
+                              onClick={() => item.is_synced && onSelectRedacao(item)}
+                              className="px-2.5 py-1 rounded-lg bg-amber-500 hover:bg-amber-600 text-white font-semibold text-xs flex items-center gap-1 transition-colors cursor-pointer shadow-2xs"
+                              title="Vincular a um aluno"
+                            >
+                              <UserX className="w-3.5 h-3.5" />
+                              <span>Vincular Aluno</span>
+                            </button>
+                          )}
 
-                      <button
-                        type="button"
-                        onClick={() => item.is_synced && onSelectRedacao(item)}
-                        className="p-1.5 sm:p-2 rounded-lg bg-[#fafaf7] hover:bg-[#e6e5e0] border border-[#e6e5e0] text-[#26251e] transition-colors cursor-pointer"
-                        title="Ver Boletim Completo"
-                      >
-                        <ChevronRight className="w-4 h-4" />
-                      </button>
+                          <button
+                            type="button"
+                            onClick={() => item.is_synced && onSelectRedacao(item)}
+                            className="p-1.5 sm:p-2 rounded-lg bg-[#fafaf7] hover:bg-[#e6e5e0] border border-[#e6e5e0] text-[#26251e] transition-colors cursor-pointer"
+                            title="Ver Boletim Completo"
+                          >
+                            <ChevronRight className="w-4 h-4" />
+                          </button>
+                        </>
+                      )}
 
                       {isAdmin && (
                         <button

@@ -1,5 +1,5 @@
 import express from 'express';
-import { handleCorrection } from '../controllers/correctionController.js';
+import { handleCorrection, reprocessEssay, reprocessAllFailed, getQueueStatus } from '../controllers/correctionController.js';
 import { exportDatabase } from '../controllers/redacaoController.js';
 import authRoutes from './authRoutes.js';
 import redacaoRoutes from './redacaoRoutes.js';
@@ -17,6 +17,13 @@ router.use('/auth', authRoutes);
 
 // Redações routes (/api/redacoes, /api/redacoes/sync-legacy)
 router.use('/redacoes', redacaoRoutes);
+
+// Queue Status Route (/api/queue/status)
+router.get('/queue/status', authenticate, getQueueStatus);
+
+// Reprocessamento de Redações com Erro (/api/redacoes/:id/reprocessar e /api/redacoes/reprocessar-erros)
+router.post('/redacoes/reprocessar-erros', aiCorrectionLimiter, authenticate, requireAdmin, reprocessAllFailed);
+router.post('/redacoes/:id/reprocessar', aiCorrectionLimiter, authenticate, requireAdmin, reprocessEssay);
 
 // AI Correction endpoint (Protegido por Autenticação + Rate Limiter de IA)
 router.post(['/corrigir', '/sync'], aiCorrectionLimiter, authenticate, handleCorrection);
