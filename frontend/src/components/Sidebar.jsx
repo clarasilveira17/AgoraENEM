@@ -15,7 +15,8 @@ import {
   Shield,
   Download,
   Trophy,
-  UserCheck
+  UserCheck,
+  TrendingUp
 } from 'lucide-react';
 import { db } from '../db/db';
 import { useAuth } from '../context/AuthContext';
