@@ -3,7 +3,8 @@ import {
   Upload, Database, FileText, CheckCircle2, AlertCircle, 
   Loader2, Image as ImageIcon, Plus, Trash2, Edit3, User, 
   GraduationCap, Sparkles, Filter, X, ChevronRight, AlertTriangle, 
-  UserX, Search, CheckCircle, Check, Clock, RefreshCw, BarChart2, Award
+  UserX, Search, CheckCircle, Check, Clock, RefreshCw, BarChart2, Award,
+  Copy, Layers, FileSearch, Eye
 } from 'lucide-react';
 import { processRedacoesCloud } from '../services/cloudCorrectionService';
 import { authService } from '../services/authService';
@@ -275,7 +276,7 @@ export default function GestaoRedacoesView({
   const handleSaveTypedText = handleStartProcessing;
 
   // Contadores de texto ao vivo
-  const wordCount = typedText.trim() ? typedText.trim().split(/\s+/).length : 0;
+  const wordCount = typedText.trim() ? typedText.split(/\s+/).length : 0;
   const lineCount = typedText.trim() ? typedText.split('\n').length : 0;
 
   // ==========================================
@@ -286,6 +287,143 @@ export default function GestaoRedacoesView({
 
   // Turmas Oficiais da Escola (todas as 19 turmas da Lista Geral dos Alunos)
   const turmasList = TURMAS_ESCOLA;
+
+  // ==========================================
+  // DETECÇÃO E AGRUPAMENTO DE DUPLICATAS
+  // ==========================================
+  const { duplicateGroups, duplicateItemIds, duplicateMap } = useMemo(() => {
+    const groupsByStudent = {};
+    const groupsByText = {};
+
+    redacoes.forEach((r) => {
+      const ext = r.extracted_data || {};
+      const rawName = (r.nome_aluno || ext.aluno || '').trim();
+      const rawText = (r.texto_digitado || ext.texto_transcrito || '').trim();
+
+      // 1. Agrupamento por Aluno (se tiver nome válido)
+      if (rawName && rawName.length >= 3) {
+        const normName = rawName.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+        if (!groupsByStudent[normName]) {
+          groupsByStudent[normName] = {
+            key: `aluno_${normName}`,
+            type: 'aluno',
+            title: rawName,
+            turma: r.turma_aluno || ext.turma || '',
+            items: []
+          };
+        }
+        groupsByStudent[normName].items.push(r);
+      }
+
+      // 2. Agrupamento por Texto idêntico (caso o nome esteja vazio ou inconsistente)
+      if (rawText && rawText.length >= 50) {
+        const textKey = rawText.slice(0, 100).toLowerCase().replace(/\s+/g, ' ');
+        if (!groupsByText[textKey]) {
+          groupsByText[textKey] = {
+            key: `text_${textKey}`,
+            type: 'texto',
+            title: rawName || 'Redações com texto idêntico',
+            turma: r.turma_aluno || ext.turma || '',
+            items: []
+          };
+        }
+        if (!groupsByText[textKey].items.some(it => it.id === r.id)) {
+          groupsByText[textKey].items.push(r);
+        }
+      }
+    });
+
+    const finalGroups = [];
+    const itemIds = new Set();
+    const mapInfo = {};
+
+    // Filtra apenas grupos com 2 ou mais redações
+    Object.values(groupsByStudent).forEach((grp) => {
+      if (grp.items.length >= 2) {
+        // Ordena itens: maior nota primeiro, ou mais recente
+        grp.items.sort((a, b) => {
+          const scoreA = Number(a.nota_final ?? -1);
+          const scoreB = Number(b.nota_final ?? -1);
+          if (scoreB !== scoreA) return scoreB - scoreA;
+          return new Date(b.data_captura || 0) - new Date(a.data_captura || 0);
+        });
+
+        const highestScore = grp.items[0]?.nota_final;
+        const latestTime = Math.max(...grp.items.map(it => new Date(it.data_captura || 0).getTime()));
+
+        grp.items.forEach((item, idx) => {
+          itemIds.add(item.id);
+          const itemTime = new Date(item.data_captura || 0).getTime();
+          mapInfo[item.id] = {
+            isDuplicate: true,
+            totalCount: grp.items.length,
+            isHighest: idx === 0 && grp.items.length > 1,
+            isLatest: itemTime === latestTime,
+            groupKey: grp.key,
+            groupTitle: grp.title
+          };
+        });
+
+        finalGroups.push(grp);
+      }
+    });
+
+    // Grupos por texto que não foram totalmente cobertos por nome
+    Object.values(groupsByText).forEach((grp) => {
+      if (grp.items.length >= 2) {
+        const alreadyInGroup = grp.items.every(it => itemIds.has(it.id));
+        if (!alreadyInGroup) {
+          grp.items.sort((a, b) => (Number(b.nota_final ?? -1) - Number(a.nota_final ?? -1)));
+          grp.items.forEach((item, idx) => {
+            itemIds.add(item.id);
+            if (!mapInfo[item.id]) {
+              mapInfo[item.id] = {
+                isDuplicate: true,
+                totalCount: grp.items.length,
+                isHighest: idx === 0,
+                isLatest: false,
+                groupKey: grp.key,
+                groupTitle: grp.title || 'Texto Idêntico'
+              };
+            }
+          });
+          finalGroups.push(grp);
+        }
+      }
+    });
+
+    return {
+      duplicateGroups: finalGroups,
+      duplicateItemIds: itemIds,
+      duplicateMap: mapInfo
+    };
+  }, [redacoes]);
+
+  // Grupos de duplicatas filtrados por busca e turma
+  const filteredDuplicateGroups = useMemo(() => {
+    return duplicateGroups.filter((grp) => {
+      // Filtro por turma
+      if (selectedTurma !== 'todas') {
+        const hasMatchingTurma = grp.items.some(it => {
+          const t = normalizeTurma(it.turma_aluno || it.extracted_data?.turma || '');
+          return t.toLowerCase() === selectedTurma.toLowerCase();
+        });
+        if (!hasMatchingTurma) return false;
+      }
+
+      // Filtro por busca
+      const q = localSearch.trim().toLowerCase();
+      if (!q) return true;
+      const matchTitle = (grp.title || '').toLowerCase().includes(q);
+      const matchItem = grp.items.some(it => {
+        const ext = it.extracted_data || {};
+        const aluno = (it.nome_aluno || ext.aluno || '').toLowerCase();
+        const turma = normalizeTurma(it.turma_aluno || ext.turma || '').toLowerCase();
+        return aluno.includes(q) || turma.includes(q) || String(it.id).includes(q);
+      });
+      return matchTitle || matchItem;
+    });
+  }, [duplicateGroups, selectedTurma, localSearch]);
 
   // Lista filtrada do banco
   const filteredRedacoes = useMemo(() => {
@@ -317,16 +455,18 @@ export default function GestaoRedacoesView({
       if (filterTab === 'pendentes') return !isConferida;
       if (filterTab === 'excelentes') return Number(item.nota_final || 0) >= 800;
       if (filterTab === 'baixas') return item.is_synced && Number(item.nota_final || 0) < 600;
+      if (filterTab === 'duplicatas') return duplicateItemIds.has(item.id);
 
       return true;
     });
-  }, [redacoes, selectedTurma, localSearch, filterTab]);
+  }, [redacoes, selectedTurma, localSearch, filterTab, duplicateItemIds]);
 
   // Métricas rápidas
   const totalBanco = redacoes.length;
   const semNomeCount = redacoes.filter(r => !r.nome_aluno || !r.user_id).length;
   const comNomeCount = totalBanco - semNomeCount;
   const conferidasCount = redacoes.filter(r => Boolean(r.data_validacao || r.validado_por)).length;
+  const totalDuplicatasCount = duplicateItemIds.size;
   
   const mediaNotas = useMemo(() => {
     const valid = redacoes.filter(r => r.nota_final !== null && r.nota_final !== undefined);
@@ -359,7 +499,7 @@ export default function GestaoRedacoesView({
           </div>
 
           {/* Quick Metrics Bar */}
-          <div className="flex items-center gap-3 bg-[#fafaf7] border border-[#e6e5e0] p-3 rounded-lg text-xs font-mono shrink-0">
+          <div className="flex flex-wrap items-center gap-3 bg-[#fafaf7] border border-[#e6e5e0] p-3 rounded-lg text-xs font-mono shrink-0">
             <div>
               <span className="text-[10px] text-[#807d72] block uppercase">No Banco</span>
               <strong className="text-[#26251e] text-sm">{totalBanco}</strong>
@@ -374,6 +514,22 @@ export default function GestaoRedacoesView({
               <span className="text-[10px] text-[#807d72] block uppercase">Conferidas</span>
               <strong className="text-[#1f8a65] text-sm">{conferidasCount}</strong>
             </div>
+            {isAdmin && totalDuplicatasCount > 0 && (
+              <>
+                <div className="h-6 w-px bg-[#e6e5e0]" />
+                <button
+                  type="button"
+                  onClick={() => setFilterTab('duplicatas')}
+                  className="text-left cursor-pointer hover:opacity-80 transition-opacity"
+                  title="Filtrar redações com duplicatas detectadas"
+                >
+                  <span className="text-[10px] text-[#c08532] block uppercase flex items-center gap-1 font-bold">
+                    <Copy className="w-2.5 h-2.5" /> Duplicatas
+                  </span>
+                  <strong className="text-[#c08532] text-sm font-bold">{totalDuplicatasCount}</strong>
+                </button>
+              </>
+            )}
           </div>
         </div>
       </div>

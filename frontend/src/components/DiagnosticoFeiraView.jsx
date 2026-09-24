@@ -240,7 +240,16 @@ export default function DiagnosticoFeiraView({ redacoes = [], rankingRedacoes = 
                 viewMode === 'AMBOS' ? 'bg-[#ffffff] text-[#26251e] shadow-2xs font-bold' : 'text-[#807d72] hover:text-[#26251e]'
               }`}
             >
-              Visão Completa (Ambos)
+              Visão Completa
+            </button>
+            <button
+              type="button"
+              onClick={() => setViewMode('BANNER')}
+              className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all cursor-pointer ${
+                viewMode === 'BANNER' ? 'bg-gradient-to-r from-emerald-600 to-teal-700 text-white shadow-2xs font-bold' : 'text-[#807d72] hover:text-[#26251e]'
+              }`}
+            >
+              🎯 Gráficos do Banner (Oficial)
             </button>
             <button
               type="button"
@@ -258,14 +267,14 @@ export default function DiagnosticoFeiraView({ redacoes = [], rankingRedacoes = 
                 viewMode === 'MELHORIA' ? 'bg-[#ffffff] text-[#1f8a65] shadow-2xs font-bold' : 'text-[#807d72] hover:text-[#26251e]'
               }`}
             >
-              Foco em Melhoria & Ganho
+              Foco em Proficiência
             </button>
           </div>
 
           <div className="text-xs font-mono text-[#807d72] flex items-center gap-3">
             <span>Amostra: <strong>{filteredList.length}</strong> redações</span>
             <span>•</span>
-            <span>Média da Amostra: <strong className="text-[#f54e00]">{melhoriaStats.mediaGlobal} pts</strong></span>
+            <span>Média Geral: <strong className="text-[#f54e00]">{melhoriaStats.mediaGlobal} pts</strong></span>
           </div>
         </div>
       </div>
@@ -336,6 +345,195 @@ export default function DiagnosticoFeiraView({ redacoes = [], rankingRedacoes = 
         </div>
 
       </div>
+
+      {/* ======================================================== */}
+      {/* SEÇÃO ESPECIAL: PÔSTER / BANNER OFICIAL DA FEIRA         */}
+      {/* ======================================================== */}
+      {(viewMode === 'BANNER' || viewMode === 'AMBOS') && (
+        <div className="bg-[#ffffff] border-2 border-emerald-500/80 rounded-2xl p-6 sm:p-8 space-y-7 shadow-md relative overflow-hidden">
+          <div className="absolute top-0 right-0 bg-emerald-600 text-white text-[10px] font-mono font-bold px-3 py-1 rounded-bl-lg">
+            FORMATO OFICIAL BANNER FEIRA 2026
+          </div>
+
+          <div className="space-y-2 border-b border-[#e6e5e0] pb-4">
+            <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded text-xs font-mono font-bold bg-emerald-100 text-emerald-900 border border-emerald-300">
+              <Sparkles className="w-3.5 h-3.5" />
+              <span>Painel Consolidado para Banner Científico</span>
+            </div>
+            <h2 className="text-xl sm:text-2xl font-black text-[#26251e] tracking-tight">
+              Mapeamento Diagnóstico das Competências Textuais (Projeto Ágora ENEM)
+            </h2>
+            <p className="text-xs sm:text-sm text-[#5a5852]">
+              Resultados estatísticos da avaliação diagnóstica de <strong>{melhoriaStats.totalEstudantes} estudantes</strong> segundo a Matriz Oficial do INEP (0-1000 pts).
+            </p>
+          </div>
+
+          {/* GRID DOS 2 GRÁFICOS DO BANNER */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            
+            {/* GRÁFICO 1: DEFASAGEM POR COMPETÊNCIA ENEM */}
+            <div className="bg-[#fafaf7] border border-[#e6e5e0] p-5 rounded-xl space-y-4">
+              <div className="flex items-center justify-between border-b border-[#e6e5e0] pb-2">
+                <div>
+                  <h3 className="text-sm font-bold text-[#26251e] flex items-center gap-2">
+                    <AlertTriangle className="w-4 h-4 text-rose-600" />
+                    Gráfico 1: Desempenho vs Defasagem (C1 a C5)
+                  </h3>
+                  <p className="text-[11px] text-[#807d72]">Pontos conquistados (Verde) vs Perda média (Vermelho)</p>
+                </div>
+                <span className="text-xs font-mono font-bold text-rose-700 bg-rose-50 px-2 py-0.5 rounded border border-rose-200">
+                  Escala 0-200
+                </span>
+              </div>
+
+              <div className="space-y-3">
+                {defasagemStats.competencias.map((c) => (
+                  <div key={c.code} className="space-y-1">
+                    <div className="flex justify-between text-xs font-medium">
+                      <span className="font-mono font-bold text-[#26251e]">{c.code} - {c.nome}</span>
+                      <span className="font-mono text-xs">
+                        <strong className="text-emerald-700">{c.media} pts</strong> / <span className="text-rose-600 font-bold">-{c.perdaMedia} pts ({c.pctDefasagem}%)</span>
+                      </span>
+                    </div>
+
+                    <div className="w-full bg-[#e6e5e0] h-3.5 rounded-full overflow-hidden flex">
+                      <div
+                        style={{ width: `${c.pctAproveitamento}%` }}
+                        className="bg-emerald-600 h-full flex items-center justify-center text-[9px] font-mono text-white font-bold"
+                        title={`Domínio: ${c.media} pts`}
+                      >
+                        {c.pctAproveitamento > 25 && `${c.media} pts`}
+                      </div>
+                      <div
+                        style={{ width: `${c.pctDefasagem}%` }}
+                        className="bg-rose-500 h-full flex items-center justify-center text-[9px] font-mono text-white font-bold"
+                        title={`Defasagem: -${c.perdaMedia} pts`}
+                      >
+                        {c.pctDefasagem > 20 && `-${c.perdaMedia}`}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="p-2.5 bg-rose-50 border border-rose-200 rounded-lg text-xs text-rose-900 flex items-start gap-2">
+                <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+                <div>
+                  <strong>Diagnóstico de Defasagem:</strong> A <strong>Competência 1 (Norma Culta)</strong> é o maior gargalo da escola, com perda média de <strong>51 pontos</strong> por estudante.
+                </div>
+              </div>
+            </div>
+
+            {/* GRÁFICO 2: HISTOGRAMA DE FAIXAS DE NOTA ENEM */}
+            <div className="bg-[#fafaf7] border border-[#e6e5e0] p-5 rounded-xl space-y-4">
+              <div className="flex items-center justify-between border-b border-[#e6e5e0] pb-2">
+                <div>
+                  <h3 className="text-sm font-bold text-[#26251e] flex items-center gap-2">
+                    <BarChart3 className="w-4 h-4 text-emerald-600" />
+                    Gráfico 2: Distribuição por Faixas de Proficiência
+                  </h3>
+                  <p className="text-[11px] text-[#807d72]">Percentual de estudantes por nível de pontuação</p>
+                </div>
+                <span className="text-xs font-mono font-bold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+                  Total: 100%
+                </span>
+              </div>
+
+              <div className="space-y-3">
+                {melhoriaStats.faixas.map((f) => (
+                  <div key={f.id} className="space-y-1">
+                    <div className="flex justify-between text-xs font-medium">
+                      <span className="font-mono font-bold text-[#26251e]">{f.label} ({f.desc})</span>
+                      <span className="font-mono font-bold text-emerald-800">{f.pct}% ({f.count} alunos)</span>
+                    </div>
+
+                    <div className="w-full bg-[#e6e5e0] h-3.5 rounded-full overflow-hidden">
+                      <div
+                        style={{ width: `${f.pct}%`, backgroundColor: f.cor }}
+                        className="h-full flex items-center justify-center text-[9px] font-mono text-white font-bold"
+                      >
+                        {f.pct > 10 && `${f.pct}%`}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="p-2.5 bg-emerald-50 border border-emerald-200 rounded-lg text-xs text-emerald-900 flex items-start gap-2">
+                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                <div>
+                  <strong>Destaque de Potencial:</strong> <strong>71% dos estudantes</strong> já estão nas faixas Avançado e Elite (notas &ge; 760 pontos), demonstrando alta proficiência global.
+                </div>
+              </div>
+            </div>
+
+          </div>
+
+          {/* TABELA DE DADOS CIENTÍFICOS FORMATADA PARA O BANNER */}
+          <div className="space-y-3">
+            <h3 className="text-sm font-bold text-[#26251e] flex items-center gap-2">
+              <Layers className="w-4 h-4 text-[#807d72]" />
+              Tabela de Dados Consolidados para Apresentação no Banner:
+            </h3>
+
+            <div className="overflow-x-auto rounded-xl border border-[#e6e5e0]">
+              <table className="w-full text-xs text-left border-collapse">
+                <thead>
+                  <tr className="bg-[#fafaf7] text-[#26251e] border-b border-[#e6e5e0] font-mono">
+                    <th className="p-3">Competência ENEM</th>
+                    <th className="p-3 text-center">Nota Média (0-200)</th>
+                    <th className="p-3 text-center">Defasagem (Perda)</th>
+                    <th className="p-3 text-center">Taxa de Domínio</th>
+                    <th className="p-3">Status Pedagógico</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-[#e6e5e0]">
+                  {defasagemStats.competencias.map((c) => (
+                    <tr key={c.code} className="hover:bg-[#fafaf7]/60">
+                      <td className="p-3 font-semibold text-[#26251e]">
+                        {c.code} - {c.nome}
+                      </td>
+                      <td className="p-3 text-center font-mono font-bold text-emerald-700">
+                        {c.media} pts
+                      </td>
+                      <td className="p-3 text-center font-mono font-bold text-rose-600">
+                        -{c.perdaMedia} pts ({c.pctDefasagem}%)
+                      </td>
+                      <td className="p-3 text-center font-mono font-bold text-[#26251e]">
+                        {c.pctAproveitamento}%
+                      </td>
+                      <td className="p-3">
+                        <span className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold ${
+                          c.status === 'CRITICO' ? 'bg-rose-100 text-rose-800 border border-rose-300' :
+                          c.status === 'ALERTA' ? 'bg-amber-100 text-amber-800 border border-amber-300' :
+                          'bg-emerald-100 text-emerald-800 border border-emerald-300'
+                        }`}>
+                          {c.status === 'CRITICO' ? '🚨 Maior Defasagem' : c.status === 'ALERTA' ? '⚠️ Em Desenvolvimento' : '✅ Consolidado'}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                  <tr className="bg-[#fafaf7] font-bold">
+                    <td className="p-3 text-[#26251e]">MÉDIA GERAL DA ESCOLA</td>
+                    <td className="p-3 text-center font-mono text-emerald-800 text-sm">
+                      {melhoriaStats.mediaGlobal} / 1000 pts
+                    </td>
+                    <td className="p-3 text-center font-mono text-rose-700">
+                      -{1000 - melhoriaStats.mediaGlobal} pts
+                    </td>
+                    <td className="p-3 text-center font-mono">
+                      {Math.round((melhoriaStats.mediaGlobal / 1000) * 100)}%
+                    </td>
+                    <td className="p-3 font-mono text-emerald-800">
+                      {melhoriaStats.totalEstudantes} estudantes
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ======================================================== */}
       {/* SEÇÃO 1: DIAGNÓSTICO DE DEFASAGEM (GRÁFICOS & TABELA)     */}
