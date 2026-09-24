@@ -9,33 +9,40 @@ export const redacaoRepository = {
     let formatted = [];
 
     if (isSupabaseConfigured) {
-      const selectFields = includeImage
-        ? '*'
-        : 'id, user_id, nome_aluno, turma_aluno, nome_detectado, data_captura, tipo_input, texto_digitado, is_synced, extracted_data, nota_final, status_validacao, validado_por, data_validacao';
+      try {
+        const selectFields = includeImage
+          ? '*'
+          : 'id, user_id, nome_aluno, turma_aluno, nome_detectado, data_captura, tipo_input, texto_digitado, is_synced, extracted_data, nota_final, status_validacao, validado_por, data_validacao';
 
-      let query = supabase
-        .from('redacoes')
-        .select(selectFields)
-        .order('data_captura', { ascending: false });
+        let query = supabase
+          .from('redacoes')
+          .select(selectFields)
+          .order('data_captura', { ascending: false });
 
-      if (user.role !== 'ADMIN') {
-        const cleanStudentName = (user.nome || '').trim();
-        query = query.eq('status_validacao', 'VALIDADA').or(`user_id.eq.${user.id},nome_aluno.ilike.${cleanStudentName}`);
-      }
+        if (user.role !== 'ADMIN') {
+          const cleanStudentName = (user.nome || '').trim();
+          query = query.eq('status_validacao', 'VALIDADA').or(`user_id.eq.${user.id},nome_aluno.ilike.${cleanStudentName}`);
+        }
 
-      const { data, error } = await query;
-      if (!error && data) {
-        formatted = data.map(r => ({
-          ...r,
-          nome_detectado: Boolean(r.nome_detectado),
-          is_synced: Boolean(r.is_synced),
-          extracted_data: typeof r.extracted_data === 'string' ? JSON.parse(r.extracted_data || '{}') : (r.extracted_data || {}),
-          status_validacao: r.status_validacao || 'VALIDADA'
-        }));
+        const { data, error } = await query;
+        if (!error && data && data.length > 0) {
+          formatted = data.map(r => ({
+            ...r,
+            nome_detectado: Boolean(r.nome_detectado),
+            is_synced: Boolean(r.is_synced),
+            extracted_data: typeof r.extracted_data === 'string' ? JSON.parse(r.extracted_data || '{}') : (r.extracted_data || {}),
+            status_validacao: r.status_validacao || 'VALIDADA'
+          }));
+        } else if (error) {
+          console.warn('[redacaoRepository.findAll Supabase Warning]:', error.message);
+        }
+      } catch (err) {
+        console.warn('[redacaoRepository.findAll Supabase Exception]:', err.message);
       }
     }
 
-    if (formatted.length === 0 && !isSupabaseConfigured && db) {
+    // Se Supabase falhou/retornou 0 e temos SQLite local com dados, carrega do SQLite!
+    if (formatted.length === 0 && db) {
       let rows;
       if (user.role === 'ADMIN') {
         rows = db.prepare(`
@@ -82,20 +89,24 @@ export const redacaoRepository = {
     let redacao = null;
 
     if (isSupabaseConfigured) {
-      const { data, error } = await supabase
-        .from('redacoes')
-        .select('*')
-        .eq('id', id)
-        .maybeSingle();
+      try {
+        const { data, error } = await supabase
+          .from('redacoes')
+          .select('*')
+          .eq('id', id)
+          .maybeSingle();
 
-      if (!error && data) {
-        redacao = {
-          ...data,
-          nome_detectado: Boolean(data.nome_detectado),
-          is_synced: Boolean(data.is_synced),
-          extracted_data: typeof data.extracted_data === 'string' ? JSON.parse(data.extracted_data || '{}') : (data.extracted_data || {}),
-          status_validacao: data.status_validacao || 'VALIDADA'
-        };
+        if (!error && data) {
+          redacao = {
+            ...data,
+            nome_detectado: Boolean(data.nome_detectado),
+            is_synced: Boolean(data.is_synced),
+            extracted_data: typeof data.extracted_data === 'string' ? JSON.parse(data.extracted_data || '{}') : (data.extracted_data || {}),
+            status_validacao: data.status_validacao || 'VALIDADA'
+          };
+        }
+      } catch (err) {
+        console.warn('[redacaoRepository.findById Supabase Exception]:', err.message);
       }
     }
 
@@ -126,22 +137,28 @@ export const redacaoRepository = {
     let formatted = [];
 
     if (isSupabaseConfigured) {
-      const { data, error } = await supabase
-        .from('redacoes')
-        .select('id, user_id, nome_aluno, turma_aluno, nota_final, data_captura, status_validacao, extracted_data, is_synced')
-        .eq('status_validacao', 'VALIDADA')
-        .order('nota_final', { ascending: false });
+      try {
+        const { data, error } = await supabase
+          .from('redacoes')
+          .select('id, user_id, nome_aluno, turma_aluno, nota_final, data_captura, status_validacao, extracted_data, is_synced')
+          .eq('status_validacao', 'VALIDADA')
+          .order('nota_final', { ascending: false });
 
-      if (!error && data) {
-        formatted = data.map(r => ({
-          ...r,
-          extracted_data: typeof r.extracted_data === 'string' ? JSON.parse(r.extracted_data || '{}') : (r.extracted_data || {}),
-          is_synced: true
-        }));
+        if (!error && data && data.length > 0) {
+          formatted = data.map(r => ({
+            ...r,
+            extracted_data: typeof r.extracted_data === 'string' ? JSON.parse(r.extracted_data || '{}') : (r.extracted_data || {}),
+            is_synced: true
+          }));
+        } else if (error) {
+          console.warn('[redacaoRepository.findRanking Supabase Warning]:', error.message);
+        }
+      } catch (err) {
+        console.warn('[redacaoRepository.findRanking Supabase Exception]:', err.message);
       }
     }
 
-    if (formatted.length === 0 && !isSupabaseConfigured && db) {
+    if (formatted.length === 0 && db) {
       const rows = db.prepare(`
         SELECT id, user_id, nome_aluno, turma_aluno, nota_final, data_captura, status_validacao, extracted_data, is_synced
         FROM redacoes
