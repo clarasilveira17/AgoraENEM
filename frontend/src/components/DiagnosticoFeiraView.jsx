@@ -16,7 +16,9 @@ import {
   Layers, 
   Filter, 
   Users, 
-  Brain
+  Brain,
+  HeartHandshake,
+  BookOpen
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
@@ -188,6 +190,128 @@ export default function DiagnosticoFeiraView({ redacoes = [], rankingRedacoes = 
         pctAdequado
       };
     }).sort((a, b) => b.pctInicial - a.pctInicial); // Mais críticos primeiro
+  }, [filteredList]);
+
+  // ========================================================
+  // CÁLCULOS DAS DIMENSÕES DISCURSIVA & ÉTICO-CRÍTICA (ÁGORA)
+  // ========================================================
+  const rubricasPanoramaStats = useMemo(() => {
+    if (filteredList.length === 0) {
+      return {
+        discursiva: [],
+        eticoCritica: [],
+        mediaAdesaoDiscursiva: 0,
+        mediaAdesaoEtica: 0,
+        pctDireitosHumanosPleno: 100
+      };
+    }
+
+    let clarezaAdv = 0, clarezaAdeq = 0, clarezaIni = 0;
+    let progAdv = 0, progAdeq = 0, progIni = 0;
+    let repAdv = 0, repAdeq = 0, repIni = 0;
+
+    let empAdv = 0, empAdeq = 0, empIni = 0;
+    let justAdv = 0, justAdeq = 0, justIni = 0;
+    let concAdv = 0, concAdeq = 0, concIni = 0;
+    let dhRespeitado = 0;
+
+    filteredList.forEach(r => {
+      const sisedu = r.extracted_data?.avaliacoes?.sisedu || r.extracted_data?.avaliacoes?.sisedu_agora || {};
+      const enem = r.extracted_data?.avaliacoes?.enem || {};
+      const c1Val = Number(enem.competencia_1?.nota ?? 160);
+      const c2Val = Number(enem.competencia_2?.nota ?? 160);
+      const c3Val = Number(enem.competencia_3?.nota ?? 160);
+      const c4Val = Number(enem.competencia_4?.nota ?? 160);
+      const c5Val = Number(enem.competencia_5?.nota ?? 160);
+      const desrespeitoDh = enem.competencia_5?.desrespeito_dh === true || enem.competencia_5?.elementos_finais?.desrespeito_dh === true;
+
+      if (!desrespeitoDh) dhRespeitado++;
+
+      // Clareza da Tese
+      const rawClareza = sisedu.dimensao_discursiva?.clareza_tese?.nivel || sisedu.descritores?.D06?.nivel || sisedu.descritores?.D13?.nivel;
+      const nivClareza = rawClareza ? rawClareza.toLowerCase() : (c3Val >= 160 && c2Val >= 160 ? 'avançado' : (c3Val >= 120 ? 'adequado' : 'inicial'));
+      if (nivClareza.includes('avanç') || nivClareza.includes('pleno') || nivClareza.includes('alto')) clarezaAdv++;
+      else if (nivClareza.includes('inicial') || nivClareza.includes('baixo')) clarezaIni++;
+      else clarezaAdeq++;
+
+      // Consistência e Progressão
+      const rawProg = sisedu.dimensao_discursiva?.argumentacao?.nivel || sisedu.descritores?.D16?.nivel || sisedu.descritores?.D14?.nivel;
+      const nivProg = rawProg ? rawProg.toLowerCase() : (c3Val >= 160 ? 'avançado' : (c3Val >= 120 ? 'adequado' : 'inicial'));
+      if (nivProg.includes('avanç') || nivProg.includes('pleno') || nivProg.includes('alto')) progAdv++;
+      else if (nivProg.includes('inicial') || nivProg.includes('baixo')) progIni++;
+      else progAdeq++;
+
+      // Produtividade de Repertório
+      const rawRep = sisedu.dimensao_discursiva?.repertorio?.nivel || sisedu.descritores?.D05?.nivel;
+      const nivRep = rawRep ? rawRep.toLowerCase() : (c2Val >= 160 ? 'avançado' : (c2Val >= 120 ? 'adequado' : 'inicial'));
+      if (nivRep.includes('avanç') || nivRep.includes('pleno') || nivRep.includes('alto')) repAdv++;
+      else if (nivRep.includes('inicial') || nivRep.includes('baixo')) repIni++;
+      else repAdeq++;
+
+      // Empatia e Alteridade
+      const rawEmp = sisedu.dimensao_etico_critica?.empatia_alteridade?.nivel || sisedu.dimensao_etico_moral?.empatia_alteridade?.nivel || sisedu.dimensao_etico_critica?.direitos_humanos?.nivel;
+      const nivEmp = rawEmp ? rawEmp.toLowerCase() : (c5Val >= 160 ? 'avançado' : (c5Val >= 120 ? 'adequado' : 'inicial'));
+      if (nivEmp.includes('avanç') || nivEmp.includes('pleno') || nivEmp.includes('alto')) empAdv++;
+      else if (nivEmp.includes('inicial') || nivEmp.includes('baixo')) empIni++;
+      else empAdeq++;
+
+      // Justificação Moral
+      const rawJust = sisedu.dimensao_etico_critica?.justificacao_moral?.nivel || sisedu.dimensao_etico_moral?.justificacao_moral?.nivel || sisedu.dimensao_etico_critica?.justificativa_critica?.nivel || sisedu.dimensao_etico_moral?.justificacao_axiologica?.nivel;
+      const nivJust = rawJust ? rawJust.toLowerCase() : ((c3Val >= 160 && c5Val >= 120) ? 'avançado' : (c3Val >= 120 ? 'adequado' : 'inicial'));
+      if (nivJust.includes('avanç') || nivJust.includes('pleno') || nivJust.includes('alto')) justAdv++;
+      else if (nivJust.includes('inicial') || nivJust.includes('baixo')) justIni++;
+      else justAdeq++;
+
+      // Conclusão Crítica / Propostas
+      const rawConc = sisedu.dimensao_etico_critica?.conclusao_critica?.nivel || sisedu.dimensao_etico_moral?.conclusao_critica?.nivel || sisedu.dimensao_etico_critica?.eficacia_proposta?.nivel || sisedu.dimensao_etico_moral?.eficacia_proposta?.nivel;
+      const nivConc = rawConc ? rawConc.toLowerCase() : (c5Val >= 160 ? 'avançado' : (c5Val >= 120 ? 'adequado' : 'inicial'));
+      if (nivConc.includes('avanç') || nivConc.includes('pleno') || nivConc.includes('alto')) concAdv++;
+      else if (nivConc.includes('inicial') || nivConc.includes('baixo')) concIni++;
+      else concAdeq++;
+    });
+
+    const total = filteredList.length || 1;
+
+    const calcItem = (criterio, descricao, adv, adeq, ini) => {
+      const advPct = Math.round((adv / total) * 100);
+      const adeqPct = Math.round((adeq / total) * 100);
+      const iniPct = Math.max(0, 100 - advPct - adeqPct);
+      return {
+        criterio,
+        descricao,
+        altoPct: advPct,
+        medioPct: adeqPct,
+        baixoPct: iniPct,
+        altoCount: adv,
+        medioCount: adeq,
+        baixoCount: ini,
+        total
+      };
+    };
+
+    const discursiva = [
+      calcItem('Clareza da Tese', 'Formulação explícita do ponto de vista e problematização introdutória', clarezaAdv, clarezaAdeq, clarezaIni),
+      calcItem('Consistência e Progressão', 'Encadeamento dos tópicos frasais e progressão temática sem contradições', progAdv, progAdeq, progIni),
+      calcItem('Produtividade de Repertório', 'Legitimidade e pertinência produtiva das referências socioculturais', repAdv, repAdeq, repIni)
+    ];
+
+    const eticoCritica = [
+      calcItem('Empatia e Alteridade', 'Sensibilidade social, superação de preconceitos e consideração aos vulneráveis', empAdv, empAdeq, empIni),
+      calcItem('Justificação Moral', 'Fundamentação ética de responsabilidade coletiva e dignidade humana', justAdv, justAdeq, justIni),
+      calcItem('Conclusão Crítica / Propostas', 'Intervenção transformadora que transcende o mero cumprimento burocrático', concAdv, concAdeq, concIni)
+    ];
+
+    const mediaAdesaoDiscursiva = Math.round(discursiva.reduce((acc, i) => acc + i.altoPct + i.medioPct, 0) / discursiva.length);
+    const mediaAdesaoEtica = Math.round(eticoCritica.reduce((acc, i) => acc + i.altoPct + i.medioPct, 0) / eticoCritica.length);
+    const pctDireitosHumanosPleno = Math.round((dhRespeitado / total) * 100);
+
+    return {
+      discursiva,
+      eticoCritica,
+      mediaAdesaoDiscursiva,
+      mediaAdesaoEtica,
+      pctDireitosHumanosPleno
+    };
   }, [filteredList]);
 
   return (
@@ -527,6 +651,162 @@ export default function DiagnosticoFeiraView({ redacoes = [], rankingRedacoes = 
                 </tbody>
               </table>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ======================================================== */}
+      {/* SEÇÃO ESPECIAL: PANORAMA DAS RUBRICAS QUALITATIVAS       */}
+      {/* ======================================================== */}
+      {(viewMode === 'AMBOS' || viewMode === 'BANNER' || viewMode === 'MELHORIA') && (
+        <div className="bg-[#ffffff] border border-teal-200/80 rounded-2xl p-6 sm:p-7 space-y-6 shadow-xs">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-[#e6e5e0]">
+            <div className="space-y-1">
+              <div className="inline-flex items-center gap-1.5 text-xs font-mono font-bold text-teal-700">
+                <Sparkles className="w-4 h-4 text-teal-600" />
+                <span>EIXO FORMATIVO & ÁGORA: MATRIZ QUALITATIVA SISEDU</span>
+              </div>
+              <h2 className="text-lg sm:text-xl font-bold text-[#26251e]">
+                Panorama das Dimensões Ético-Crítica e Discursiva
+              </h2>
+              <p className="text-xs text-[#807d72]">
+                Avaliação quantificada em percentuais das dimensões de cidadania, direitos humanos, clareza de tese e consistência argumentativa.
+              </p>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <span className="px-3 py-1 bg-teal-50 border border-teal-200 rounded-full text-xs font-mono font-bold text-teal-800 self-start sm:self-auto">
+                Adesão aos DH: {rubricasPanoramaStats.pctDireitosHumanosPleno}% Pleno
+              </span>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            
+            {/* Bloco Detalhado: Dimensão Ético-Crítica */}
+            <div className="bg-[#fafaf7] border border-teal-200/70 p-5 rounded-xl space-y-4">
+              <div className="flex items-center justify-between border-b border-[#e6e5e0] pb-2">
+                <div>
+                  <h3 className="text-sm font-bold text-teal-950 flex items-center gap-2">
+                    <HeartHandshake className="w-4 h-4 text-teal-600" />
+                    Dimensão Ético-Crítica & Cidadania
+                  </h3>
+                  <p className="text-[11px] text-[#807d72]">Consciência social, dignidade humana e intervenção factível</p>
+                </div>
+                <span className="text-xs font-mono font-bold text-teal-800 bg-teal-50 px-2 py-0.5 rounded border border-teal-200">
+                  {rubricasPanoramaStats.mediaAdesaoEtica}% Domínio
+                </span>
+              </div>
+
+              <div className="space-y-4">
+                {rubricasPanoramaStats.eticoCritica.map((item, idx) => (
+                  <div key={idx} className="bg-white p-3.5 rounded-lg border border-[#e6e5e0] space-y-2">
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <h4 className="font-bold text-xs text-[#26251e]">{item.criterio}</h4>
+                        <p className="text-[10.5px] text-[#807d72] mt-0.5">{item.descricao}</p>
+                      </div>
+                      <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-teal-100 text-teal-900 border border-teal-300 shrink-0 ml-2">
+                        {item.altoPct}% Pleno
+                      </span>
+                    </div>
+
+                    <div className="w-full bg-[#e6e5e0] h-3.5 rounded-full overflow-hidden flex shadow-inner">
+                      <div
+                        style={{ width: `${item.altoPct}%` }}
+                        className="bg-teal-600 h-full flex items-center justify-center text-[9px] font-mono text-white font-bold"
+                        title={`Pleno: ${item.altoCount} alunos`}
+                      >
+                        {item.altoPct > 15 && `${item.altoPct}% Pleno`}
+                      </div>
+                      <div
+                        style={{ width: `${item.medioPct}%` }}
+                        className="bg-amber-500 h-full flex items-center justify-center text-[9px] font-mono text-white font-bold"
+                        title={`Adequado: ${item.medioCount} alunos`}
+                      >
+                        {item.medioPct > 15 && `${item.medioPct}%`}
+                      </div>
+                      <div
+                        style={{ width: `${item.baixoPct}%` }}
+                        className="bg-rose-500 h-full flex items-center justify-center text-[9px] font-mono text-white font-bold"
+                        title={`Inicial: ${item.baixoCount} alunos`}
+                      >
+                        {item.baixoPct > 10 && `${item.baixoPct}%`}
+                      </div>
+                    </div>
+
+                    <div className="flex justify-between text-[10px] text-[#807d72] font-mono pt-0.5">
+                      <span className="text-teal-800 font-semibold">{item.altoCount} alunos em Nível Pleno</span>
+                      <span className="text-amber-700">{item.medioCount} em Nível Adequado</span>
+                      <span className="text-rose-600">{item.baixoCount} em Nível Inicial</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Bloco Detalhado: Dimensão Discursiva */}
+            <div className="bg-[#fafaf7] border border-blue-200/70 p-5 rounded-xl space-y-4">
+              <div className="flex items-center justify-between border-b border-[#e6e5e0] pb-2">
+                <div>
+                  <h3 className="text-sm font-bold text-blue-950 flex items-center gap-2">
+                    <BookOpen className="w-4 h-4 text-blue-600" />
+                    Dimensão Discursiva & Fluência
+                  </h3>
+                  <p className="text-[11px] text-[#807d72]">Tese explícita, concatenação de argumentos e repertório produtivo</p>
+                </div>
+                <span className="text-xs font-mono font-bold text-blue-800 bg-blue-50 px-2 py-0.5 rounded border border-blue-200">
+                  {rubricasPanoramaStats.mediaAdesaoDiscursiva}% Domínio
+                </span>
+              </div>
+
+              <div className="space-y-4">
+                {rubricasPanoramaStats.discursiva.map((item, idx) => (
+                  <div key={idx} className="bg-white p-3.5 rounded-lg border border-[#e6e5e0] space-y-2">
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <h4 className="font-bold text-xs text-[#26251e]">{item.criterio}</h4>
+                        <p className="text-[10.5px] text-[#807d72] mt-0.5">{item.descricao}</p>
+                      </div>
+                      <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-blue-100 text-blue-900 border border-blue-300 shrink-0 ml-2">
+                        {item.altoPct}% Avançado
+                      </span>
+                    </div>
+
+                    <div className="w-full bg-[#e6e5e0] h-3.5 rounded-full overflow-hidden flex shadow-inner">
+                      <div
+                        style={{ width: `${item.altoPct}%` }}
+                        className="bg-blue-600 h-full flex items-center justify-center text-[9px] font-mono text-white font-bold"
+                        title={`Avançado: ${item.altoCount} alunos`}
+                      >
+                        {item.altoPct > 15 && `${item.altoPct}% Avançado`}
+                      </div>
+                      <div
+                        style={{ width: `${item.medioPct}%` }}
+                        className="bg-amber-500 h-full flex items-center justify-center text-[9px] font-mono text-white font-bold"
+                        title={`Adequado: ${item.medioCount} alunos`}
+                      >
+                        {item.medioPct > 15 && `${item.medioPct}%`}
+                      </div>
+                      <div
+                        style={{ width: `${item.baixoPct}%` }}
+                        className="bg-rose-500 h-full flex items-center justify-center text-[9px] font-mono text-white font-bold"
+                        title={`Inicial: ${item.baixoCount} alunos`}
+                      >
+                        {item.baixoPct > 10 && `${item.baixoPct}%`}
+                      </div>
+                    </div>
+
+                    <div className="flex justify-between text-[10px] text-[#807d72] font-mono pt-0.5">
+                      <span className="text-blue-800 font-semibold">{item.altoCount} alunos em Nível Avançado</span>
+                      <span className="text-amber-700">{item.medioCount} em Nível Adequado</span>
+                      <span className="text-rose-600">{item.baixoCount} em Nível Inicial</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
           </div>
         </div>
       )}
