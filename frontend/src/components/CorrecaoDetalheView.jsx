@@ -996,6 +996,163 @@ export default function CorrecaoDetalheView({
             </div>
           </div>
 
+          {/* SEÇÃO QUALITATIVA FORMATIVA: DIMENSÃO DISCURSIVA & DIMENSÃO ÉTICO-CRÍTICA (ÁGORA ESCOLAR) */}
+          {/* SEÇÃO QUALITATIVA FORMATIVA: DIMENSÃO DISCURSIVA & DIMENSÃO ÉTICO-CRÍTICA (ÁGORA ESCOLAR) */}
+          {(() => {
+            const dClarezaNivel = sisedu.dimensao_discursiva?.clareza_tese?.nivel || (c3Val >= 160 && c2Val >= 160 ? 'Avançado' : (c3Val >= 120 ? 'Adequado' : 'Inicial'));
+            const dClarezaJust = sisedu.dimensao_discursiva?.clareza_tese?.justificativa || (
+              dClarezaNivel === 'Avançado'
+                ? 'Apresenta tese explícita e claramente articulada no parágrafo introdutório, estabelecendo direcionamento argumentativo seguro e objetivo.'
+                : dClarezaNivel === 'Adequado'
+                ? 'Apresenta posicionamento discernível no texto, delimitando os pontos centrais a serem defendidos.'
+                : 'Tese pouco nítida ou difusa na introdução, demandando maior clareza no posicionamento do autor.'
+            );
+
+            const dProgNivel = sisedu.dimensao_discursiva?.argumentacao?.nivel || (c3Val >= 160 ? 'Avançado' : (c3Val >= 120 ? 'Adequado' : 'Inicial'));
+            const dProgJust = sisedu.dimensao_discursiva?.argumentacao?.justificativa || (
+              dProgNivel === 'Avançado'
+                ? 'Desenvolve tópicos frasais estruturados com progressão lógica entre as causas e os efeitos abordados ao longo do texto.'
+                : dProgNivel === 'Adequado'
+                ? 'Estrutura argumentos coerentes com a proposta, apresentando encadeamento funcional entre os parágrafos.'
+                : 'Apresenta lacunas na progressão temática ou argumentos com fragilidade de fundamentação.'
+            );
+
+            const dRepNivel = sisedu.dimensao_discursiva?.repertorio?.nivel || (c2Val >= 160 ? 'Avançado' : (c2Val >= 120 ? 'Adequado' : 'Inicial'));
+            const dRepJust = sisedu.dimensao_discursiva?.repertorio?.justificativa || (
+              dRepNivel === 'Avançado'
+                ? 'Mobiliza referências das ciências humanas com vínculo produtivo e autoral ao cerne da tese apresentada.'
+                : dRepNivel === 'Adequado'
+                ? 'Utiliza repertório legítimo e pertinente à discussão temática proposta.'
+                : 'Repertório restrito aos textos motivadores ou com articulação mecânica/insuficiente.'
+            );
+
+            const rawEmpatia = sisedu.dimensao_etico_critica?.empatia_alteridade || sisedu.dimensao_etico_moral?.empatia_alteridade || sisedu.dimensao_etico_critica?.direitos_humanos;
+            const eEmpatiaNivel = rawEmpatia?.nivel || (c5Val >= 160 ? 'Avançado' : (c5Val >= 120 ? 'Adequado' : 'Inicial'));
+            const eEmpatiaJust = rawEmpatia?.justificativa || (
+              eEmpatiaNivel === 'Avançado'
+                ? 'Demonstra forte sensibilidade em relação ao sofrimento alheio e à superação de preconceitos estruturais contra a população vulnerável.'
+                : eEmpatiaNivel === 'Adequado'
+                ? 'Reconhece a condição dos grupos sociais afetados pela temática, mantendo postura respeitosa e alinhada aos direitos humanos.'
+                : 'Apresenta abordagem incipiente da alteridade, necessitando de maior aprofundamento sobre a empatia com os grupos vulneráveis.'
+            );
+
+            const rawMoral = sisedu.dimensao_etico_critica?.justificacao_moral || sisedu.dimensao_etico_moral?.justificacao_moral || sisedu.dimensao_etico_critica?.justificativa_critica || sisedu.dimensao_etico_moral?.justificacao_axiologica;
+            const eMoralNivel = rawMoral?.nivel || ((c3Val >= 160 && c5Val >= 120) ? 'Avançado' : (c3Val >= 120 ? 'Adequado' : 'Inicial'));
+            const eMoralJust = rawMoral?.justificativa || (
+              eMoralNivel === 'Avançado'
+                ? 'Fundamenta a necessidade de justiça social com base em princípios éticos de responsabilidade coletiva e dignidade humana.'
+                : eMoralNivel === 'Adequado'
+                ? 'Articula valores cívicos e responsabilidade social de forma pertinente ao longo da fundamentação argumentativa.'
+                : 'Fundamentação moral e ética básica, demandando articulação mais sólida dos valores de cidadania e bem coletivo.'
+            );
+
+            const rawConclusao = sisedu.dimensao_etico_critica?.conclusao_critica || sisedu.dimensao_etico_moral?.conclusao_critica || sisedu.dimensao_etico_critica?.eficacia_proposta || sisedu.dimensao_etico_moral?.eficacia_proposta;
+            const eConclusaoNivel = rawConclusao?.nivel || (c5Val >= 160 ? 'Avançado' : (c5Val >= 120 ? 'Adequado' : 'Inicial'));
+            const eConclusaoJust = rawConclusao?.justificativa || (
+              eConclusaoNivel === 'Avançado'
+                ? 'A conclusão vai além da mera burocracia estatal, propondo uma transformação cultural e solidária na mentalidade da sociedade.'
+                : eConclusaoNivel === 'Adequado'
+                ? 'Apresenta proposta de intervenção consistente e aplicável para o enfrentamento prático da problemática.'
+                : 'Proposta de intervenção restrita ou elementar, necessitando de maior detalhamento e visão transformadora.'
+            );
+
+            return (
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                
+                {/* CARD 1: DIMENSÃO DISCURSIVA */}
+                <div className="bg-[#ffffff] border border-[#26251e] rounded-xl p-5 shadow-xs space-y-3.5">
+                  <h4 className="text-xs font-bold text-[#26251e] uppercase tracking-wider font-mono border-b border-[#e6e5e0] pb-2">
+                    DIMENSÃO DISCURSIVA
+                  </h4>
+
+                  <div className="space-y-3 divide-y divide-[#e6e5e0]/70">
+                    <div className="pt-2 first:pt-0 space-y-1">
+                      <div className="flex justify-between items-baseline">
+                        <span className="font-bold text-xs text-[#26251e]">Clareza da Tese:</span>
+                        <span className="font-bold text-xs text-[#26251e] underline underline-offset-2">
+                          {dClarezaNivel}
+                        </span>
+                      </div>
+                      <p className="text-xs text-[#5a5852] leading-relaxed">
+                        {dClarezaJust}
+                      </p>
+                    </div>
+
+                    <div className="pt-3 space-y-1">
+                      <div className="flex justify-between items-baseline">
+                        <span className="font-bold text-xs text-[#26251e]">Consistência e Progressão:</span>
+                        <span className="font-bold text-xs text-[#26251e] underline underline-offset-2">
+                          {dProgNivel}
+                        </span>
+                      </div>
+                      <p className="text-xs text-[#5a5852] leading-relaxed">
+                        {dProgJust}
+                      </p>
+                    </div>
+
+                    <div className="pt-3 space-y-1">
+                      <div className="flex justify-between items-baseline">
+                        <span className="font-bold text-xs text-[#26251e]">Produtividade de Repertório:</span>
+                        <span className="font-bold text-xs text-[#26251e] underline underline-offset-2">
+                          {dRepNivel}
+                        </span>
+                      </div>
+                      <p className="text-xs text-[#5a5852] leading-relaxed">
+                        {dRepJust}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* CARD 2: DIMENSÃO ÉTICO-CRÍTICA (IDÊNTICO À IMAGEM DE REFERÊNCIA) */}
+                <div className="bg-[#ffffff] border border-[#26251e] rounded-xl p-5 shadow-xs space-y-3.5">
+                  <h4 className="text-xs font-bold text-[#26251e] uppercase tracking-wider font-mono border-b border-[#e6e5e0] pb-2">
+                    DIMENSÃO ÉTICO-CRÍTICA
+                  </h4>
+
+                  <div className="space-y-3 divide-y divide-[#e6e5e0]/70">
+                    <div className="pt-2 first:pt-0 space-y-1">
+                      <div className="flex justify-between items-baseline">
+                        <span className="font-bold text-xs text-[#26251e]">Empatia e Alteridade:</span>
+                        <span className="font-bold text-xs text-[#26251e] underline underline-offset-2">
+                          {eEmpatiaNivel}
+                        </span>
+                      </div>
+                      <p className="text-xs text-[#5a5852] leading-relaxed">
+                        {eEmpatiaJust}
+                      </p>
+                    </div>
+
+                    <div className="pt-3 space-y-1">
+                      <div className="flex justify-between items-baseline">
+                        <span className="font-bold text-xs text-[#26251e]">Justificação Moral:</span>
+                        <span className="font-bold text-xs text-[#26251e] underline underline-offset-2">
+                          {eMoralNivel}
+                        </span>
+                      </div>
+                      <p className="text-xs text-[#5a5852] leading-relaxed">
+                        {eMoralJust}
+                      </p>
+                    </div>
+
+                    <div className="pt-3 space-y-1">
+                      <div className="flex justify-between items-baseline">
+                        <span className="font-bold text-xs text-[#26251e]">Conclusão Crítica / Propostas:</span>
+                        <span className="font-bold text-xs text-[#26251e] underline underline-offset-2">
+                          {eConclusaoNivel}
+                        </span>
+                      </div>
+                      <p className="text-xs text-[#5a5852] leading-relaxed">
+                        {eConclusaoJust}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+              </div>
+            );
+          })()}
+
           {/* Pontos Fortes e Pontos a Evoluir */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="bg-[#ffffff] border border-[#e6e5e0] rounded-xl p-5 space-y-2 shadow-xs">

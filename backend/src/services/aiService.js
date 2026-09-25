@@ -969,7 +969,29 @@ export async function agenteAvaliadorUnificado(
         },
         nota_total_enem: notas.total,
       },
-      sisedu: { descritores: fatos.sisedu || {} },
+      sisedu: {
+        descritores: fatos.sisedu || {},
+        dimensao_etico_critica: {
+          empatia_alteridade: {
+            nivel: c5.nota >= 160 ? 'Avançado' : (c5.nota >= 120 ? 'Adequado' : 'Inicial'),
+            justificativa: c5.nota >= 160 
+              ? 'Demonstra forte sensibilidade em relação ao sofrimento alheio e à superação de preconceitos estruturais contra a população vulnerável.'
+              : (c5.nota >= 120 ? 'Reconhece a condição dos grupos sociais afetados pela temática, mantendo postura respeitosa e alinhada aos direitos humanos.' : 'Apresenta abordagem incipiente da alteridade, necessitando de maior aprofundamento sobre a empatia com os grupos vulneráveis.')
+          },
+          justificacao_moral: {
+            nivel: (c3.nota >= 160 && c5.nota >= 120) ? 'Avançado' : (c3.nota >= 120 ? 'Adequado' : 'Inicial'),
+            justificativa: (c3.nota >= 160 && c5.nota >= 120)
+              ? 'Fundamenta a necessidade de justiça social com base em princípios éticos de responsabilidade coletiva e dignidade humana.'
+              : (c3.nota >= 120 ? 'Articula valores cívicos e responsabilidade social de forma pertinente ao longo da fundamentação argumentativa.' : 'Fundamentação moral e ética básica, demandando articulação mais sólida dos valores de cidadania e bem coletivo.')
+          },
+          conclusao_critica: {
+            nivel: c5.nota >= 160 ? 'Avançado' : (c5.nota >= 120 ? 'Adequado' : 'Inicial'),
+            justificativa: c5.nota >= 160
+              ? 'A conclusão vai além da mera burocracia estatal, propondo uma transformação cultural e solidária na mentalidade da sociedade.'
+              : (c5.nota >= 120 ? 'Apresenta proposta de intervenção consistente e aplicável para o enfrentamento prático da problemática.' : 'Proposta de intervenção restrita ou elementar, necessitando de maior detalhamento e visão transformadora.')
+          }
+        }
+      },
     },
 
     nota_final: notas.total,
