@@ -4,7 +4,7 @@ import { exportDatabase } from '../controllers/redacaoController.js';
 import authRoutes from './authRoutes.js';
 import redacaoRoutes from './redacaoRoutes.js';
 
-import { authenticate, requireAdmin } from '../middleware/authMiddleware.js';
+import { authenticate, requireAdmin, requireTeacherOrAdmin } from '../middleware/authMiddleware.js';
 import { aiCorrectionLimiter, exportDbLimiter } from '../middleware/rateLimitMiddleware.js';
 
 const router = express.Router();
@@ -22,10 +22,10 @@ router.use('/redacoes', redacaoRoutes);
 router.get('/queue/status', authenticate, getQueueStatus);
 
 // Reprocessamento de Redações com Erro (/api/redacoes/:id/reprocessar e /api/redacoes/reprocessar-erros)
-router.post('/redacoes/reprocessar-erros', aiCorrectionLimiter, authenticate, requireAdmin, reprocessAllFailed);
-router.post('/redacoes/:id/reprocessar', aiCorrectionLimiter, authenticate, requireAdmin, reprocessEssay);
+router.post('/redacoes/reprocessar-erros', aiCorrectionLimiter, authenticate, requireTeacherOrAdmin, reprocessAllFailed);
+router.post('/redacoes/:id/reprocessar', aiCorrectionLimiter, authenticate, requireTeacherOrAdmin, reprocessEssay);
 
-// AI Correction endpoint (Protegido por Autenticação + Rate Limiter de IA)
-router.post(['/corrigir', '/sync'], aiCorrectionLimiter, authenticate, handleCorrection);
+// AI Correction endpoint (Protegido por Autenticação de Professores/Admin + Rate Limiter de IA)
+router.post(['/corrigir', '/sync'], aiCorrectionLimiter, authenticate, requireTeacherOrAdmin, handleCorrection);
 
 export default router;

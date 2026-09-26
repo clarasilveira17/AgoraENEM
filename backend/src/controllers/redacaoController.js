@@ -263,12 +263,12 @@ export const deleteRedacao = async (req, res) => {
       return res.status(401).json({ error: 'Acesso não autorizado. Autenticação necessária.' });
     }
 
-    if (req.user.role !== 'ADMIN') {
-      return res.status(403).json({ error: 'Apenas professores/administradores podem excluir redações.' });
+    if (req.user.role !== 'ADMIN' && req.user.role !== 'PROFESSOR') {
+      return res.status(403).json({ error: 'Apenas professores e administradores podem excluir redações.' });
     }
 
     await redacaoRepository.deleteById(id);
-    logger.info(`Redação ID #${id} excluída pelo Administrador ID ${req.user.id}`, { requestId: req.id, redacaoId: id });
+    logger.info(`Redação ID #${id} excluída pelo usuário ID ${req.user.id} (${req.user.role})`, { requestId: req.id, redacaoId: id });
 
     return res.status(200).json({ message: 'Redação excluída com sucesso do banco de dados.' });
   } catch (error) {
@@ -334,12 +334,18 @@ export const getRedacaoById = async (req, res) => {
       return res.status(401).json({ error: 'Autenticação necessária para visualizar a redação.' });
     }
 
-    if (user.role !== 'ADMIN') {
+    if (user.role !== 'ADMIN' && user.role !== 'PROFESSOR') {
       const cleanStudentName = (user.nome || '').trim().toLowerCase();
       const alunoNome = (redacao.nome_aluno || '').trim().toLowerCase();
       const isOwner = (redacao.user_id && Number(redacao.user_id) === Number(user.id)) || (alunoNome && alunoNome === cleanStudentName);
+      
       if (!isOwner) {
-        return res.status(403).json({ error: 'Você só tem permissão para visualizar suas próprias redações.' });
+        // Permite visualização se for redação modelo do Top 3
+        const topRanking = await redacaoRepository.getRanking(3);
+        const isTop3 = Array.isArray(topRanking) && topRanking.some(r => Number(r.id) === Number(id));
+        if (!isTop3) {
+          return res.status(403).json({ error: 'Você só tem permissão para visualizar suas próprias redações ou as redações modelo do Top 3.' });
+        }
       }
     }
 

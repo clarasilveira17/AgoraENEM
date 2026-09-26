@@ -31,7 +31,7 @@ export const redacaoRepository = {
           .select(selectFields)
           .order('data_captura', { ascending: false });
 
-        if (user.role !== 'ADMIN') {
+        if (user.role !== 'ADMIN' && user.role !== 'PROFESSOR') {
           const cleanStudentName = (user.nome || '').trim();
           query = query.eq('status_validacao', 'VALIDADA').or(`user_id.eq.${user.id},nome_aluno.ilike.${cleanStudentName}`);
         }
@@ -56,7 +56,7 @@ export const redacaoRepository = {
     // Se Supabase falhou/retornou 0 e temos SQLite local com dados, carrega do SQLite!
     if (formatted.length === 0 && db) {
       let rows;
-      if (user.role === 'ADMIN') {
+      if (user.role === 'ADMIN' || user.role === 'PROFESSOR') {
         rows = db.prepare(`
           SELECT r.id, r.user_id, r.nome_aluno, r.turma_aluno, r.nome_detectado, r.data_captura,
                  r.tipo_input, r.texto_digitado, r.is_synced, r.extracted_data, r.nota_final,

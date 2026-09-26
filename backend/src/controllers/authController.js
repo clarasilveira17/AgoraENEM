@@ -123,9 +123,9 @@ export const register = async (req, res) => {
     if (isStudentDomain) {
       userRole = 'ESTUDANTE';
     } else if (isStrictTeacherDomain) {
-      userRole = 'ADMIN';
-    } else if (role === 'ADMIN') {
-      // Se solicitou papel de Professor com e-mail comum, exige chave da escola configurada no ambiente ou autorização por admin autenticado
+      userRole = role === 'ADMIN' ? 'ADMIN' : 'PROFESSOR';
+    } else if (role === 'ADMIN' || role === 'PROFESSOR') {
+      // Se solicitou papel de Professor / Admin com e-mail comum, exige chave da escola configurada no ambiente ou autorização por admin autenticado
       const isAuthorizedByAdmin = req.user?.role === 'ADMIN';
       const isValidSchoolCode = Boolean(
         PROFESSOR_SECRET_KEY &&
@@ -134,7 +134,7 @@ export const register = async (req, res) => {
       );
 
       if (isAuthorizedByAdmin || isValidSchoolCode) {
-        userRole = 'ADMIN';
+        userRole = role;
       } else {
         return res.status(403).json({
           error: 'Cadastro de Professor com e-mail pessoal não autorizado. É necessário informar uma Chave da Escola válida ou ter convite de um Administrador.'

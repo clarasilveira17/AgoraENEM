@@ -8,7 +8,7 @@ import { useAuth } from '../context/AuthContext';
 import { TURMAS_ESCOLA, normalizeTurma } from '../constants/turmas';
 
 export default function RankingView({ redacoes = [], onSelectRedacao }) {
-  const { user, isAdmin } = useAuth();
+  const { user, isAdmin, isProfessor, isTeacherOrAdmin } = useAuth();
   const [selectedTurma, setSelectedTurma] = useState('todas');
   const [searchQuery, setSearchQuery] = useState('');
   const [rankingMode, setRankingMode] = useState('alunos'); // 'alunos' | 'redacoes'
@@ -279,9 +279,14 @@ export default function RankingView({ redacoes = [], onSelectRedacao }) {
     };
   };
 
-  // Helper para verificar se a redação pertence ao aluno logado
+  // Helper para verificar se a redação pode ser visualizada:
+  // - Professores e Administradores podem visualizar todas as redações
+  // - As redações do Top 3 do pódio (#1, #2 e #3) ficam abertas para toda a escola como redações modelo
+  // - O próprio estudante logado pode visualizar suas próprias redações
   const canViewEssay = (itemOrRedacao) => {
-    if (isAdmin) return true;
+    if (isAdmin || isProfessor) return true;
+    const rank = itemOrRedacao.rank;
+    if (rank && Number(rank) <= 3) return true;
     if (!user) return false;
     const uId = itemOrRedacao.userId || itemOrRedacao.user_id;
     const sName = (itemOrRedacao.nome || itemOrRedacao.nome_aluno || '').toLowerCase().trim();
@@ -642,12 +647,19 @@ export default function RankingView({ redacoes = [], onSelectRedacao }) {
 
                         <td className="py-3.5 px-4 text-center">
                           {isAuthorized ? (
-                            <span className="px-2 py-1 rounded bg-[#ffffff] border border-[#e6e5e0] text-[#f54e00] font-mono font-medium text-[10px] hover:bg-[#e6e5e0] inline-flex items-center gap-1 shadow-2xs">
-                              Ver Redação <ChevronRight className="w-3 h-3 inline" />
-                            </span>
+                            item.rank <= 3 && !isCurrentUser && !isTeacherOrAdmin ? (
+                              <span className="px-2 py-1 rounded bg-amber-50 border border-amber-300 text-amber-900 font-mono font-bold text-[10px] hover:bg-amber-100 inline-flex items-center gap-1 shadow-2xs">
+                                <Sparkles className="w-3 h-3 text-amber-600" />
+                                Redação Modelo <ChevronRight className="w-3 h-3 inline" />
+                              </span>
+                            ) : (
+                              <span className="px-2 py-1 rounded bg-[#ffffff] border border-[#e6e5e0] text-[#f54e00] font-mono font-medium text-[10px] hover:bg-[#e6e5e0] inline-flex items-center gap-1 shadow-2xs">
+                                Ver Redação <ChevronRight className="w-3 h-3 inline" />
+                              </span>
+                            )
                           ) : (
-                            <span className="text-[11px] text-[#5a5852] font-mono inline-flex items-center justify-center gap-1 font-medium">
-                              <Lock className="w-3 h-3" /> Restrito
+                            <span className="text-[11px] text-[#807d72] font-mono inline-flex items-center justify-center gap-1 font-medium">
+                              <Lock className="w-3 h-3" /> Restrito (Top 3)
                             </span>
                           )}
                         </td>
@@ -717,12 +729,19 @@ export default function RankingView({ redacoes = [], onSelectRedacao }) {
 
                         <td className="py-3.5 px-4 text-center">
                           {isAuthorized ? (
-                            <span className="px-2 py-1 rounded bg-[#ffffff] border border-[#e6e5e0] text-[#f54e00] font-mono font-medium text-[10px] hover:bg-[#e6e5e0] inline-flex items-center gap-1 shadow-2xs">
-                              Ver Redação <ChevronRight className="w-3 h-3 inline" />
-                            </span>
+                            r.rank <= 3 && !isCurrentUser && !isTeacherOrAdmin ? (
+                              <span className="px-2 py-1 rounded bg-amber-50 border border-amber-300 text-amber-900 font-mono font-bold text-[10px] hover:bg-amber-100 inline-flex items-center gap-1 shadow-2xs">
+                                <Sparkles className="w-3 h-3 text-amber-600" />
+                                Redação Modelo <ChevronRight className="w-3 h-3 inline" />
+                              </span>
+                            ) : (
+                              <span className="px-2 py-1 rounded bg-[#ffffff] border border-[#e6e5e0] text-[#f54e00] font-mono font-medium text-[10px] hover:bg-[#e6e5e0] inline-flex items-center gap-1 shadow-2xs">
+                                Ver Redação <ChevronRight className="w-3 h-3 inline" />
+                              </span>
+                            )
                           ) : (
-                            <span className="text-[11px] text-[#5a5852] font-mono inline-flex items-center justify-center gap-1 font-medium">
-                              <Lock className="w-3 h-3" /> Restrito
+                            <span className="text-[11px] text-[#807d72] font-mono inline-flex items-center justify-center gap-1 font-medium">
+                              <Lock className="w-3 h-3" /> Restrito (Top 3)
                             </span>
                           )}
                         </td>

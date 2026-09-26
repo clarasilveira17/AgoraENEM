@@ -36,7 +36,14 @@ export const authenticate = async (req, res, next) => {
 
 export const requireAdmin = (req, res, next) => {
   if (!req.user || req.user.role !== 'ADMIN') {
-    return res.status(403).json({ error: 'Acesso negado. Requer privilégios de Administrador/Professor.' });
+    return res.status(403).json({ error: 'Acesso negado. Requer privilégios de Administrador Geral.' });
+  }
+  next();
+};
+
+export const requireTeacherOrAdmin = (req, res, next) => {
+  if (!req.user || (req.user.role !== 'ADMIN' && req.user.role !== 'PROFESSOR')) {
+    return res.status(403).json({ error: 'Acesso negado. Requer privilégios de Professor ou Administrador.' });
   }
   next();
 };

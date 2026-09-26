@@ -10,6 +10,7 @@ import { processRedacoesCloud } from '../services/cloudCorrectionService';
 import { authService } from '../services/authService';
 import { useAuth } from '../context/AuthContext';
 import { TURMAS_ESCOLA, normalizeTurma } from '../constants/turmas';
+import { compressImageFile } from '../utils/imageCompressor';
 
 export default function GestaoRedacoesView({ 
   redacoes = [], 
@@ -22,7 +23,7 @@ export default function GestaoRedacoesView({
   searchQuery = '',
   setSearchQuery
 }) {
-  const { user, isAdmin, isEstudante } = useAuth();
+  const { user, isAdmin, isProfessor, isTeacherOrAdmin, isEstudante } = useAuth();
 
   // ==========================================
   // ESTADO DA COLUNA DE ENVIO (ESQUERDA)
@@ -68,29 +69,39 @@ export default function GestaoRedacoesView({
     ).slice(0, 5);
   }, [estudantesList, manualName]);
 
-  const handleFilesSelected = (e) => {
+  const handleFilesSelected = async (e) => {
     const files = Array.from(e.target.files || []);
     if (files.length === 0) return;
 
-    const filePromises = files.map((file, idx) => {
-      return new Promise((resolve) => {
-        const reader = new FileReader();
-        reader.onload = (ev) => {
-          resolve({
-            id: `img_${Date.now()}_${idx}_${Math.random().toString(36).substr(2, 6)}`,
-            name: file.name,
-            size: (file.size / 1024).toFixed(1) + ' KB',
-            base64: ev.target?.result,
-            file
-          });
+    const filePromises = files.map(async (file, idx) => {
+      try {
+        const compressed = await compressImageFile(file);
+        return {
+          id: `img_${Date.now()}_${idx}_${Math.random().toString(36).substr(2, 6)}`,
+          name: file.name,
+          size: compressed.sizeKB,
+          base64: compressed.base64,
+          file
         };
-        reader.readAsDataURL(file);
-      });
+      } catch (err) {
+        return new Promise((resolve) => {
+          const reader = new FileReader();
+          reader.onload = (ev) => {
+            resolve({
+              id: `img_${Date.now()}_${idx}_${Math.random().toString(36).substr(2, 6)}`,
+              name: file.name,
+              size: (file.size / 1024).toFixed(1) + ' KB',
+              base64: ev.target?.result,
+              file
+            });
+          };
+          reader.readAsDataURL(file);
+        });
+      }
     });
 
-    Promise.all(filePromises).then((newFiles) => {
-      setSelectedFiles(prev => [...prev, ...newFiles]);
-    });
+    const newFiles = await Promise.all(filePromises);
+    setSelectedFiles(prev => [...prev, ...newFiles]);
   };
 
   const removeFile = (index) => {
@@ -486,27 +497,27 @@ export default function GestaoRedacoesView({
           <div className="space-y-1.5">
             <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-mono font-medium border border-[#e6e5e0] bg-[#fafaf7] text-[#26251e]">
               <Database className="w-3.5 h-3.5 text-[#f54e00]" />
-              <span>Gestão Integrada de Redações</span>
+              <span>{isTeacherOrAdmin ? 'Gestão Integrada de Redações' : 'Portal do Aluno • Redações'}</span>
             </div>
             <h2 className="text-xl sm:text-2xl font-semibold text-[#26251e] tracking-tight">
-              {isAdmin ? 'Envio & Banco de Redações' : 'Enviar Redação & Minhas Avaliações'}
+              {isTeacherOrAdmin ? 'Envio & Banco de Redações' : 'Minhas Redações & Avaliações'}
             </h2>
             <p className="text-xs text-[#807d72] max-w-2xl leading-relaxed">
-              {isAdmin 
+              {isTeacherOrAdmin 
                 ? 'Lançamento em lote de novas redações para avaliação instantânea e consulta completa ao repositório escolar.'
-                : 'Envie sua redação para correção da IA e acompanhe o seu histórico de notas avaliadas.'}
+                : 'Consulte o histórico completo das suas redações corrigidas e acompanhe seus feedbacks pedagógicos.'}
             </p>
           </div>
 
           {/* Quick Metrics Bar */}
           <div className="flex flex-wrap items-center gap-3 bg-[#fafaf7] border border-[#e6e5e0] p-3 rounded-lg text-xs font-mono shrink-0">
             <div>
-              <span className="text-[10px] text-[#807d72] block uppercase">No Banco</span>
+              <span className="text-[10px] text-[#807d72] block uppercase">{isTeacherOrAdmin ? 'No Banco' : 'Minhas Redações'}</span>
               <strong className="text-[#26251e] text-sm">{totalBanco}</strong>
             </div>
             <div className="h-6 w-px bg-[#e6e5e0]" />
             <div>
-              <span className="text-[10px] text-[#807d72] block uppercase">Média Geral</span>
+              <span className="text-[10px] text-[#807d72] block uppercase">{isTeacherOrAdmin ? 'Média Geral' : 'Sua Média'}</span>
               <strong className="text-[#f54e00] text-sm">{mediaNotas} pts</strong>
             </div>
             <div className="h-6 w-px bg-[#e6e5e0]" />
@@ -514,7 +525,7 @@ export default function GestaoRedacoesView({
               <span className="text-[10px] text-[#807d72] block uppercase">Conferidas</span>
               <strong className="text-[#1f8a65] text-sm">{conferidasCount}</strong>
             </div>
-            {isAdmin && totalDuplicatasCount > 0 && (
+            {isTeacherOrAdmin && totalDuplicatasCount > 0 && (
               <>
                 <div className="h-6 w-px bg-[#e6e5e0]" />
                 <button
@@ -535,24 +546,25 @@ export default function GestaoRedacoesView({
       </div>
 
       {/* ======================================================== */}
-      {/* 2. GRID EM DUAS COLUNAS: ENVIO (ESQ) vs BANCO (DIR)     */}
+      {/* 2. GRID: ENVIO (PROFESSORES) vs BANCO / MINHAS REDAÇÕES  */}
       {/* ======================================================== */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
         
         {/* ======================================================= */}
-        {/* COLUNA 1 (5 Colunas): ENVIO E LANÇAMENTO DE REDAÇÕES   */}
+        {/* COLUNA 1 (5 Colunas): ENVIO E LANÇAMENTO (PROFESSORES)  */}
         {/* ======================================================= */}
-        <div className="lg:col-span-5 bg-[#ffffff] border border-[#e6e5e0] rounded-xl p-5 space-y-4 shadow-xs sticky top-4">
-          
-          <div className="border-b border-[#e6e5e0] pb-3">
-            <h3 className="text-sm font-semibold text-[#26251e] flex items-center gap-2">
-              <Upload className="w-4 h-4 text-[#f54e00]" />
-              <span>Novo Envio & Lançamento</span>
-            </h3>
-            <p className="text-xs text-[#807d72] mt-0.5">
-              Fotos manuscritas (em lote) ou texto digitado
-            </p>
-          </div>
+        {isTeacherOrAdmin && (
+          <div className="lg:col-span-5 bg-[#ffffff] border border-[#e6e5e0] rounded-xl p-5 space-y-4 shadow-xs sticky top-4">
+            
+            <div className="border-b border-[#e6e5e0] pb-3">
+              <h3 className="text-sm font-semibold text-[#26251e] flex items-center gap-2">
+                <Upload className="w-4 h-4 text-[#f54e00]" />
+                <span>Novo Envio & Lançamento</span>
+              </h3>
+              <p className="text-xs text-[#807d72] mt-0.5">
+                Fotos manuscritas (em lote) ou texto digitado
+              </p>
+            </div>
 
           {/* Toggle Modo: Imagem vs Texto */}
           <div className="grid grid-cols-2 gap-2 bg-[#fafaf7] p-1 rounded-lg border border-[#e6e5e0]">
@@ -880,21 +892,22 @@ export default function GestaoRedacoesView({
           )}
 
         </div>
+        )}
 
         {/* ======================================================= */}
-        {/* COLUNA 2 (7 Colunas): BANCO DE REDAÇÕES EXISTENTES      */}
+        {/* COLUNA 2: BANCO (PROFESSORES) / MINHAS REDAÇÕES (ALUNOS) */}
         {/* ======================================================= */}
-        <div className="lg:col-span-7 bg-[#ffffff] border border-[#e6e5e0] rounded-xl p-5 space-y-4 shadow-xs">
+        <div className={`${isTeacherOrAdmin ? 'lg:col-span-7' : 'lg:col-span-12'} bg-[#ffffff] border border-[#e6e5e0] rounded-xl p-5 space-y-4 shadow-xs`}>
           
           {/* Cabeçalho do Banco & Controles de Busca */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#e6e5e0] pb-3.5">
             <div>
               <h3 className="text-sm font-semibold text-[#26251e] flex items-center gap-2">
                 <Database className="w-4 h-4 text-[#1f8a65]" />
-                <span>Repositório de Redações ({filteredRedacoes.length})</span>
+                <span>{isTeacherOrAdmin ? `Repositório de Redações (${filteredRedacoes.length})` : `Minhas Redações Avaliadas (${filteredRedacoes.length})`}</span>
               </h3>
               <p className="text-xs text-[#807d72]">
-                {isAdmin ? 'Lista completa de redações processadas pela IA' : 'Histórico das suas correções'}
+                {isTeacherOrAdmin ? 'Lista completa de redações processadas pela IA' : 'Histórico das suas redações corrigidas e notas oficiais'}
               </p>
             </div>
 

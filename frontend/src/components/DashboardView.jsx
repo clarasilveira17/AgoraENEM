@@ -3,7 +3,7 @@ import { Award, Sparkles, UserCheck, AlertTriangle, FileText, ChevronRight, Grad
 import { useAuth } from '../context/AuthContext';
 
 export default function DashboardView({ redacoes, rankingRedacoes = [], isLoading = false, onSelectRedacao, onNavigateToUpload, onNavigateToRanking, onNavigateToSemNome, onNavigateToDiagnostico }) {
-  const { user, isAdmin } = useAuth();
+  const { user, isAdmin, isProfessor, isTeacherOrAdmin } = useAuth();
 
   const totalCount = redacoes.length;
   const correctedList = useMemo(() => {
@@ -191,20 +191,20 @@ export default function DashboardView({ redacoes, rankingRedacoes = [], isLoadin
           <div className="space-y-1.5">
             <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-mono font-medium border border-[#dfa88f] bg-[#dfa88f]/20 text-[#f54e00]">
               <Sparkles className="w-3.5 h-3.5" />
-              <span>{isAdmin ? 'Painel do Professor' : 'Portal do Aluno'}</span>
+              <span>{isAdmin ? 'Painel do Administrador' : isProfessor ? 'Painel do Professor' : 'Portal do Aluno'}</span>
             </div>
             <h2 className="text-xl sm:text-2xl font-semibold text-[#26251e] tracking-tight">
-              {isAdmin ? 'Painel Geral de Desempenho' : `Olá, ${user?.nome || 'Estudante'}!`}
+              {isTeacherOrAdmin ? 'Painel Geral de Desempenho' : `Olá, ${user?.nome || 'Estudante'}!`}
             </h2>
             <p className="text-xs text-[#807d72] max-w-xl leading-relaxed">
-              {isAdmin
+              {isTeacherOrAdmin
                 ? 'Análise textual cruzada baseada na Matriz do ENEM (0-1000) e Rubricas Qualitativas Sisedu.'
                 : 'Acompanhe o desempenho detalhado, ranking da turma e as notas das suas redações.'}
             </p>
           </div>
 
           <div className="flex flex-wrap items-center gap-2 shrink-0">
-            {onNavigateToDiagnostico && (
+            {isTeacherOrAdmin && onNavigateToDiagnostico && (
               <button
                 type="button"
                 onClick={onNavigateToDiagnostico}
@@ -226,7 +226,7 @@ export default function DashboardView({ redacoes, rankingRedacoes = [], isLoadin
               </button>
             )}
 
-            {isAdmin && (
+            {isTeacherOrAdmin && onNavigateToUpload && (
               <button
                 type="button"
                 onClick={onNavigateToUpload}
@@ -240,8 +240,8 @@ export default function DashboardView({ redacoes, rankingRedacoes = [], isLoadin
         </div>
       </div>
 
-      {/* SCIENCE FAIR CALLOUT BANNER */}
-      {onNavigateToDiagnostico && (
+      {/* SCIENCE FAIR CALLOUT BANNER - Apenas para Professores / Gestores */}
+      {isTeacherOrAdmin && onNavigateToDiagnostico && (
         <div 
           onClick={onNavigateToDiagnostico}
           className="bg-gradient-to-r from-emerald-500/10 via-amber-500/10 to-rose-500/10 border border-emerald-300/80 rounded-xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs hover:border-emerald-400 transition-all cursor-pointer group"

@@ -72,7 +72,9 @@ export const AuthProvider = ({ children }) => {
     syncLegacyToCloud,
     isAuthenticated: !!user,
     isAdmin: user?.role === 'ADMIN',
-    isEstudante: user?.role === 'ESTUDANTE'
+    isProfessor: user?.role === 'PROFESSOR',
+    isTeacherOrAdmin: user?.role === 'ADMIN' || user?.role === 'PROFESSOR',
+    isEstudante: user?.role === 'ESTUDANTE' || (!user?.role)
   };
 
   return (

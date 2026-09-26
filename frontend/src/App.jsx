@@ -20,7 +20,7 @@ const CorrecaoDetalheView = lazy(() => import('./components/CorrecaoDetalheView'
 const ProjetoAgoraLandingView = lazy(() => import('./components/ProjetoAgoraLandingView'));
 
 function AppContent() {
-  const { user, isAuthenticated, isAdmin, isEstudante, loading: authLoading } = useAuth();
+  const { user, isAuthenticated, isAdmin, isProfessor, isTeacherOrAdmin, isEstudante, loading: authLoading } = useAuth();
   
   // Parse Hash URL to support #correcao/42 or regular views
   const parseHash = () => {
@@ -56,6 +56,10 @@ function AppContent() {
   });
 
   const handleSetActiveView = (view) => {
+    // Redireciona alunos que tentarem acessar a aba de diagnóstico ou validação para o dashboard
+    if (!isTeacherOrAdmin && (view === 'diagnostico' || view === 'validacao' || view === 'config')) {
+      view = 'dashboard';
+    }
     if (activeView !== 'correcao') {
       setPreviousView(activeView);
     }
@@ -79,12 +83,16 @@ function AppContent() {
   useEffect(() => {
     const handleHashChange = () => {
       const route = parseHash();
-      setActiveView(route.view);
+      let targetView = route.view;
+      if (!isTeacherOrAdmin && (targetView === 'diagnostico' || targetView === 'validacao' || targetView === 'config')) {
+        targetView = 'dashboard';
+      }
+      setActiveView(targetView);
       setCurrentCorrecaoId(route.id);
     };
     window.addEventListener('hashchange', handleHashChange);
     return () => window.removeEventListener('hashchange', handleHashChange);
-  }, []);
+  }, [isTeacherOrAdmin]);
 
   // Limpa silenciosamente o cache antigo do IndexedDB do navegador para evitar conflitos
   useEffect(() => {
@@ -103,7 +111,7 @@ function AppContent() {
       const cloudDocs = Array.isArray(cloudDocsRes) ? cloudDocsRes : [];
       const rankingDocs = Array.isArray(rankingDocsRes) ? rankingDocsRes : [];
 
-      if (!isAdmin && user && user.role === 'ESTUDANTE') {
+      if (!isTeacherOrAdmin && user && user.role === 'ESTUDANTE') {
         // Para Estudante: Mostrar apenas as redações validadas do próprio estudante logado
         const cleanName = (user.nome || '').toLowerCase().trim();
         const studentCloudDocs = cloudDocs.filter(r =>
@@ -311,14 +319,14 @@ function AppContent() {
                   rankingRedacoes={rankingRedacoes}
                   isLoading={isLoadingRedacoes}
                   onSelectRedacao={handleSelectRedacao}
-                  onNavigateToUpload={() => handleSetActiveView('tabela')}
+                  onNavigateToUpload={isTeacherOrAdmin ? () => handleSetActiveView('tabela') : null}
                   onNavigateToRanking={() => handleSetActiveView('ranking')}
-                  onNavigateToSemNome={() => handleSetActiveView('validacao')}
-                  onNavigateToDiagnostico={() => handleSetActiveView('diagnostico')}
+                  onNavigateToSemNome={isTeacherOrAdmin ? () => handleSetActiveView('validacao') : null}
+                  onNavigateToDiagnostico={isTeacherOrAdmin ? () => handleSetActiveView('diagnostico') : null}
                 />
               )}
 
-              {activeView === 'diagnostico' && (
+              {activeView === 'diagnostico' && isTeacherOrAdmin && (
                 <DiagnosticoFeiraView
                   redacoes={redacoes}
                   rankingRedacoes={rankingRedacoes}
@@ -340,14 +348,14 @@ function AppContent() {
                   filterTab={activeView === 'sem_nome' ? 'sem_nome' : filterTab}
                   setFilterTab={setFilterTab}
                   onSelectRedacao={handleSelectRedacao}
-                  onDeleteRedacao={handleDeleteRedacao}
+                  onDeleteRedacao={isTeacherOrAdmin ? handleDeleteRedacao : null}
                   onRedacaoSaved={handleRedacaoSaved}
                   searchQuery={searchQuery}
                   setSearchQuery={setSearchQuery}
                 />
               )}
 
-              {activeView === 'validacao' && (
+              {activeView === 'validacao' && isTeacherOrAdmin && (
                 <ValidacaoRapidaView
                   redacoes={redacoes}
                   onSelectRedacao={handleSelectRedacao}
@@ -366,7 +374,7 @@ function AppContent() {
                 />
               )}
 
-              {activeView === 'config' && (
+              {activeView === 'config' && isAdmin && (
                 <ConfigView />
               )}
             </Suspense>

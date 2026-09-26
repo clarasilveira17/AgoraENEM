@@ -23,7 +23,7 @@ import { useAuth } from '../context/AuthContext';
 import { useNetworkStatus } from '../hooks/useNetworkStatus';
 
 export default function Sidebar({ activeView, setActiveView, isMobileMenuOpen, setIsMobileMenuOpen, pendingCount, unidentifiedCount, onToast }) {
-  const { user, logout, isAdmin, isEstudante, syncLegacyToCloud } = useAuth();
+  const { user, logout, isAdmin, isProfessor, isTeacherOrAdmin, isEstudante, syncLegacyToCloud } = useAuth();
   const isOnline = useNetworkStatus();
   const [isCloudSyncing, setIsCloudSyncing] = useState(false);
   const [syncFeedback, setSyncFeedback] = useState(null);
@@ -81,7 +81,7 @@ export default function Sidebar({ activeView, setActiveView, isMobileMenuOpen, s
     }
   };
 
-  const navSections = isAdmin ? [
+  const navSections = isTeacherOrAdmin ? [
     {
       title: 'Geral',
       items: [
@@ -97,25 +97,26 @@ export default function Sidebar({ activeView, setActiveView, isMobileMenuOpen, s
         { id: 'validacao', label: 'Validar Alunos & Turmas', icon: UserCheck, badge: unidentifiedCount }
       ]
     },
-    {
-      title: 'Sistema',
-      items: [
-        { id: 'config', label: 'Configurações & API', icon: Settings }
-      ]
-    }
+    ...(isAdmin ? [
+      {
+        title: 'Sistema',
+        items: [
+          { id: 'config', label: 'Configurações & API', icon: Settings }
+        ]
+      }
+    ] : [])
   ] : [
     {
       title: 'Geral',
       items: [
         { id: 'dashboard', label: 'Minhas Notas & Desempenho', icon: LayoutDashboard },
-        { id: 'diagnostico', label: 'Diagnóstico & Evolução', icon: TrendingUp },
         { id: 'ranking', label: 'Ranking & Classificação', icon: Trophy }
       ]
     },
     {
       title: 'Desempenho',
       items: [
-        { id: 'tabela', label: 'Enviar & Minhas Redações', icon: GraduationCap }
+        { id: 'tabela', label: 'Minhas Redações', icon: GraduationCap }
       ]
     }
   ];
@@ -135,7 +136,7 @@ export default function Sidebar({ activeView, setActiveView, isMobileMenuOpen, s
           <div>
             <span className="font-normal text-sm sm:text-base text-[#26251e] block tracking-tight">Ágora ENEM</span>
             <span className="text-[10px] text-[#807d72] font-mono block">
-              {isAdmin ? 'Painel do Professor' : 'Portal do Aluno'}
+              {isAdmin ? 'Painel do Administrador' : isProfessor ? 'Painel do Professor' : 'Portal do Aluno'}
             </span>
           </div>
         </div>

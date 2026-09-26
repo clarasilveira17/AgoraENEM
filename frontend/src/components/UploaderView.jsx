@@ -4,6 +4,7 @@ import {
   Trash2, Edit3, User, GraduationCap, Sparkles, RefreshCw, ShieldCheck, Clock, AlertTriangle 
 } from 'lucide-react';
 import { processRedacoesCloud, reprocessarRedacao } from '../services/cloudCorrectionService';
+import { compressImageFile } from '../utils/imageCompressor';
 
 export default function UploaderView({ onRedacaoSaved }) {
   const [mode, setMode] = useState('imagem');
@@ -21,30 +22,40 @@ export default function UploaderView({ onRedacaoSaved }) {
   const wordCount = typedText.trim() ? typedText.trim().split(/\s+/).length : 0;
   const lineCount = typedText.trim() ? typedText.split('\n').length : 0;
 
-  const handleFileSelect = (event) => {
+  const handleFileSelect = async (event) => {
     const files = Array.from(event.target.files || []);
     if (files.length === 0) return;
 
-    const filePromises = files.map((file, idx) => {
-      return new Promise((resolve) => {
-        const reader = new FileReader();
-        reader.onload = (e) => {
-          const fileId = `file_${Date.now()}_${idx}_${Math.random().toString(36).substring(7)}`;
-          resolve({
-            id: fileId,
-            name: file.name,
-            size: (file.size / 1024).toFixed(1) + ' KB',
-            base64: e.target?.result,
-            status: 'IDLE' // IDLE | PROCESSING | WAITING_RETRY | SUCCESS | ERROR
-          });
+    const filePromises = files.map(async (file, idx) => {
+      const fileId = `file_${Date.now()}_${idx}_${Math.random().toString(36).substring(7)}`;
+      try {
+        const compressed = await compressImageFile(file);
+        return {
+          id: fileId,
+          name: file.name,
+          size: compressed.sizeKB,
+          base64: compressed.base64,
+          status: 'IDLE'
         };
-        reader.readAsDataURL(file);
-      });
+      } catch (err) {
+        return new Promise((resolve) => {
+          const reader = new FileReader();
+          reader.onload = (e) => {
+            resolve({
+              id: fileId,
+              name: file.name,
+              size: (file.size / 1024).toFixed(1) + ' KB',
+              base64: e.target?.result,
+              status: 'IDLE' // IDLE | PROCESSING | WAITING_RETRY | SUCCESS | ERROR
+            });
+          };
+          reader.readAsDataURL(file);
+        });
+      }
     });
 
-    Promise.all(filePromises).then((newFiles) => {
-      setSelectedFiles((prev) => [...prev, ...newFiles]);
-    });
+    const newFiles = await Promise.all(filePromises);
+    setSelectedFiles((prev) => [...prev, ...newFiles]);
   };
 
   const handleRemoveFile = (id) => {
