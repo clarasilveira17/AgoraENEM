@@ -341,17 +341,22 @@ export const getRedacaoById = async (req, res) => {
       
       if (!isOwner) {
         // Permite visualização se for redação modelo do Top 3
-        const topRanking = await redacaoRepository.getRanking(3);
-        const isTop3 = Array.isArray(topRanking) && topRanking.some(r => Number(r.id) === Number(id));
-        if (!isTop3) {
-          return res.status(403).json({ error: 'Você só tem permissão para visualizar suas próprias redações ou as redações modelo do Top 3.' });
+        try {
+          const topRanking = await redacaoRepository.findRanking();
+          const isTop3 = Array.isArray(topRanking) && topRanking.slice(0, 3).some(r => Number(r.id) === Number(id));
+          if (!isTop3) {
+            return res.status(403).json({ error: 'Você só tem permissão para visualizar suas próprias redações ou as redações modelo do Top 3.' });
+          }
+        } catch (rankingErr) {
+          logger.warn('Falha ao verificar Top 3 no ranking para permissao:', rankingErr.message);
+          return res.status(403).json({ error: 'Você só tem permissão para visualizar suas próprias redações.' });
         }
       }
     }
 
     return res.status(200).json(redacao);
   } catch (error) {
-    logger.error('Erro ao carregar detalhes da redação', { requestId: req.id, error });
+    logger.error('Erro ao carregar detalhes da redação', { requestId: req.id, error: error.message });
     return res.status(500).json({ error: 'Erro ao carregar detalhes da redação.' });
   }
 };
