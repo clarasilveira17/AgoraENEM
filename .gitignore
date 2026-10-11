@@ -56,3 +56,10 @@ design_pattern.md
 *.log
 scratch/
 
+# LaTeX build files
+*.aux
+*.out
+*.toc
+*.synctex.gz
+
+

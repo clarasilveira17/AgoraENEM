@@ -73,7 +73,7 @@ class RateLimitedQueueService {
       try {
         logger.info(`[Queue] Processando item ID: ${current.id} (Tentativa ${current.attempts}/${this.maxRetries})`);
         const result = await this.executeEvaluation(current.item, current.requestingUser);
-        
+
         current.status = 'CONCLUIDO';
         current.result = result;
         this.stats.processed++;
@@ -82,24 +82,21 @@ class RateLimitedQueueService {
         logger.error(`[Queue] Erro ao processar item ID ${current.id}: ${error.message}`);
         this.stats.errors++;
 
-        // Se ainda tiver tentativas, re-enfileira com atraso
         if (current.attempts < this.maxRetries) {
-          const backoffDelay = current.attempts * 10000; // 10s, 20s
+          const backoffDelay = current.attempts * 10000;
           logger.warn(`[Queue] Re-enfileirando item ID ${current.id} para retry em ${backoffDelay / 1000}s`);
           this.stats.retries++;
-          
+
           setTimeout(() => {
             current.status = 'PENDENTE';
             this.queue.push(current);
             if (!this.isProcessing) this.processQueue();
           }, backoffDelay);
         } else {
-          // Esgotou tentativas: salva no banco com status ERRO_PROCESSAMENTO para reprocessamento manual/agendado
           await this.saveFailedEssay(current.item, error.message, current.attempts);
         }
       }
 
-      // Intervalo de segurança anti-estouro de cota (4.5s)
       if (this.queue.length > 0) {
         await new Promise(r => setTimeout(r, this.rateLimitDelayMs));
       }
@@ -208,7 +205,7 @@ class RateLimitedQueueService {
     try {
       const dataCaptura = item.data_captura || new Date().toISOString();
       const tipoInput = item.tipo_input || (item.imagem_base64 ? 'imagem' : 'texto');
-      
+
       const payload = {
         user_id: item.user_id || null,
         nome_aluno: item.nome_aluno || 'Não identificado',

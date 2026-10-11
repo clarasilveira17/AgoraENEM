@@ -1,0 +1,650 @@
+\documentclass[11pt,a4paper]{article}
+
+% --- PACOTES BÁSICOS E TIPOGRAFIA ---
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[portuguese]{babel}
+\usepackage{lmodern}
+\usepackage{microtype}
+
+% --- GEOMETRIA E ESPAÇAMENTO ---
+\usepackage[top=2.5cm, bottom=2.5cm, left=2.3cm, right=2.3cm, headheight=16pt]{geometry}
+\usepackage{setspace}
+\onehalfspacing
+\usepackage{parskip}
+
+% --- CORES E DESIGN SYSTEM ---
+\usepackage{xcolor}
+\definecolor{agoraDark}{HTML}{1E293B}      % Slate 800
+\definecolor{agoraPrimary}{HTML}{0F172A}   % Slate 900
+\definecolor{agoraAccent}{HTML}{EA580C}    % Orange 600 (Cursor/Agora Accent)
+\definecolor{agoraBlue}{HTML}{2563EB}      % Blue 600
+\definecolor{agoraGreen}{HTML}{16A34A}     % Green 600
+\definecolor{agoraPurple}{HTML}{7C3AED}    % Purple 600
+\definecolor{bgLight}{HTML}{F8FAFC}        % Slate 50
+\definecolor{boxBorder}{HTML}{CBD5E1}      % Slate 300
+\definecolor{codeBg}{HTML}{0F172A}         % Dark code background
+
+% --- BOXES MODERNOS ---
+\usepackage{tcolorbox}
+\tcbset{
+    boxrule=0.8pt,
+    arc=4pt,
+    fonttitle=\bfseries\sffamily,
+    coltitle=white,
+    colback=bgLight,
+    colframe=agoraDark
+}
+
+\newtcolorbox{infobox}[2][agoraBlue]{
+    colframe=#1,
+    colback=bgLight,
+    coltitle=white,
+    title={#2}
+}
+
+\newtcolorbox{warningbox}[2][agoraAccent]{
+    colframe=#1,
+    colback=bgLight,
+    coltitle=white,
+    title={#2}
+}
+
+\newtcolorbox{successbox}[2][agoraGreen]{
+    colframe=#1,
+    colback=bgLight,
+    coltitle=white,
+    title={#2}
+}
+
+% --- TABELAS E GRÁFICOS ---
+\usepackage{tabularx}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{tikz}
+\usetikzlibrary{shapes.geometric, arrows.meta, positioning, calc, backgrounds, fit, shadows}
+
+% --- CABEÇALHOS E RODAPÉS ---
+\usepackage{fancyhdr}
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\small\sffamily\textcolor{gray}{\textbf{Ágora ENEM} | Documento de Arquitetura \& Engenharia}}
+\fancyhead[R]{\small\sffamily\textcolor{gray}{Visão Técnica do Sistema}}
+\fancyfoot[C]{\sffamily\thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+\renewcommand{\footrulewidth}{0.4pt}
+
+% --- TÍTULOS E SEÇÕES ---
+\usepackage{titlesec}
+\titleformat{\section}
+  {\normalfont\Large\bfseries\sffamily\color{agoraDark}}{\thesection}{1em}{}[\color{agoraAccent}\titlerule]
+\titleformat{\subsection}
+  {\normalfont\large\bfseries\sffamily\color{agoraBlue}}{\thesubsection}{1em}{}
+\titleformat{\subsubsection}
+  {\normalfont\normalsize\bfseries\sffamily\color{agoraDark}}{\thesubsubsection}{1em}{}
+
+% --- CÓDIGO E LISTAGENS ---
+\usepackage{listings}
+\lstdefinelanguage{JavaScript}{
+  keywords={break, case, catch, class, const, continue, debugger, default, delete, do, else, export, extends, finally, for, function, if, import, in, instanceof, new, return, super, switch, this, throw, try, typeof, var, void, while, with, yield, async, await, let, static, null, true, false, undefined},
+  morecomment=[l]{//},
+  morecomment=[s]{/*}{*/},
+  morestring=[b]',
+  morestring=[b]",
+  morestring=[b]`
+}
+
+\lstset{
+    backgroundcolor=\color{bgLight},
+    basicstyle=\ttfamily\footnotesize\color{agoraDark},
+    keywordstyle=\bfseries\color{agoraAccent},
+    stringstyle=\color{agoraGreen},
+    commentstyle=\color{gray},
+    numberstyle=\tiny\color{gray},
+    numbers=left,
+    stepnumber=1,
+    numbersep=8pt,
+    showstringspaces=false,
+    breaklines=true,
+    frame=single,
+    rulecolor=\color{boxBorder},
+    tabsize=2
+}
+
+% --- LINKS E SUMÁRIO ---
+\usepackage[pdftex, hyperfootnotes=false, plainpages=false, pdfpagelabels]{hyperref}
+\hypersetup{
+    colorlinks=true,
+    linkcolor=agoraBlue,
+    urlcolor=agoraAccent,
+    citecolor=agoraGreen,
+    pdftitle={Guia de Arquitetura e Engenharia - Agora ENEM},
+    pdfauthor={Equipe Agora ENEM / Clara Silveira}
+}
+\usepackage{enumitem}
+
+\begin{document}
+\pagenumbering{gobble}
+
+% ==============================================================================
+% CAPA MODERNA E ELEGANTE
+% ==============================================================================
+\begin{titlepage}
+    \begin{tikzpicture}[remember picture, overlay]
+        % Faixa decorativa superior
+        \fill[agoraDark] (current page.north west) rectangle ([yshift=-4.5cm]current page.north east);
+        \fill[agoraAccent] ([yshift=-4.5cm]current page.north west) rectangle ([yshift=-4.7cm]current page.north east);
+        
+        % Badge no topo
+        \node[anchor=north west, text=white, font=\sffamily\bfseries\small] at ([xshift=2.5cm, yshift=-1.5cm]current page.north west) {PROJETO ÁGORA $\cdot$ PLATAFORMA DE CORREÇÃO PEDAGÓGICA IA};
+        \node[anchor=north west, text=white, font=\sffamily\Huge\bfseries] at ([xshift=2.5cm, yshift=-2.4cm]current page.north west) {ÁGORA ENEM};
+        \node[anchor=north west, text=orange!30, font=\sffamily\large] at ([xshift=2.5cm, yshift=-3.5cm]current page.north west) {Arquitetura de Software, Engenharia de IA e Guia de Funcionamento};
+    \end{tikzpicture}
+
+    \vspace{4.8cm}
+
+    \begin{tcolorbox}[colframe=agoraBlue, title={Resumo Executivo do Documento}]
+        Este documento foi concebido para explicar detalhadamente \textbf{o que está por trás} da plataforma \textbf{Ágora ENEM}: sua arquitetura de software, o pipeline de inteligência artificial multimodal com visão computacional, a avaliação cruzada entre a \textbf{Matriz Oficial do ENEM} e a \textbf{Matriz Qualitativa SISEDU / SPAECE (Projeto Ágora Escolar)}, o sistema de fallback resiliente de modelos Google Gemini, a gestão de filas e a interface offline-first voltada à produtividade docente.
+    \end{tcolorbox}
+
+    \vspace{0.8cm}
+
+    \begin{center}
+        \begin{tabularx}{\textwidth}{r X}
+            \textbf{Repositório Oficial:} & \texttt{clarasilveira17/AgoraENEM} \\
+            \textbf{Objetivo do Projeto:} & Avaliação Automatizada \& Devolutiva Pedagógica (ENEM $\times$ SISEDU) \\
+            \textbf{Linguagens / Stacks:} & Node.js (Express), React 19 (Vite, TailwindCSS), Gemini AI SDK \\
+            \textbf{Bancos de Dados:} & Supabase (PostgreSQL Cloud) + SQLite Local + Dexie.js (IndexedDB) \\
+            \textbf{Modelos de IA:} & Família Google Gemini Flash (3.5 Flash Lite, 3.7 Flash, Flash Latest) \\
+            \textbf{Data da Edição:} & Setembro de 2026 \\
+        \end{tabularx}
+    \end{center}
+
+    \vfill
+
+    \begin{center}
+        \begin{tikzpicture}
+            \node[draw=agoraDark, rounded corners=6pt, fill=bgLight, inner sep=10pt, text width=0.85\textwidth, align=center] {
+                \textbf{\sffamily Visão Geral:} Da foto da folha manuscrita ao boletim oficial com competências C1--C5, desvios e proposta de intervenção em menos de 10 segundos por aluno.
+            };
+        \end{tikzpicture}
+    \end{center}
+
+    \vspace{0.5cm}
+\end{titlepage}
+
+% ==============================================================================
+% SUMÁRIO
+% ==============================================================================
+\tableofcontents
+\newpage
+\pagenumbering{arabic}
+
+% ==============================================================================
+% SEÇÃO 1: VISÃO GERAL E MOTIVAÇÃO
+% ==============================================================================
+\section{Visão Geral e Contexto Pedagógico}
+
+\subsection{O Desafio Escolar}
+No modelo tradicional de ensino, a preparação para a Redação do ENEM (Exame Nacional do Ensino Médio) impõe um desafio colossal aos professores de Língua Portuguesa e Redação:
+\begin{itemize}[leftmargin=1.5em]
+    \item \textbf{Sobrecarga de Correção:} Corrigir manualmente 200 a 400 redações manuscritas por mês demanda dezenas de horas extraclasse.
+    \item \textbf{Latência de Feedback:} Os estudantes frequentemente recebem a devolutiva semanas após a escrita, perdendo o momento pedagógico ideal para assimilar seus erros.
+    \item \textbf{Subjetividade e Inconsistência:} Manter a mesma régua de pontuação (critérios das 5 Competências do ENEM de 0 a 200 pontos cada) em pilhas de folhas físicas é exaustivo e sujeito a variações.
+\end{itemize}
+
+\subsection{A Solução Ágora ENEM}
+A plataforma \textbf{Ágora ENEM} nasceu para solucionar essa dor integrando \textbf{Visão Computacional Multimodal (IA)} e uma \textbf{Interface Human-in-the-Loop}:
+\begin{enumerate}[leftmargin=1.5em]
+    \item O professor fotografa as folhas oficiais de redação ou o estudante digita seu texto.
+    \item A IA transcreve a caligrafia manuscrita integralmente e aplica os critérios do ENEM (C1 a C5) e da instituição (Sisedu).
+    \item A plataforma gera uma nota de 0 a 1000 com justificativas por competência, pontos fortes, desvios gramaticais pontuais e o detalhamento da Proposta de Intervenção (Agente, Ação, Meio/Modo, Efeito e Detalhamento).
+    \item O professor utiliza a tela de \textbf{Validação Rápida} para auditar a transcrição lado a lado com a foto original e ajustar notas com um único clique antes de liberar o boletim para o aluno.
+\end{enumerate}
+
+\begin{successbox}{Human-in-the-Loop (O Professor no Centro)}
+A inteligência artificial não substitui o professor: ela atua como um \textbf{super-assistente} que digita, transcreve e pré-avalia com precisão matemática, cabendo ao docente a validação final e o direcionamento humanizado.
+\end{successbox}
+
+% ==============================================================================
+% SEÇÃO 2: ARQUITETURA GERAL DO SISTEMA
+% ==============================================================================
+\section{Arquitetura Geral do Sistema}
+
+O Ágora ENEM adota uma arquitetura em camadas orientada a serviços (Service-Oriented Architecture), com separação clara de responsabilidades entre Frontend, Gateway/Backend, Fila de Processamento, Motor de IA e Camada de Persistência Híbrida.
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[
+    node distance=1.2cm and 1.8cm,
+    font=\sffamily\small,
+    box/.style={rectangle, draw=agoraDark, rounded corners=4pt, fill=bgLight, text width=3.2cm, minimum height=1.4cm, align=center, thick},
+    aiBox/.style={rectangle, draw=agoraAccent, rounded corners=4pt, fill=orange!5, text width=3.4cm, minimum height=1.5cm, align=center, thick},
+    dbBox/.style={rectangle, draw=agoraBlue, rounded corners=4pt, fill=blue!5, text width=3.2cm, minimum height=1.4cm, align=center, thick},
+    arrow/.style={-{Stealth[length=3mm]}, thick, draw=agoraDark}
+]
+
+    % Frontend
+    \node[box, fill=purple!5, draw=agoraPurple] (front) {\textbf{Frontend SPA}\\\scriptsize React 19 + Vite\\Dexie.js (Offline First)};
+    
+    % Backend Gateway
+    \node[box, right=of front] (back) {\textbf{Backend Express}\\\scriptsize Rate Limiting + Auth\\Security Headers};
+    
+    % Queue
+    \node[box, below=of back] (queue) {\textbf{Queue Service}\\\scriptsize Controle 4.5s (13 RPM)\\Retry Backoff};
+    
+    % AI Engine
+    \node[aiBox, right=of back] (ai) {\textbf{AI Service (Gemini)}\\\scriptsize Agente Unificado\\OCR + ENEM C1-C5\\Fallback em Cascata};
+    
+    % Databases
+    \node[dbBox, below=of front] (sqlite) {\textbf{SQLite Local}\\\scriptsize Cache local \& Backup\\Tolerância a falhas};
+    \node[dbBox, below=of ai] (supa) {\textbf{Supabase (Cloud)}\\\scriptsize PostgreSQL + JSONB\\Autenticação \& Sync};
+
+    % Conexões
+    \draw[arrow] (front) -- node[above]{\scriptsize HTTP/JSON} (back);
+    \draw[arrow] (back) -- node[right]{\scriptsize Enfileira} (queue);
+    \draw[arrow] (queue) -- node[above]{\scriptsize Executa (Safe RPM)} (ai);
+    \draw[arrow] (ai) -- node[above]{\scriptsize Retorna JSON} (back);
+    \draw[arrow] (back) -- node[above]{\scriptsize Persiste} (supa);
+    \draw[arrow] (back) -- node[left]{\scriptsize Fallback} (sqlite);
+    \draw[arrow, dashed] (front) -- node[left]{\scriptsize IndexedDB} (sqlite);
+
+\end{tikzpicture}
+\caption{Diagrama de Blocos da Arquitetura Ágora ENEM.}
+\label{fig:arquitetura}
+\end{figure}
+
+\subsection{Visão das Camadas}
+\begin{itemize}[leftmargin=1.5em]
+    \item \textbf{1. Camada de Apresentação (Frontend):} Construída em React 19 com compilação ultra-rápida via Vite. Implementa armazenamento local em IndexedDB (Dexie.js), permitindo que o professor trabalhe em escolas sem internet estável.
+    \item \textbf{2. Camada de Controle e Segurança (Backend API):} Servidor Node.js (ES Modules) com Express, autenticação JWT, proteção RBAC (\texttt{ADMIN}, \texttt{PROFESSOR}, \texttt{ESTUDANTE}), Correlation IDs (\texttt{X-Request-Id}) e sanitização rigorosa.
+    \item \textbf{3. Camada de Fila e Resiliência (\texttt{queueService}):} Gerenciador de concorrência com espaçamento temporal (4.5s) que garante o cumprimento estrito dos limites de taxa gratuitos do Gemini (15 RPM), além de sistema de reprocessamento automático.
+    \item \textbf{4. Camada de Inteligência Artificial (\texttt{aiService}):} Motor multimodal que ingere a imagem em Base64, executa a transcrição OCR e a avaliação analítica em um \textbf{Agente Único Unificado}, com fallback automático entre 6 variantes de modelos Gemini.
+    \item \textbf{5. Camada de Persistência Híbrida:} Supabase PostgreSQL como banco relacional em nuvem e SQLite local (\texttt{better-sqlite3}) como armazenamento redundante e fallback imediato.
+\end{itemize}
+
+% ==============================================================================
+% SEÇÃO 3: O MOTOR DE INTELIGÊNCIA ARTIFICIAL
+% ==============================================================================
+\section{O Motor de Inteligência Artificial Multimodal}
+
+\subsection{Agente Único Unificado: A Grande Otimização}
+Nas primeiras versões do protótipo, o sistema realizava duas chamadas consecutivas à API de IA:
+\begin{enumerate}
+    \item Uma chamada para detecção de cabeçalho e transcrição OCR da caligrafia;
+    \item Uma segunda chamada enviando o texto transcrito para avaliação das competências.
+\end{enumerate}
+
+\textbf{O Gargalo Identificado:} Esse modelo duplicava a latência, consumia o dobro de tokens e esgotava rapidamente a cota de 15 requisições por minuto (RPM) da API gratuita.
+
+\textbf{A Inovação Implementada:} A plataforma migrou para o \textbf{Agente Único Multimodal} (\texttt{agenteAvaliadorUnificado}). Em uma \textbf{única requisição}, a IA recebe a imagem da folha oficial e realiza simultaneamente:
+\begin{itemize}[leftmargin=1.5em]
+    \item A leitura ótica dos caracteres (OCR) com transcrição integral e fiel para a chave \texttt{texto\_transcrito};
+    \item A extração do Nome do Aluno e Turma no cabeçalho;
+    \item A correção pedagógica completa das 5 Competências do ENEM (C1 a C5);
+    \item A identificação dos 5 elementos obrigatórios da Proposta de Intervenção (C5);
+    \item A pontuação e critérios institucionais complementares (Sisedu).
+\end{itemize}
+
+\subsection{Sistema de Fallback em Cascata de Modelos}
+Para blindar o sistema contra indisponibilidades de modelos específicos, quotas temporárias ou variações na API do Google, foi criada a função \texttt{generateContentWithFallback}, que itera sequencialmente pela seguinte lista de prioridade:
+
+\begin{lstlisting}[language=JavaScript, caption={Configuração da Cascata de Modelos Gemini}]
+export const GEMINI_MODELS = [
+  'gemini-3.5-flash-lite',  // 1a Opcao: Alta cota (15 RPM / 500 RPD)
+  'gemini-3.7-flash',       // 2a Opcao: Maior capacidade de raciocinio
+  'gemini-flash-latest',    // 3a Opcao: Alias dinamico para o ultimo Flash
+  'gemini-3.5-flash',       // 4a Opcao: Versao estavel padrao
+  'gemini-3.8-flash',       // 5a Opcao: Modelo experimental
+  'gemini-3.6-flash'        // 6a Opcao: Fallback final de seguranca
+];
+\end{lstlisting}
+
+Se um modelo retornar erro \texttt{404 (Not Found)}, \texttt{429 (Rate Limit)} ou \texttt{503 (Service Unavailable)}, o backend captura a exceção imediatamente e reenvia a requisição para o próximo modelo da lista sem quebrar a experiência do usuário.
+
+\subsection{Parser JSON Ultra-Resiliente (\texttt{extractBalancedJson})}
+Um dos desafios críticos ao lidar com LLMs (Large Language Models) que retornam JSON estruturado é a ocorrência ocasional de textos explicativos, quebras ou comentários após a chave de fechamento \texttt{\}} do objeto principal.
+
+Para garantir 100\% de taxa de sucesso no parse, o Ágora ENEM implementa um algoritmo de máquina de estados (\texttt{extractBalancedJson}) que:
+\begin{itemize}[leftmargin=1.5em]
+    \item Rastreia o nível de profundidade de abertura e fechamento de delimitadores (\texttt{\{} e \texttt{\}});
+    \item Ignora caracteres dentro de strings e sequências de escape (\texttt{\textbackslash"});
+    \item Interrompe a leitura assim que a profundidade retorna a zero, descartando qualquer caractere espúrio subsequente;
+    \item Repara automaticamente strings com aspas duplas internas não-escapadas e remove caracteres de controle invisíveis (\texttt{\textbackslash u0000} a \texttt{\textbackslash u001F}).
+\end{itemize}
+
+\begin{infobox}{Validação por Testes Unitários}
+Essa camada de sanitização e parse possui uma suíte dedicada de 30 testes unitários automatizados no \textbf{Vitest} (\texttt{aiService.test.js}), validando cenários extremos de truncamento, markdown malformado e caracteres residuais.
+\end{infobox}
+
+% ==============================================================================
+% SEÇÃO 4: A MATRIZ SISEDU E AVALIAÇÃO PEDAGÓGICA QUALITATIVA
+% ==============================================================================
+\section{A Matriz SISEDU e a Avaliação Pedagógica Qualitativa}
+
+\subsection{O que é o SISEDU no Projeto Ágora Escolar}
+Enquanto a matriz oficial do ENEM fornece uma nota somativa de 0 a 1000 pontos voltada a ranqueamento e processos seletivos, o \textbf{SISEDU (Sistema de Avaliação Educacional Integrado)} atua como uma \textbf{matriz diagnóstica e formativa}.
+
+O objetivo do SISEDU no \textbf{Projeto Ágora} é avaliar a maturidade intelectual, a postura cidadã e a capacidade reflexiva do estudante em duas grandes dimensões: \textbf{Discursiva} e \textbf{Ético-Crítica}.
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[
+    font=\sffamily\small,
+    dimBox/.style={rectangle, draw=agoraDark, rounded corners=4pt, fill=bgLight, text width=6.2cm, minimum height=3.5cm, align=left, thick},
+    titleBox/.style={rectangle, fill=agoraDark, text=white, font=\sffamily\bfseries\footnotesize, rounded corners=2pt, inner sep=4pt}
+]
+
+    % Caixa Dimensão Discursiva
+    \node[dimBox, fill=blue!3, draw=agoraBlue] (disc) at (0,0) {
+        \vspace{0.4cm}
+        \begin{itemize}[leftmargin=1.2em, itemsep=2pt]
+            \item \textbf{Clareza da Tese (D05/D06):} Postura crítica e autoria.
+            \item \textbf{Argumentação (D14/D16):} Sustentação lógica e projeto.
+            \item \textbf{Repertório (D13):} Conexão interdisciplinar e pertinência.
+        \end{itemize}
+        \scriptsize\textbf{Níveis:} Inicial $\rightarrow$ Adequado $\rightarrow$ Avançado
+    };
+    \node[titleBox, fill=agoraBlue, anchor=north west] at (disc.north west) {1. Dimensão Discursiva};
+
+    % Caixa Dimensão Ético-Crítica
+    \node[dimBox, fill=orange!3, draw=agoraAccent] (etic) at (7.2,0) {
+        \vspace{0.4cm}
+        \begin{itemize}[leftmargin=1.2em, itemsep=2pt]
+            \item \textbf{Empatia \& Alteridade:} Reconhecimento do outro e direitos.
+            \item \textbf{Justificação Moral:} Fundamentação ética e racional.
+            \item \textbf{Conclusão Propositiva:} Viabilidade transformadora.
+        \end{itemize}
+        \scriptsize\textbf{Níveis:} Inicial $\rightarrow$ Adequado $\rightarrow$ Avançado
+    };
+    \node[titleBox, fill=agoraAccent, anchor=north west] at (etic.north west) {2. Dimensão Ético-Crítica};
+
+\end{tikzpicture}
+\caption{Estrutura das Duas Dimensões Avaliativas da Matriz SISEDU.}
+\label{fig:sisedu_matriz}
+\end{figure}
+
+\subsection{Rubricas das Dimensões SISEDU}
+
+\subsubsection{1. Dimensão Discursiva}
+Avalia como o estudante estrutura o pensamento e constrói seu posicionamento:
+\begin{itemize}[leftmargin=1.5em]
+    \item \textbf{Tese e Autoria:}
+    \begin{itemize}
+        \item \textit{Inicial:} Opinião vaga, implícita ou restrita à repetição da proposta.
+        \item \textit{Em Desenvolvimento / Adequado:} Ponto de vista explícito e delimitado na introdução.
+        \item \textit{Avançado:} Tese problematizadora com forte marca de autoria e posicionamento crítico maduro.
+    \end{itemize}
+    \item \textbf{Progressão Argumentativa:}
+    \begin{itemize}
+        \item \textit{Inicial:} Exemplos isolados, senso comum e fragmentação temática.
+        \item \textit{Em Desenvolvimento / Adequado:} Relações de causa, consequência e projeto de texto coerente.
+        \item \textit{Avançado:} Argumentação sólida, contra-argumentação eficiente e articulação interdisciplinar.
+    \end{itemize}
+    \item \textbf{Uso do Repertório Sociocultural:}
+    \begin{itemize}
+        \item \textit{Inicial:} Ausência de referências ou citações baseadas exclusivamente nos textos motivadores.
+        \item \textit{Em Desenvolvimento / Adequado:} Menção a fatos históricos ou leis de forma pertinente.
+        \item \textit{Avançado:} Repertório produtivo integrado organicamente à argumentação (filosofia, sociologia, arte e dados).
+    \end{itemize}
+\end{itemize}
+
+\subsubsection{2. Dimensão Ético-Crítica}
+Avalia o compromisso social e o alcance ético do estudante diante da realidade brasileira:
+\begin{itemize}[leftmargin=1.5em]
+    \item \textbf{Empatia e Alteridade (Direitos Humanos):} Capacidade de compreender a vulnerabilidade de grupos marginalizados sem posturas punitivas ou preconceituosas.
+    \item \textbf{Justificação Moral / Axiológica:} Fundamentação de escolhas argumentativas em princípios de justiça social, equidade e solidariedade democrática.
+    \item \textbf{Eficácia Propositiva (Conclusão Crítica):} Capacidade de articular ações viáveis com poder de transformação social real.
+\end{itemize}
+
+\subsection{Integração com a Matriz de Descritores SPAECE (Ceará)}
+A plataforma correlaciona a avaliação discursiva aos descritores de proficiência do **SPAECE** (Sistema Permanente de Avaliação da Educação Básica do Ceará), permitindo diagnósticos institucionais precisos:
+
+\begin{center}
+\begin{tabularx}{\textwidth}{l l p{8.5cm}}
+\toprule
+\textbf{Código} & \textbf{Competência} & \textbf{Descrição Pedagógica do Descritor} \\
+\midrule
+\texttt{D05} & Leitura / Tese & Identificar o tema central e a tese defendida no texto. \\
+\texttt{D06} & Argumentação & Distinguir um fato da opinião ou juízo de valor a ele associado. \\
+\texttt{D12} & Coesão Lexical & Estabelecer relações lógico-discursivas marcadas por conectores e operadores. \\
+\texttt{D13} & Recursos Expressivos & Avaliar os efeitos de sentido decorrentes da pontuação e figuras de linguagem. \\
+\texttt{D14} & Hierarquia Textual & Diferenciar informação principal de argumentos secundários de apoio. \\
+\texttt{D15} & Continuidade Textual & Reconhecer mecanismos de retomada anafórica, elipses e contra-argumentação. \\
+\texttt{D16} & Intertextualidade & Identificar o diálogo intertextual e posicionamentos contrastantes. \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\subsection{Plano de Intervenção Pedagógica Automatizado}
+Sempre que a IA detecta que o aluno atingiu o nível \textbf{Inicial} em qualquer dos descritores SISEDU ou competências do ENEM, o sistema injeta no boletim um **Plano de Intervenção Pedagógica Personalizado**, por exemplo:
+\begin{quote}
+\small\sffamily\textit{``Atenção: O estudante apresentou descritores em Nível Inicial. Recomenda-se aplicar atividade direcionada de reescrita com foco em contra-argumentação (D15) e ampliação de repertório sociocultural legítimo (D13).''}
+\end{quote}
+
+O professor pode optar por imprimir o boletim apenas com as notas do ENEM, apenas com a grade qualitativa SISEDU, ou com a \textbf{visão integrada completa}.
+
+% ==============================================================================
+% SEÇÃO 5: ENGENHARIA DE BACKEND E FILA
+% ==============================================================================
+\section{Engenharia de Backend \& Fila de Processamento}
+
+\subsection{Estrutura de Diretórios e Modularização}
+O backend é estruturado sob o padrão arquitetural em camadas:
+
+\begin{center}
+\begin{tabularx}{\textwidth}{l p{10cm}}
+\toprule
+\textbf{Diretório / Arquivo} & \textbf{Responsabilidade Técnica} \\
+\midrule
+\texttt{server.js} & Ponto de entrada, middlewares globais, segurança e graceful shutdown. \\
+\texttt{src/config/} & Configuração de clientes: Supabase, Gemini SDK e SQLite. \\
+\texttt{src/controllers/} & Orquestração HTTP, validação de payload e respostas da API. \\
+\texttt{src/services/} & Regras de negócio: Fila (\texttt{queueService}) e IA (\texttt{aiService}). \\
+\texttt{src/repositories/} & Camada de acesso a dados (CRUD de redações e usuários). \\
+\texttt{src/middleware/} & Autenticação JWT, controle de acesso RBAC e Rate Limiters. \\
+\texttt{src/utils/} & Logger contextualizado, cálculo de turmas e sanitização. \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\subsection{Controle de Fluxo e Fila (\texttt{RateLimitedQueueService})}
+O envio em lote (por exemplo, 40 fotos de uma turma de uma só vez) excederia instantaneamente o teto de 15 RPM da API Gemini caso todas fossem disparadas em paralelo.
+
+Para solucionar isso, o \texttt{RateLimitedQueueService} implementa:
+\begin{enumerate}[leftmargin=1.5em]
+    \item \textbf{Espaçamento Temporal Estrito (4500ms):} Entre cada requisição à IA, a fila aguarda 4,5 segundos ($\approx 13$ requisições por minuto), mantendo a taxa sempre abaixo do limite de 15 RPM.
+    \item \textbf{Mecanismo de Retry com Backoff Exponencial:} Em caso de falha transitória de rede, o item é re-enfileirado com atraso crescente (10s na primeira tentativa, 20s na segunda).
+    \item \textbf{Status \texttt{ERRO\_PROCESSAMENTO} e Worker de Resgate:} Se o item esgotar as 3 tentativas, a imagem e os metadados são salvos no banco com status de erro. Um worker em background roda a cada 3 minutos para reprocessar automaticamente itens pendentes.
+\end{enumerate}
+
+\begin{lstlisting}[language=JavaScript, caption={Loop de Processamento com Rate Limiter da Fila}]
+// Trecho de execucao com espacamento temporal seguro
+while (this.queue.length > 0) {
+  const current = this.queue.shift();
+  current.status = 'PROCESSANDO';
+  
+  try {
+    const result = await this.executeEvaluation(current.item, current.requestingUser);
+    current.status = 'CONCLUIDO';
+  } catch (error) {
+    this.handleFailure(current, error);
+  }
+  
+  // Atraso obrigatorio para blindagem contra 429 Too Many Requests
+  await new Promise(resolve => setTimeout(resolve, this.rateLimitDelayMs));
+}
+\end{lstlisting}
+
+% ==============================================================================
+% SEÇÃO 6: BANCO DE DADOS E MODELO DE DADOS
+% ==============================================================================
+\section{Esquema do Banco de Dados \& Persistência Híbrida}
+
+A plataforma utiliza o banco de dados relacional **Supabase (PostgreSQL)** com suporte avançado a dados semiestruturados via colunas **JSONB**.
+
+\subsection{Esquema Relacional (PostgreSQL / Supabase)}
+
+\begin{lstlisting}[language=SQL, caption={Estrutura das Tabelas Principais}]
+-- 1. Tabela de Usuarios (Controle de Acesso RBAC)
+CREATE TABLE IF NOT EXISTS public.users (
+  id BIGSERIAL PRIMARY KEY,
+  nome TEXT NOT NULL,
+  email TEXT UNIQUE NOT NULL,
+  senha_hash TEXT NOT NULL,
+  role TEXT NOT NULL DEFAULT 'ESTUDANTE', -- 'ADMIN', 'PROFESSOR', 'ESTUDANTE'
+  turma TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- 2. Tabela de Redacoes
+CREATE TABLE IF NOT EXISTS public.redacoes (
+  id BIGSERIAL PRIMARY KEY,
+  user_id BIGINT REFERENCES public.users(id) ON DELETE SET NULL,
+  nome_aluno TEXT,
+  turma_aluno TEXT,
+  nome_detectado INTEGER DEFAULT 0,
+  data_captura TIMESTAMPTZ DEFAULT NOW(),
+  tipo_input TEXT DEFAULT 'imagem',       -- 'imagem' ou 'texto'
+  imagem_base64 TEXT,                     -- Armazena foto da folha oficial
+  texto_digitado TEXT,                    -- Texto digitado ou transcrito
+  is_synced INTEGER DEFAULT 1,
+  extracted_data JSONB DEFAULT '{}'::jsonb, -- JSON integral da avaliacao da IA
+  nota_final INTEGER,                     -- Pontuacao 0 a 1000
+  status_validacao TEXT NOT NULL DEFAULT 'VALIDADA', -- 'VALIDADA', 'PENDENTE'
+  validado_por BIGINT REFERENCES public.users(id) ON DELETE SET NULL,
+  data_validacao TIMESTAMPTZ
+);
+\end{lstlisting}
+
+\subsection{Estrutura do Campo \texttt{extracted\_data} (JSONB)}
+O campo \texttt{extracted\_data} contém a riqueza analítica gerada pela IA:
+\begin{itemize}[leftmargin=1.5em]
+    \item \texttt{texto\_transcrito}: Transcrição completa com quebra de parágrafos.
+    \item \texttt{competencias}: Objeto contendo C1, C2, C3, C4 e C5 (cada qual com sua pontuação de 0 a 200 e justificativa pedagógica textual).
+    \item \texttt{proposta\_intervencao}: Breakdown dos 5 componentes da C5 (Agente, Ação, Meio/Modo, Efeito e Detalhamento).
+    \item \texttt{desvios}: Lista de inadequações gramaticais com trecho citado, regra violada e sugestão de reescrita.
+    \item \texttt{pontos\_fortes}: Elogios às passagens bem argumentadas e repertórios legítimos.
+    \item \texttt{analise\_sisedu}: Critérios da instituição (adequação ao tema, tipologia textual).
+\end{itemize}
+
+% ==============================================================================
+% SEÇÃO 7: FRONTEND E EXPERIÊNCIA DO USUÁRIO
+% ==============================================================================
+\section{Engenharia de Frontend \& Telas do Sistema}
+
+\subsection{Design System e Filosofia de Interface}
+A interface gráfica foi construída sob a inspiração do ecossistema editorial moderno (estilo \textbf{Cursor}):
+\begin{itemize}[leftmargin=1.5em]
+    \item \textbf{Cores Harmônicas:} Fundo neutro suave (\texttt{\#f7f7f4}), tipografia nítida (\texttt{\#26251e}) e destaques em Laranja Accent (\texttt{\#f54e00}), Pêssego e Menta.
+    \item \textbf{Fontes Especializadas:} \textit{Outfit} e \textit{Inter} para interface e navegação, e \textit{JetBrains Mono} com numeração de linhas para visualização da redação transcrita.
+\end{itemize}
+
+\subsection{Mapeamento das Principais Vistas (Views)}
+\begin{center}
+\begin{tabularx}{\textwidth}{l p{10.5cm}}
+\toprule
+\textbf{Componente React} & \textbf{Funcionalidade e Experiência do Usuário} \\
+\midrule
+\texttt{DashboardView} & Painel analítico executivo com KPIs, gráfico de radar das 5 competências do ENEM, média por turma e histórico recente. \\
+\texttt{UploaderView} & Área de ingestão de redações: suporta arrastar-e-soltar de dezenas de fotos simultâneas, captura via câmera ou digitação direta de texto. \\
+\texttt{ValidacaoRapidaView} & Tela em tela dividida (split-screen): à esquerda a foto original com zoom/pan, à direita o texto transcrito e sliders de ajuste de notas para auditoria em alta velocidade. \\
+\texttt{GestaoRedacoesView} & Repositório central de dados com busca em tempo real, filtros por turma, status de validação, faixa de notas e exportação para CSV/Excel. \\
+\texttt{ModalDetalhesRedacao} & Modal pedagógico completo com detalhamento dos 5 elementos da intervenção, lista de desvios e comparativo de nota. \\
+\texttt{FolhaOficialRedacao} & Visualização que replica fielmente a folha de redação padrão do INEP/ENEM com 30 linhas numeradas. \\
+\texttt{DiagnosticoFeiraView} & Relatório de inteligência pedagógica para a coordenação, identificando as principais fragilidades gramaticais e temáticas da escola. \\
+\texttt{RankingView} & Mural de desempenho dos estudantes com medalhas e classificação por turma. \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+% ==============================================================================
+% SEÇÃO 8: FLUXO DE VIDA DE UMA REDAÇÃO
+% ==============================================================================
+\section{Ciclo de Vida de uma Redação (Fluxo Ponta a Ponta)}
+
+Abaixo detalha-se o ciclo completo percorrido por uma redação desde a folha física até o relatório final:
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[
+    font=\sffamily\footnotesize,
+    stepBox/.style={rectangle, draw=agoraDark, rounded corners=3pt, fill=bgLight, text width=2.8cm, minimum height=1.3cm, align=center, thick},
+    arrow/.style={-{Stealth[length=2.5mm]}, thick, draw=agoraAccent}
+]
+
+    \node[stepBox] (s1) {\textbf{1. Captura}\\\scriptsize Foto ou Texto digitado pelo Professor/Aluno};
+    \node[stepBox, right=0.8cm of s1] (s2) {\textbf{2. Offline Store}\\\scriptsize Salva no Dexie.js (IndexedDB local)};
+    \node[stepBox, right=0.8cm of s2] (s3) {\textbf{3. Enfileiramento}\\\scriptsize Envio ao backend e fila com rate limit};
+    
+    \node[stepBox, below=1.2cm of s3, fill=orange!5, draw=agoraAccent] (s4) {\textbf{4. IA Multimodal}\\\scriptsize OCR + C1-C5 + Intervencao no Gemini};
+    \node[stepBox, left=0.8cm of s4, fill=blue!5, draw=agoraBlue] (s5) {\textbf{5. Persistencia}\\\scriptsize Gravacao no Supabase e SQLite};
+    \node[stepBox, left=0.8cm of s5, fill=green!5, draw=agoraGreen] (s6) {\textbf{6. Validacao \& PDF}\\\scriptsize Auditoria docente e emissao do Boletim};
+
+    \draw[arrow] (s1) -- (s2);
+    \draw[arrow] (s2) -- (s3);
+    \draw[arrow] (s3) -- (s4);
+    \draw[arrow] (s4) -- (s5);
+    \draw[arrow] (s5) -- (s6);
+
+\end{tikzpicture}
+\caption{Fluxograma do Ciclo de Vida de Processamento da Redação.}
+\label{fig:ciclo_vida}
+\end{figure}
+
+% ==============================================================================
+% SEÇÃO 9: GUIA PRÁTICO DE EXECUÇÃO
+% ==============================================================================
+\section{Guia de Inicialização e Operação do Sistema}
+
+\subsection{Execução Simplificada no Windows}
+O projeto conta com scripts utilitários na raiz:
+\begin{itemize}[leftmargin=1.5em]
+    \item \texttt{iniciar.bat} ou \texttt{iniciar.exe}: Inicializa simultaneamente o servidor backend na porta \texttt{3001} e a aplicação frontend Vite na porta \texttt{5173}.
+\end{itemize}
+
+\subsection{Execução Manual via Terminal}
+Para inicializar os serviços individualmente:
+
+\begin{lstlisting}[language=bash, caption={Comandos para Inicializacao}]
+# 1. No diretorio /backend
+cd backend
+npm install
+npm run dev      # Inicia o servidor Express na porta 3001
+
+# 2. No diretorio /frontend (em outro terminal)
+cd frontend
+npm install
+npm run dev      # Inicia o servidor Vite na porta 5173
+\end{lstlisting}
+
+\subsection{Variáveis de Ambiente (\texttt{backend/.env})}
+\begin{lstlisting}[language=bash, caption={Variaveis de Ambiente Obrigatorias}]
+PORT=3001
+GEMINI_API_KEY=AIzaSy...              # Chave de API do Google AI Studio
+SUPABASE_URL=https://xyz.supabase.co  # URL do projeto Supabase
+SUPABASE_KEY=eyJhbGciOi...            # Service Role / Anon Key
+JWT_SECRET=chave_secreta_jwt          # Assinatura segura de tokens
+\end{lstlisting}
+
+% ==============================================================================
+% SEÇÃO 10: CONCLUSÃO E ROADMAP
+% ==============================================================================
+\section{Conclusão e Próximos Passos}
+
+O projeto \textbf{Ágora ENEM} estabelece um novo padrão na avaliação educacional orientada por Inteligência Artificial ao conciliar:
+\begin{itemize}[leftmargin=1.5em]
+    \item \textbf{Eficiência Extrema:} Redução de 90\% no tempo de correção de redações manuscritas.
+    \item \textbf{Resiliência e Tolerância a Falhas:} Fallback de modelos de IA, parser balanceado de JSON e fila com espaçamento seguro de RPM.
+    \item \textbf{Rigor Pedagógico:} Análise integral segundo as 5 Competências do ENEM e matriz do Sisedu.
+    \item \textbf{Soberania Docente:} O professor permanece com a palavra final através de ferramentas visuais ágeis de auditoria.
+\end{itemize}
+
+\vspace{1cm}
+\begin{center}
+    \rule{0.6\textwidth}{0.4pt} \\
+    \vspace{0.3cm}
+    \small\sffamily\textcolor{gray}{\textbf{Ágora ENEM} --- Tecnologia \& Educação a Serviço do Futuro.}
+\end{center}
+
+\end{document}

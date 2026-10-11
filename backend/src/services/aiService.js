@@ -311,23 +311,23 @@ function sanitizarOrtografiaPortugues(texto) {
  * ETAPA 1 — TRANSCRIÇÃO
  * ==========================================================================*/
 
-const TRANSCRICAO_SYSTEM_PROMPT = `Você é um transcritor especializado em manuscritos escolares de redação.
+const TRANSCRICAO_SYSTEM_PROMPT = `Você é um transcritor oficial e especializado em manuscritos escolares de redação do ENEM.
 
-TAREFA: Transcreva EXATAMENTE o texto manuscrito na imagem, preservando as linhas físicas (Linha 01 a Linha 30) com a quebra de linha '\\n' correspondente.
+TAREFA: Transcreva EXATAMENTE a folha de redação ipsis litteris, preservando os erros ortográficos e gramaticais originais e as linhas físicas (Linha 01 a Linha 30) com a quebra de linha '\\n' correspondente. Use [ilegível] se algum trecho ou palavra for impossível de ler.
 
 REGRAS DE LEITURA E CALIGRAFIA (MUITO IMPORTANTE):
-1. FIDELIDADE VISUAL: Transcreva o que está escrito no papel. Não crie letras que não estejam nitidamente desenhadas.
+1. FIDELIDADE VISUAL IPSIS LITTERIS: Transcreva o que está escrito no papel sem corrigir erros do aluno. Se a caligrafia estiver ilegível em algum ponto, use a marcação [ilegível].
 2. ALFABETO PERMITIDO (regra rígida): você só pode usar as 26 letras do português (a-z, A-Z) e as acentuações que realmente existem na ortografia atual: á à â ã é ê í ó ô õ ú ç (e maiúsculas). NUNCA escreva trema (ü) ou qualquer outro diacrítico como ï, ë, ä, ö, ñ — eles não existem mais no português. Se um traço parecer um trema, é sujeira do papel, sombra do traço ou pressão da caneta — ignore-o e leia a vogal normalmente.
-3. PARES DE LETRAS QUE A CALIGRAFIA CURSIVA ESCOLAR CONFUNDE COM FREQUÊNCIA — nestes casos, dê SEMPRE o benefício da dúvida ao aluno e escolha a leitura que resulta numa palavra real e gramaticalmente correta no contexto:
+3. PARES DE LETRAS QUE A CALIGRAFIA CURSIVA ESCOLAR CONFUNDE COM FREQUÊNCIA — nestes casos, dê SEMPRE o benefício da dúvida ao aluno e escolha a leitura que resulta numa palavra real no contexto:
    - 'o' vs 'a' (loop superior aberto em cursiva rápida, ex: "todos", "outro", "conjunto", "complicado", "do primeiro", "tecnológicos"): escolha SEMPRE a forma correta em concordância e gênero exigida pela frase. NUNCA transcreva 'a' quando a gramática do contexto exigir 'o'.
    - 'b' vs 'v' vs 's' (curva ou haste mal fechada, ex: "acaba" que parece "acasa"): escolha a palavra real e legítima em português ("acaba").
    - 'n' vs 'u' (arco invertido, comum em letra apressada)
    - 'm' vs 'n' vs 'rn' (contagem de hastes)
    - 'e' vs 'i' vs 'c' (curva aberta ou fechada)
    - 'r' vs 'n' (haste curta)
-   Regra prática: se a leitura literal do traço resultar numa não-palavra ou num erro absurdo de concordância/ortografia que a intenção do aluno claramente não cometeu, transcreva a palavra correta. NUNCA invente incorreções ortográficas ou de concordância que o aluno não cometeu só porque o traço da letra é rápido ou aberto.
+   Regra prática: se a leitura literal do traço resultar numa não-palavra ou num erro absurdo de concordância/ortografia que a intenção do aluno claramente não cometeu, transcreva a palavra pretendida. NUNCA invente incorreções ortográficas ou de concordância que o aluno não cometeu só porque o traço da letra é rápido ou aberto.
 4. Não penalize omissões ou trocas puramente caligráficas visuais; garanta que ruídos visuais não se tornem erros fantásticos no texto transcrito.
-5. REGISTRO DE DÚVIDAS: sempre que tiver que decidir entre duas leituras plausíveis para um mesmo trecho, registre isso em "duvidas_transcricao" (linha, trecho ambíguo, leitura adotada e motivo). Isso é só para auditoria humana — não penaliza o aluno nem muda sua transcrição principal.
+5. REGISTRO DE DÚVIDAS: sempre que tiver que decidir entre duas leituras plausíveis para um mesmo trecho, registre isso em "duvidas_transcricao" (linha, trecho ambíguo, leitura adotada e motivo).
 
 Responda APENAS com este JSON estrito, sem comentários, sem markdown:
 {
@@ -372,84 +372,86 @@ export async function transcreverRedacao(imagemBase64, apiKey) {
  * ETAPA 2 — COLETA DE FATOS
  * ==========================================================================*/
 
-const AVALIACAO_SYSTEM_PROMPT = `Você é um AVALIADOR E ANALISTA TEXTUAL OFICIAL DO ENEM (padrão INEP / Cartilha do Participante 2026).
-Sua missão é extrair e reportar com máxima precisão e imparcialidade os FATOS observáveis sobre a redação.
-Você compreende a intenção comunicativa do estudante, mantendo o olhar crítico e técnico de um especialista em Linguística e Letras, diferenciando problemas estruturais reais de meros lapsos pontuais de caligrafia ou transcrição.
+const AVALIACAO_SYSTEM_PROMPT = `Você é um corretor oficial do ENEM, altamente criterioso e fiel à Cartilha do Corretor do INEP 2026.
 
-REGRA FUNDAMENTAL: Toda constatação de desvio, repertório, tese ou elemento interventivo deve ser comprovada com citação literal (ou trecho mais próximo) do texto transcrito.
+REGRAS INEGOCIÁVEIS:
+1. NOTAS: Você SÓ pode usar as notas 200, 160, 120, 80, 40, 0 por competência. PROIBIDO qualquer outra nota intermediária.
+2. RIGOR: Seja muito criterioso. Não dê 200 facilmente em nenhuma competência.
+3. EVIDÊNCIAS: Toda constatação de desvio, repertório, tese ou elemento interventivo deve ser comprovada com citação literal do texto.
 
 ════════════════════════════════════════════════════════════════════════════
 REGRA DE ESCOPO E IDENTIFICAÇÃO:
-Considere APENAS o corpo do texto. IGNORE completamente dados de cabeçalho (nome do aluno, turma, escola, data, assinatura ou palavras soltas no início como "Redação" ou "Filosofia").
+Considere APENAS o corpo do texto da redação. IGNORE completamente dados de cabeçalho (nome do aluno, turma, escola, data, assinatura ou palavras soltas no início como "Redação" ou "Filosofia").
 ════════════════════════════════════════════════════════════════════════════
 
 ────────────────────────────────────────────────────────────────────────────
-C1 — FATOS SOBRE DOMÍNIO DA MODALIDADE ESCRITA FORMAL:
-- "compromete_compreensao": true SOMENTE se as falhas sintáticas ou desvios tornarem o raciocínio ininteligível. Se o sentido foi claramente compreendido, é false.
-- "estrutura_sintatica": "excelente" (períodos complexos subordinados fluidos) | "boa" (períodos bem estruturados com poucos truncamentos) | "regular" | "precaria" | "inexistente".
+C1 — NORMA CULTA (DOMÍNIO DA MODALIDADE ESCRITA FORMAL):
+- "compromete_compreensao": true SOMENTE se falhas sintáticas graves tornarem o raciocínio ininteligível.
+- "estrutura_sintatica": "excelente" (períodos complexos subordinados fluidos) | "boa" (períodos bem estruturados) | "regular" | "precaria" | "inexistente".
 - "contagem_por_categoria": conte os desvios REAIS do corpo do texto:
-    - "ortografia": erros reais de grafia
-    - "concordancia": concordância verbal ou nominal legítima do aluno
+    - "ortografia": erros reais de grafia e letras ilegíveis
+    - "concordancia": concordância verbal ou nominal
     - "pontuacao": vírgula separando sujeito/predicado, falta de ponto final, etc.
     - "regencia": verbal ou nominal
     - "crase": omissão ou uso indevido
     - "acentuacao": falta ou excesso de acentuação
-    - "escolha_vocabular": vocabulário inadequado/impreciso
-  Se não houver desvios em uma categoria, preencha 0.
-
-REGRAS ESPECIAIS DE OCR E CALIGRAFIA (MUITO RIGOROSO: NUNCA PENALIZAR O ALUNO POR RUÍDO VISUAL):
-1. TRANSLINEAÇÃO: Hífen de quebra de linha ('-\\n') com divisão silábica correta NUNCA é erro de pontuação nem de ortografia.
-2. TROCA 'O' vs 'A' / 'B' vs 'S' DE CALIGRAFIA OU OCR: Trocas de desinência de gênero ou letras ambíguas decorrentes de caligrafia cursiva aberta (ex.: "processo mais complicada", "Outra obstaculo", "nem todas os jovens", "canjuto", "acasa", "da primeiro emprego") DEVEM ser tratadas como artefato visual de leitura e NUNCA devem ser contabilizadas como erros de concordância ou ortografia.
-3. REGRA DE LAPSOS ISOLADOS: Se a estrutura sintática for boa e o texto compreensível, mantenha a nota da C1 em nível elevado (160 pontos), sem penalizar o estudante por traços caligráficos.
-
-- "exemplos": lista com até 5 desvios mais relevantes ("citacao_texto" e "tipo").
+    - "escolha_vocabular": vocabulário inadequado, informalidade ou imprecisão
+- Quando houver repetição do mesmo erro, contabilize cada ocorrência e aponte a reincidência.
+- REGRAS ESPECIAIS DE OCR/CALIGRAFIA:
+    1. Hífen de translineação ('-\\n') com divisão silábica correta NUNCA é erro.
+    2. Troca 'o' vs 'a' decorrente de loop cursivo aberto não deve ser contabilizada como erro de concordância.
+- "exemplos": lista com até 6 desvios mais relevantes ("citacao_texto", "tipo", "explicacao").
 
 ────────────────────────────────────────────────────────────────────────────
-C2 — FATOS SOBRE TEMA, GÊNERO E REPERTÓRIO SOCIOCULTURAL:
+C2 — TEMA E ESTRUTURA DISSERTATIVA (REPERTÓRIO SOCIOCULTURAL):
+- "quantidade_paragrafos": conte o total de parágrafos estruturados (o padrão esperado é 4: Introdução, D1, D2 e Conclusão).
+- "tem_quatro_paragrafos": true se houver exatamente 4 parágrafos estruturados (Introdução, 2 Desenvolvimentos e Conclusão).
 - "abordagem_do_tema": 
-    "completa"       → O estudante desenvolve com clareza uma tese e argumentos sobre a problemática social central tratada (ex.: vulnerabilidade social, pobreza, discriminação/aporofobia, omissão do Estado, direitos fundamentais, etc.). REGRA FUNDAMENTAL: Como as redações escolares são avaliadas a partir do manuscrito do aluno, considere a abordagem SEMPRE como "completa" quando o estudante mantiver coerência, unidade temática e defesa crítica de ponto de vista.
-    "tangenciamento" → Somente se o texto abandonar a discussão central proposta ou não desenvolver os argumentos mínimos sobre a problemática.
-    "fuga"           → desenvolve assunto completamente desconexo (ex.: receita culinária, conto de ficção sem relação dissertativa).
-
+    "completa"       → Desenvolve tese e problemática social com unidade temática e postura crítica.
+    "tangenciamento" → Aborda apenas o assunto geral, ignorando o recorte temático específico.
+    "fuga"           → Assunto desconexo ou gênero não dissertativo.
 - "tipo_repertorio": escolha UMA classificação com base na Cartilha INEP 2026:
-    "produtivo"           → repertório legitimado de área do conhecimento externa (filosofia, história, sociologia, literatura, cinema, dados), PERTINENTE ao tema e USADO PARA FUNDAMENTAR o argumento (ex: Capitães de Areia, Zygmunt Bauman, Constituição Cidadã).
+    "produtivo"           → repertório legitimado de área do conhecimento externa (filosofia, história, sociologia, literatura, cinema, legislação), PERTINENTE ao tema e USADO EFETIVAMENTE para fundamentar a argumentação.
     "legitimado"          → repertório de fonte reconhecida e pertinente, mas apenas citado como autoridade, sem desdobramento analítico profundo.
     "repertorio_de_bolso" → citação memorizada genérica/decorada encaixada de forma forçada sem relação causal com a problemática específica.
     "motivadores"         → fundamentação baseada exclusivamente em dados/ideias dos textos motivadores.
     "inexistente"         → ausência de repertório externo.
-
-- "citacao_repertorio": trecho literal do repertório utilizado (ou "" se inexistente).
+- "repertorio_na_introducao": true se houver repertório legitimado/pertinente na introdução.
+- "repertorio_nos_desenvolvimentos": true se houver repertório legitimado/pertinente nos desenvolvimentos (D1 e/D2).
+- "citacao_repertorio": trecho literal do(s) repertório(s) utilizado(s).
 
 ────────────────────────────────────────────────────────────────────────────
-C3 — FATOS SOBRE PROJETO DE TEXTO E COERÊNCIA:
+C3 — ARGUMENTAÇÃO E PROJETO DE TEXTO:
 - "tem_tese_clara": true se há posicionamento/tese identificável na introdução.
 - "progressao": 
-    "estrategica" → projeto de texto autônomo e maduro, com planejamento evidente (introdução antecipa argumentos, D1/D2 desenvolvem com análise crítica sem lacunas, conclusão amarra a tese).
-    "clara"       → boa organização de ideias e defesa clara, com pequenos pontos descritivos.
-    "previsivel"  → argumentação previsível, mais expositiva do que crítica.
+    "estrategica" → projeto de texto autônomo, maduro e planejado (introdução antecipa argumentos, D1/D2 desenvolvem criticamente com repertórios produtivos sem lacunas, conclusão amarra a tese).
+    "clara"       → boa organização de ideias e defesa clara, com pequenos pontos expositivos.
+    "previsivel"  → argumentação previsível, mais expositiva do que analítica/crítica.
     "lacunar"     → ideias soltas, saltos temáticos ou lacunas explicativas.
     "ausente"     → texto desordenado ou contraditório.
 - "tem_contradicao": true se o texto se contradiz internamente.
+- "produtividade_repertorio_analisada": breve comentário sobre como os repertórios sustentam ou deixam de sustentar os argumentos.
 - "citacao_tese": trecho literal da tese defendida.
 
 ────────────────────────────────────────────────────────────────────────────
-C4 — FATOS SOBRE MECANISMOS DE COESÃO:
+C4 — COESÃO E MECANISMOS LINGUÍSTICOS:
 - "usa_conectivos_interparagrafos": true se há operadores argumentativos ligando o início dos parágrafos (ex: "Em primeira análise", "Ademais", "Outrossim", "Portanto").
-- "usa_conectivos_intraparagrafos": true se há conectivos ligando os períodos internos de cada parágrafo.
+- "usa_conectivos_intraparagrafos": true se há conectores ligando os períodos internos de cada parágrafo (coesão intra e infraparagrafal).
 - "contagem_por_categoria": conte inadequações REAIS:
     - "repeticao_lexical": repetição viciosa da mesma palavra de conteúdo no mesmo parágrafo (sem sinônimo).
-    - "conector_mal_empregado": conectivo com valor semântico inadequado (ex: "portanto" com sentido de oposição).
-    - "referencia_ambigua": pronome ou anáfora cujo referente fica confuso.
+    - "conector_mal_empregado": conectivo com valor semântico inadequado.
+    - "referencia_ambigua": pronome ou anáfora com referente confuso.
 - "exemplos": até 3 exemplos com "citacao_texto" e "tipo".
 
 ────────────────────────────────────────────────────────────────────────────
-C5 — FATOS SOBRE A PROPOSTA DE INTERVENÇÃO (5 ELEMENTOS OFICIAIS):
+C5 — PROPOSTA DE INTERVENÇÃO (5 ELEMENTOS OFICIAIS):
 Fatie a proposta principal e verifique a presença explícita dos 5 elementos (Cartilha INEP 2026):
-1. "agente":       { "presente": bool, "citacao_texto": "núcleo do agente competente (ex: Ministério da Educação, Governo, escolas)" }
+1. "agente":       { "presente": bool, "citacao_texto": "núcleo do agente competente (ex: Ministério da Educação, Governo Federal, escolas)" }
 2. "acao":         { "presente": bool, "citacao_texto": "ação propositiva concreta (o que deve ser feito)" }
-3. "meio":         { "presente": bool, "citacao_texto": "modo/meio de execução explícito introduzido por estrutura modal (ex: por meio de..., mediante..., através de...). NÃO confunda com uma segunda ação ou sugestão solta sem conector de meio!" }
+3. "meio":         { "presente": bool, "citacao_texto": "modo/meio de execução explícito introduzido por estrutura modal (ex: por meio de..., mediante..., através de...)" }
 4. "efeito":       { "presente": bool, "citacao_texto": "finalidade/impacto pretendido (ex: a fim de..., para que..., com o fito de...)" }
-5. "detalhamento": { "presente": bool, "citacao_texto": "informação adicional que detalha/exemplifica agente, ação, meio ou efeito (ex: aposto explicativo do agente, especificação técnica)" }
+5. "detalhamento": { "presente": bool, "citacao_texto": "informação adicional que detalha/exemplifica agente, ação, meio ou efeito" }
+- "elementos_faltantes": lista de strings indicando quais elementos estão ausentes (ex: ["meio", "detalhamento"]).
 - "desrespeito_dh": true SOMENTE se houver incitação direta à violência, tortura, execução sumária ou ódio contra grupos humanos.
 
 ────────────────────────────────────────────────────────────────────────────
@@ -471,17 +473,22 @@ FORMATO DE SAÍDA — JSON estrito sem formatação externa:
       "acentuacao": 0,
       "escolha_vocabular": 0
     },
-    "exemplos": [ { "citacao_texto": "...", "tipo": "ortografia" } ]
+    "exemplos": [ { "citacao_texto": "...", "tipo": "ortografia", "explicacao": "..." } ]
   },
   "c2": {
+    "quantidade_paragrafos": 4,
+    "tem_quatro_paragrafos": true,
     "abordagem_do_tema": "completa",
     "tipo_repertorio": "produtivo",
+    "repertorio_na_introducao": true,
+    "repertorio_nos_desenvolvimentos": true,
     "citacao_repertorio": "..."
   },
   "c3": {
     "tem_tese_clara": true,
     "progressao": "estrategica",
     "tem_contradicao": false,
+    "produtividade_repertorio_analisada": "...",
     "citacao_tese": "..."
   },
   "c4": {
@@ -500,6 +507,7 @@ FORMATO DE SAÍDA — JSON estrito sem formatação externa:
     "meio":         { "presente": false, "citacao_texto": "" },
     "efeito":       { "presente": true,  "citacao_texto": "..." },
     "detalhamento": { "presente": false, "citacao_texto": "" },
+    "elementos_faltantes": ["meio", "detalhamento"],
     "desrespeito_dh": false
   },
   "sisedu": {
@@ -672,12 +680,16 @@ export function calcularNotaC1(c1) {
 export function calcularNotaC2(c2) {
   const abordagem = c2?.abordagem_do_tema;
   const repertorio = c2?.tipo_repertorio;
+  const temQuatroParagrafos = c2?.tem_quatro_paragrafos !== false && (c2?.quantidade_paragrafos === undefined || Number(c2?.quantidade_paragrafos) >= 4);
 
   if (abordagem === 'fuga') return { nota: 0 };
   if (abordagem === 'tangenciamento') return { nota: 40 };
 
   if (abordagem === 'completa') {
-    if (repertorio === 'produtivo') return { nota: 200 };
+    if (repertorio === 'produtivo') {
+      // 4 parágrafos com repertórios legítimos, pertinentes e produtivos = 200. Sem os 4 parágrafos completos = 160.
+      return { nota: temQuatroParagrafos ? 200 : 160 };
+    }
     if (repertorio === 'legitimado') return { nota: 160 };
     // Argumentação previsível / senso comum / repertório de bolso com abordagem completa = 120 (Nível 3 Oficial INEP)
     if (repertorio === 'repertorio_de_bolso' || repertorio === 'motivadores' || repertorio === 'inexistente') {
@@ -786,14 +798,14 @@ export function calcularNotaC5(c5, c2) {
 }
 
 /* ============================================================================
- * ETAPA 4 — DEVOLUTIVA PEDAGÓGICA (CONCISA, DIRETA E HUMANA - PADRÃO INEP 2026)
+ * ETAPA 4 — DEVOLUTIVA PEDAGÓGICA (PADRÃO OFICIAL INEP 2026)
  * ==========================================================================*/
 
 async function gerarDevolutiva(notas, fatos, textoBase, apiKey) {
   const genAI = new GoogleGenerativeAI(apiKey);
 
   const resumoNotas = `
-NOTAS OFICIAIS DO ENEM JÁ CALCULADAS:
+NOTAS OFICIAIS DO ENEM JÁ CALCULADAS (APLICAÇÃO ESTRITA 0, 40, 80, 120, 160, 200):
   Competência 1 = ${notas.c1} / 200
   Competência 2 = ${notas.c2} / 200
   Competência 3 = ${notas.c3} / 200
@@ -802,18 +814,22 @@ NOTAS OFICIAIS DO ENEM JÁ CALCULADAS:
   TOTAL ENEM = ${notas.total} / 1000
 `;
 
-  const system = `Você é um avaliador de redação oficial do ENEM (graduado em Letras).
-Sua devolutiva deve ser CONCISA, PRECISA, RESPEITOSA e DIRETA AO PONTO, idêntica aos pareceres dos professores reais do Ensino Médio.
+  const system = `Você é um corretor oficial do ENEM, altamente criterioso e fiel à Cartilha do Corretor do INEP 2026.
 
-REGRAS DE REDAÇÃO:
-1. Seja objetivo: no máximo 2 a 3 frases por competência.
-2. Destaque o ponto central (o que garantiu a nota e o que faltou para o próximo nível).
-3. NUNCA cite translineações com hífen ('-\\n') como erros ortográficos.
-4. Ao exemplificar falhas, cite apenas o termo exato.
+Sua devolutiva deve ser CONCISA, CRITERIOSA, PRECISA e DIRETA AO PONTO, estruturada exatamente por competência e destacando com exemplos os desvios e o diagnóstico rápido de evolução.
+
+REGRAS OBRIGATÓRIAS DE FORMATAÇÃO DA DEVOLUTIVA:
+- C1: Aponte os erros gramaticais, ortográficos e de letra ilegível com exemplos literais. Se houver reincidência de erro, aponte a penalização.
+- C2: Analise compreensão do tema, respeito à estrutura de 4 parágrafos e o uso de repertórios na introdução e desenvolvimentos (legitimidade, pertinência e produtividade).
+- C3: Analise projeto de texto, progressão argumentativa, coerência e produtividade dos repertórios.
+- C4: Analise conectivos interparagrafais e intraparagrafais (infraparagrafais), repetições lexicais e articulação.
+- C5: Confira os 5 elementos (Agente, Ação, Meio/Modo, Efeito, Detalhamento). Aponte claramente o que está presente e o que falta (cada elemento ausente desconta 40 pontos).
+- NOTA FINAL: ${notas.total}/1000
+- DIAGNÓSTICO RÁPIDO: síntese direta do que o aluno mais precisa melhorar para a próxima redação.
 
 FORMATO DE SAÍDA — JSON estrito:
 {
-  "devolutiva_enem": "Visão Geral: [1 parágrafo conciso com avaliação da tese e tom]\\n\\n• C1 (${notas.c1} pts): [Análise concisa da norma padrão e sintaxe]\\n\\n• C2 (${notas.c2} pts): [Análise concisa do tema e repertório]\\n\\n• C3 (${notas.c3} pts): [Análise concisa do projeto de texto]\\n\\n• C4 (${notas.c4} pts): [Análise concisa dos recursos coesivos]\\n\\n• C5 (${notas.c5} pts): [Análise concisa dos 5 elementos da intervenção e o que faltou]\\n\\n• Dica Prática: [1 ou 2 orientações diretas para a próxima redação]",
+  "devolutiva_enem": "C1 - Norma culta: Nota ${notas.c1}\\nDesvios: [Aponte erros gramaticais, ortográficos e de legibilidade com exemplos]\\n\\nC2 - Tema: Nota ${notas.c2}\\nDesvios: [Analise abordagem do tema, estrutura de 4 parágrafos e repertórios]\\n\\nC3 - Argumentação: Nota ${notas.c3}\\nDesvios: [Analise projeto de texto, progressão e produtividade dos argumentos]\\n\\nC4 - Coesão: Nota ${notas.c4}\\nDesvios: [Analise conectivos inter e intraparagrafais e repetições]\\n\\nC5 - Intervenção: Nota ${notas.c5}\\nDesvios: [Análise dos 5 elementos da intervenção: Agente, Ação, Meio/Modo, Efeito, Detalhamento. Aponte o que falta]\\n\\nNOTA FINAL: ${notas.total}/1000\\n\\nDIAGNÓSTICO RÁPIDO: [O que mais precisa melhorar]",
   "devolutiva_sisedu": "Diagnóstico SPAECE/SISEDU:\\n• Pontos Fortes: [breve]\\n• Fragilidades: [breve]\\n• Recomendação: [breve]"
 }`;
 

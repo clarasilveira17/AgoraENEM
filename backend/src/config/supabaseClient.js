@@ -1,14 +1,17 @@
 import { createClient } from '@supabase/supabase-js';
 import dotenv from 'dotenv';
 import path from 'path';
+import { fileURLToPath } from 'url';
 
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+dotenv.config({ path: path.resolve(__dirname, '../../.env') });
 dotenv.config({ path: path.resolve(process.cwd(), 'backend/.env') });
 dotenv.config({ path: path.resolve(process.cwd(), '.env') });
 
 const SUPABASE_URL = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
 const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY 
   || process.env.SUPABASE_SECRET_KEY 
-  || process.env.SUPABASE_KEY 
+  || (process.env.SUPABASE_KEY && !process.env.SUPABASE_KEY.startsWith('sb_publishable_') ? process.env.SUPABASE_KEY : null)
   || process.env.SUPABASE_ANON_KEY 
   || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
