@@ -13,7 +13,8 @@ import {
   TrendingUp,
   Users,
   Layers,
-  User
+  User,
+  UploadCloud
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useNetworkStatus } from '../hooks/useNetworkStatus';
@@ -36,7 +37,8 @@ export default function Sidebar({ activeView, setActiveView, isMobileMenuOpen, s
     {
       title: 'Gestão de Redações',
       items: [
-        { id: 'tabela', label: 'Envio & Banco de Redações', icon: Database },
+        { id: 'novo', label: 'Uploader (Envio de Redações)', icon: UploadCloud },
+        { id: 'tabela', label: 'Banco de Redações', icon: Database },
         { id: 'validacao', label: 'Validar Alunos & Turmas', icon: UserCheck, badge: unidentifiedCount }
       ]
     },
@@ -59,8 +61,9 @@ export default function Sidebar({ activeView, setActiveView, isMobileMenuOpen, s
       ]
     },
     {
-      title: 'Desempenho',
+      title: 'Redações',
       items: [
+        { id: 'novo', label: 'Enviar Redação (Uploader)', icon: UploadCloud },
         { id: 'tabela', label: 'Minhas Redações', icon: GraduationCap }
       ]
     }

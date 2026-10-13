@@ -5,13 +5,15 @@ import {
 } from 'lucide-react';
 import { processRedacoesCloud, reprocessarRedacao } from '../services/cloudCorrectionService';
 import { compressImageFile } from '../utils/imageCompressor';
+import { useAuth } from '../context/AuthContext';
 
 export default function UploaderView({ onRedacaoSaved }) {
+  const { user, isEstudante } = useAuth();
   const [mode, setMode] = useState('imagem');
   const [selectedFiles, setSelectedFiles] = useState([]);
   const [typedText, setTypedText] = useState('');
-  const [manualName, setManualName] = useState('');
-  const [manualTurma, setManualTurma] = useState('');
+  const [manualName, setManualName] = useState(isEstudante && user ? user.nome : '');
+  const [manualTurma, setManualTurma] = useState(isEstudante && user?.turma ? user.turma : '');
   const [isProcessing, setIsProcessing] = useState(false);
   const [progressState, setProgressState] = useState(null);
   const [fileStatuses, setFileStatuses] = useState({});
@@ -87,48 +89,56 @@ export default function UploaderView({ onRedacaoSaved }) {
         turma_manual: manualTurma.trim() || null
       }));
 
-      const res = await processRedacoesCloud(itemsToSave, (cur, tot, progressObj) => {
-        const data = (typeof cur === 'object' && cur !== null)
-          ? cur
-          : (progressObj || { currentIndex: cur, total: tot, status: `Avaliando foto ${cur} de ${tot}...` });
-        const { currentIndex, total, currentItem, status, attempt, maxAttempts, allResults } = data;
-        
-        setProgressState({
-          current: currentIndex || cur || 1,
-          total: total || tot || selectedFiles.length,
-          statusText: status || `Avaliando foto ${cur} de ${tot}...`,
-          attempt: attempt || 1,
-          maxAttempts: maxAttempts || 1
-        });
-
-        if (currentItem && currentItem.id) {
-          setFileStatuses((prev) => ({
-            ...prev,
-            [currentItem.id]: {
-              status: status.includes('Aguardando') || status.includes('Repetindo') ? 'WAITING_RETRY' : 'PROCESSING',
-              statusText: status,
-              attempt
-            }
-          }));
-        }
-
-        // Atualiza status dos que já finalizaram
-        if (Array.isArray(allResults)) {
-          allResults.forEach((r) => {
-            if (r.id) {
-              setFileStatuses((prev) => ({
-                ...prev,
-                [r.id]: {
-                  status: r.status === 'success' ? 'SUCCESS' : 'ERROR',
-                  nota: r.extracted?.nota_final,
-                  aluno: r.extracted?.aluno,
-                  error: r.error
-                }
-              }));
-            }
+      const res = await processRedacoesCloud(
+        itemsToSave,
+        (cur, tot, progressObj) => {
+          const data = (typeof cur === 'object' && cur !== null)
+            ? cur
+            : (progressObj || { currentIndex: cur, total: tot, status: `Avaliando foto ${cur} de ${tot}...` });
+          const { currentIndex, total, currentItem, status, attempt, maxAttempts, allResults } = data;
+          
+          setProgressState({
+            current: currentIndex || cur || 1,
+            total: total || tot || selectedFiles.length,
+            statusText: status || `Avaliando foto ${cur} de ${tot}...`,
+            attempt: attempt || 1,
+            maxAttempts: maxAttempts || 1
           });
+
+          if (currentItem && currentItem.id) {
+            setFileStatuses((prev) => ({
+              ...prev,
+              [currentItem.id]: {
+                status: status.includes('Aguardando') || status.includes('Repetindo') ? 'WAITING_RETRY' : 'PROCESSING',
+                statusText: status,
+                attempt
+              }
+            }));
+          }
+
+          // Atualiza status dos que já finalizaram
+          if (Array.isArray(allResults)) {
+            allResults.forEach((r) => {
+              if (r.id) {
+                setFileStatuses((prev) => ({
+                  ...prev,
+                  [r.id]: {
+                    status: r.status === 'success' ? 'SUCCESS' : 'ERROR',
+                    nota: r.extracted?.nota_final,
+                    aluno: r.extracted?.aluno,
+                    error: r.error
+                  }
+                }));
+              }
+            });
+          }
+        },
+        {
+          usuarioId: isEstudante && user ? user.id : null,
+          nomePadrao: isEstudante && user ? user.nome : (manualName || null),
+          turmaPadrao: isEstudante && user?.turma ? user.turma : (manualTurma || null)
         }
-      });
+      );
 
       setFeedback({
         type: res.errorCount === 0 ? 'success' : 'warning',
@@ -154,14 +164,22 @@ export default function UploaderView({ onRedacaoSaved }) {
     }));
 
     try {
-      const res = await processRedacoesCloud([{
-        id: file.id,
-        name: file.name,
-        imagem_base64: file.base64,
-        tipo_input: 'imagem',
-        nome_manual: manualName.trim() || null,
-        turma_manual: manualTurma.trim() || null
-      }]);
+      const res = await processRedacoesCloud(
+        [{
+          id: file.id,
+          name: file.name,
+          imagem_base64: file.base64,
+          tipo_input: 'imagem',
+          nome_manual: manualName.trim() || null,
+          turma_manual: manualTurma.trim() || null
+        }],
+        null,
+        {
+          usuarioId: isEstudante && user ? user.id : null,
+          nomePadrao: isEstudante && user ? user.nome : (manualName || null),
+          turmaPadrao: isEstudante && user?.turma ? user.turma : (manualTurma || null)
+        }
+      );
 
       const result = res.results?.[0];
       if (result && result.status === 'success') {
@@ -199,12 +217,20 @@ export default function UploaderView({ onRedacaoSaved }) {
     setProgressState({ current: 1, total: 1, statusText: 'Avaliando texto com IA...' });
 
     try {
-      const res = await processRedacoesCloud([{
-        texto_digitado: typedText.trim(),
-        tipo_input: 'texto',
-        nome_manual: manualName.trim() || null,
-        turma_manual: manualTurma.trim() || null
-      }]);
+      const res = await processRedacoesCloud(
+        [{
+          texto_digitado: typedText.trim(),
+          tipo_input: 'texto',
+          nome_manual: manualName.trim() || null,
+          turma_manual: manualTurma.trim() || null
+        }],
+        null,
+        {
+          usuarioId: isEstudante && user ? user.id : null,
+          nomePadrao: isEstudante && user ? user.nome : (manualName || null),
+          turmaPadrao: isEstudante && user?.turma ? user.turma : (manualTurma || null)
+        }
+      );
 
       setFeedback({
         type: 'success',
@@ -212,8 +238,10 @@ export default function UploaderView({ onRedacaoSaved }) {
       });
 
       setTypedText('');
-      setManualName('');
-      setManualTurma('');
+      if (!isEstudante) {
+        setManualName('');
+        setManualTurma('');
+      }
       if (onRedacaoSaved) onRedacaoSaved();
     } catch (error) {
       setFeedback({
@@ -249,39 +277,47 @@ export default function UploaderView({ onRedacaoSaved }) {
         turma_manual: manualTurma.trim() || null
       }));
 
-      await processRedacoesCloud(itemsToSave, (cur, tot, progressObj) => {
-        const data = (typeof cur === 'object' && cur !== null)
-          ? cur
-          : (progressObj || { currentIndex: cur, total: tot, status: `Avaliando foto ${cur} de ${tot}...` });
-        const { currentIndex, total, currentItem, status, allResults } = data;
-        setProgressState({ current: currentIndex || cur || 1, total: total || tot || failedFiles.length, statusText: status || `Avaliando foto ${cur} de ${tot}...` });
+      await processRedacoesCloud(
+        itemsToSave,
+        (cur, tot, progressObj) => {
+          const data = (typeof cur === 'object' && cur !== null)
+            ? cur
+            : (progressObj || { currentIndex: cur, total: tot, status: `Avaliando foto ${cur} de ${tot}...` });
+          const { currentIndex, total, currentItem, status, allResults } = data;
+          setProgressState({ current: currentIndex || cur || 1, total: total || tot || failedFiles.length, statusText: status || `Avaliando foto ${cur} de ${tot}...` });
 
-        if (currentItem && currentItem.id) {
-          setFileStatuses((prev) => ({
-            ...prev,
-            [currentItem.id]: {
-              status: status.includes('Aguardando') ? 'WAITING_RETRY' : 'PROCESSING',
-              statusText: status
-            }
-          }));
-        }
+          if (currentItem && currentItem.id) {
+            setFileStatuses((prev) => ({
+              ...prev,
+              [currentItem.id]: {
+                status: status.includes('Aguardando') ? 'WAITING_RETRY' : 'PROCESSING',
+                statusText: status
+              }
+            }));
+          }
 
-        if (Array.isArray(allResults)) {
-          allResults.forEach((r) => {
-            if (r.id) {
-              setFileStatuses((prev) => ({
-                ...prev,
-                [r.id]: {
-                  status: r.status === 'success' ? 'SUCCESS' : 'ERROR',
-                  nota: r.extracted?.nota_final,
-                  aluno: r.extracted?.aluno,
-                  error: r.error
-                }
-              }));
-            }
-          });
+          if (Array.isArray(allResults)) {
+            allResults.forEach((r) => {
+              if (r.id) {
+                setFileStatuses((prev) => ({
+                  ...prev,
+                  [r.id]: {
+                    status: r.status === 'success' ? 'SUCCESS' : 'ERROR',
+                    nota: r.extracted?.nota_final,
+                    aluno: r.extracted?.aluno,
+                    error: r.error
+                  }
+                }));
+              }
+            });
+          }
+        },
+        {
+          usuarioId: isEstudante && user ? user.id : null,
+          nomePadrao: isEstudante && user ? user.nome : (manualName || null),
+          turmaPadrao: isEstudante && user?.turma ? user.turma : (manualTurma || null)
         }
-      });
+      );
 
       if (onRedacaoSaved) onRedacaoSaved();
     } finally {
@@ -348,33 +384,35 @@ export default function UploaderView({ onRedacaoSaved }) {
           <div>
             <label htmlFor="uploader-manual-name" className="block text-xs font-semibold text-[#5a5852] uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
               <User className="w-3.5 h-3.5 text-[#807d72]" aria-hidden="true" />
-              Nome do Aluno (Opcional)
+              Nome do Aluno {isEstudante ? '(Seu Perfil)' : '(Opcional)'}
             </label>
             <input
               id="uploader-manual-name"
               name="nomeAluno"
               type="text"
               autoComplete="name"
-              placeholder="IA extrai se houver no cabeçalho..."
+              placeholder={isEstudante ? (user?.nome || 'Seu nome') : 'IA extrai se houver no cabeçalho...'}
               value={manualName}
               onChange={(e) => setManualName(e.target.value)}
-              className="w-full bg-[#fafaf7] border border-[#e6e5e0] rounded-md px-3.5 py-2.5 text-xs text-[#26251e] placeholder-[#807d72] focus:outline-none focus:ring-2 focus:ring-[#26251e] transition-colors"
+              disabled={isEstudante}
+              className={`w-full bg-[#fafaf7] border border-[#e6e5e0] rounded-md px-3.5 py-2.5 text-xs text-[#26251e] placeholder-[#807d72] focus:outline-none focus:ring-2 focus:ring-[#26251e] transition-colors ${isEstudante ? 'opacity-80 cursor-not-allowed' : ''}`}
             />
           </div>
 
           <div>
             <label htmlFor="uploader-manual-turma" className="block text-xs font-semibold text-[#5a5852] uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
               <GraduationCap className="w-3.5 h-3.5 text-[#807d72]" aria-hidden="true" />
-              Turma (Opcional)
+              Turma {isEstudante && user?.turma ? '(Sua Turma)' : '(Opcional)'}
             </label>
             <input
               id="uploader-manual-turma"
               name="turmaAluno"
               type="text"
-              placeholder="ex: 3º Ano A - Ensino Médio..."
+              placeholder={isEstudante && user?.turma ? user.turma : 'ex: 3º Ano A - Ensino Médio...'}
               value={manualTurma}
               onChange={(e) => setManualTurma(e.target.value)}
-              className="w-full bg-[#fafaf7] border border-[#e6e5e0] rounded-md px-3.5 py-2.5 text-xs text-[#26251e] placeholder-[#807d72] focus:outline-none focus:ring-2 focus:ring-[#26251e] transition-colors"
+              disabled={isEstudante && Boolean(user?.turma)}
+              className={`w-full bg-[#fafaf7] border border-[#e6e5e0] rounded-md px-3.5 py-2.5 text-xs text-[#26251e] placeholder-[#807d72] focus:outline-none focus:ring-2 focus:ring-[#26251e] transition-colors ${isEstudante && Boolean(user?.turma) ? 'opacity-80 cursor-not-allowed' : ''}`}
             />
           </div>
         </div>

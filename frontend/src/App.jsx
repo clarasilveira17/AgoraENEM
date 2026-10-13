@@ -21,6 +21,7 @@ const ProjetoAgoraLandingView = lazy(() => import('./components/ProjetoAgoraLand
 const PerfilView = lazy(() => import('./components/PerfilView'));
 const AdminUsuariosView = lazy(() => import('./components/AdminUsuariosView'));
 const AdminAlocacaoView = lazy(() => import('./components/AdminAlocacaoView'));
+const UploaderView = lazy(() => import('./components/UploaderView'));
 
 function AppContent() {
   const { user, isAuthenticated, isAdmin, isProfessor, isTeacherOrAdmin, isEstudante, loading: authLoading } = useAuth();
@@ -370,7 +371,11 @@ function AppContent() {
                 />
               )}
 
-              {(activeView === 'novo' || activeView === 'tabela' || activeView === 'sem_nome') && (
+              {activeView === 'novo' && (
+                <UploaderView onRedacaoSaved={handleRedacaoSaved} />
+              )}
+
+              {(activeView === 'tabela' || activeView === 'sem_nome') && (
                 <GestaoRedacoesView
                   redacoes={redacoes}
                   isLoading={isLoadingRedacoes}
