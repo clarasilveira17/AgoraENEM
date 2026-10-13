@@ -1,15 +1,12 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
 
 /**
- * Priority list of models optimized for Google AI Studio quotas (15 RPM / 500 RPD)
+ * Lista prioritária de modelos com alta cota no Google AI Studio Free Tier (15 RPM / 500 RPD).
+ * Modelos experimentais com cota restrita (ex: gemini-3.6-flash com limite de 20 RPD) foram removidos.
  */
 export const GEMINI_MODELS = [
   'gemini-3.5-flash-lite',
-  'gemini-3.7-flash',
-  'gemini-flash-latest',
-  'gemini-3.5-flash',
-  'gemini-3.8-flash',
-  'gemini-3.6-flash'
+  'gemini-3.5-flash'
 ];
 
 const sleep = (ms) => new Promise(r => setTimeout(r, ms));
@@ -19,7 +16,7 @@ const sleep = (ms) => new Promise(r => setTimeout(r, ms));
  */
 export async function generateContentWithFallback(genAI, config, contents, timeoutMs = 45000) {
   let lastErr = null;
-  const MAX_CYCLES = 2;
+  const MAX_CYCLES = 3;
 
   for (let cycle = 1; cycle <= MAX_CYCLES; cycle++) {
     for (const modelName of GEMINI_MODELS) {
@@ -54,7 +51,7 @@ export async function generateContentWithFallback(genAI, config, contents, timeo
 
         if (isRetryable) {
           const isHighDemand = msg.includes('503') || msg.includes('429') || msg.includes('high demand') || msg.includes('overloaded');
-          const delayMs = isHighDemand ? (1500 * cycle) : 400;
+          const delayMs = isHighDemand ? (2000 * cycle) : 500;
           console.warn(`[Gemini Fallback] Modelo ${modelName} indisponível (${msg.substring(0, 80)}...). Aguardando ${delayMs}ms e alternando...`);
           await sleep(delayMs);
           continue;

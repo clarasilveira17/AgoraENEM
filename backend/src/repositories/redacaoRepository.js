@@ -1,492 +1,452 @@
-import db from '../config/db.js';
-import { supabase, isSupabaseConfigured } from '../config/supabaseClient.js';
-import { resolveStudent } from '../utils/turmasUtils.js';
-
-// Cache em memória para o ranking (TTL: 30 segundos) para poupar requisições ao Supabase
-let rankingCache = {
-  data: null,
-  timestamp: 0
-};
-const RANKING_CACHE_TTL_MS = 30 * 1000;
-
-export function invalidateRankingCache() {
-  rankingCache.data = null;
-  rankingCache.timestamp = 0;
-}
+import { supabase, isSupabaseConfigured, uploadEssayImageToStorage } from '../config/supabaseClient.js';
 
 export const redacaoRepository = {
-  async findAll({ user, includeImage = false }) {
-    if (!user) return [];
-
-    let formatted = [];
-
-    if (isSupabaseConfigured) {
-      try {
-        const selectFields = includeImage
-          ? '*'
-          : 'id, user_id, nome_aluno, turma_aluno, nome_detectado, data_captura, tipo_input, texto_digitado, is_synced, extracted_data, nota_final, status_validacao, validado_por, data_validacao';
-
-        let query = supabase
-          .from('redacoes')
-          .select(selectFields)
-          .order('data_captura', { ascending: false });
-
-        if (user.role !== 'ADMIN' && user.role !== 'PROFESSOR') {
-          const cleanStudentName = (user.nome || '').trim();
-          query = query.eq('status_validacao', 'VALIDADA').or(`user_id.eq.${user.id},nome_aluno.ilike.${cleanStudentName}`);
-        }
-
-        const { data, error } = await query;
-        if (!error && data && data.length > 0) {
-          formatted = data.map(r => ({
-            ...r,
-            nome_detectado: Boolean(r.nome_detectado),
-            is_synced: Boolean(r.is_synced),
-            extracted_data: typeof r.extracted_data === 'string' ? JSON.parse(r.extracted_data || '{}') : (r.extracted_data || {}),
-            status_validacao: r.status_validacao || 'VALIDADA'
-          }));
-        } else if (error) {
-          console.warn('[redacaoRepository.findAll Supabase Warning]:', error.message);
-        }
-      } catch (err) {
-        console.warn('[redacaoRepository.findAll Supabase Exception]:', err.message);
-      }
+  /**
+   * Busca paginada de redações com filtros completos e RBAC estrito
+   */
+  async findPaginated({ user, offset = 0, limit = 25, filters = {} }) {
+    if (!user || !isSupabaseConfigured) {
+      return { redacoes: [], total: 0 };
     }
 
-    // Se Supabase falhou/retornou 0 e temos SQLite local com dados, carrega do SQLite!
-    if (formatted.length === 0 && db) {
-      let rows;
-      if (user.role === 'ADMIN' || user.role === 'PROFESSOR') {
-        rows = db.prepare(`
-          SELECT r.id, r.user_id, r.nome_aluno, r.turma_aluno, r.nome_detectado, r.data_captura,
-                 r.tipo_input, r.texto_digitado, r.is_synced, r.extracted_data, r.nota_final,
-                 r.status_validacao, r.validado_por, r.data_validacao,
-                 u.email as user_email, v.nome as nome_validador
-          FROM redacoes r
-          LEFT JOIN users u ON r.user_id = u.id
-          LEFT JOIN users v ON r.validado_por = v.id
-          ORDER BY r.data_captura DESC
-        `).all();
+    const selectFields = 'id, user_id, nome_aluno, turma_aluno, nome_detectado, data_captura, tipo_input, imagem_url, imagens_urls, texto_digitado, is_synced, extracted_data, nota_final, status_validacao, validado_por, data_validacao, corretor_id, status_alocacao, alocado_em, versao_concorrencia';
+
+    let query = supabase
+      .from('redacoes')
+      .select(selectFields, { count: 'exact' });
+
+    // RBAC: Estudante só pode ver suas próprias redações validadas
+    if (user.role !== 'ADMIN' && user.role !== 'PROFESSOR') {
+      const cleanStudentName = (user.nome || '').trim();
+      query = query
+        .eq('status_validacao', 'VALIDADA')
+        .or(`user_id.eq.${user.id},nome_aluno.ilike.%${cleanStudentName}%`);
+    } else if (filters.minhas_alocadas && user.role === 'PROFESSOR') {
+      // Filtro para o professor ver apenas as que foram alocadas a ele
+      query = query.eq('corretor_id', user.id);
+    }
+
+    // Filtros adicionais opcionais
+    if (filters.turma && filters.turma !== 'todas') {
+      query = query.eq('turma_aluno', filters.turma);
+    }
+
+    if (filters.status && filters.status !== 'todas') {
+      if (filters.status === 'conferidas') {
+        query = query.eq('status_validacao', 'VALIDADA');
+      } else if (filters.status === 'pendentes') {
+        query = query.eq('status_validacao', 'PENDENTE_VALIDACAO');
+      } else if (filters.status === 'erro') {
+        query = query.eq('status_validacao', 'ERRO_PROCESSAMENTO');
       } else {
-        const cleanStudentName = (user.nome || '').trim();
-        rows = db.prepare(`
-          SELECT r.id, r.user_id, r.nome_aluno, r.turma_aluno, r.nome_detectado, r.data_captura,
-                 r.tipo_input, r.texto_digitado, r.is_synced, r.extracted_data, r.nota_final,
-                 r.status_validacao, r.validado_por, r.data_validacao,
-                 u.email as user_email, v.nome as nome_validador
-          FROM redacoes r
-          LEFT JOIN users u ON r.user_id = u.id
-          LEFT JOIN users v ON r.validado_por = v.id
-          WHERE (r.user_id = ? 
-             OR (r.user_id IS NULL AND LOWER(TRIM(r.nome_aluno)) = LOWER(TRIM(?))))
-            AND r.status_validacao = 'VALIDADA'
-          ORDER BY r.data_captura DESC
-        `).all(user.id, cleanStudentName);
+        query = query.eq('status_validacao', filters.status);
       }
-
-      formatted = rows.map(row => ({
-        ...row,
-        nome_detectado: Boolean(row.nome_detectado),
-        is_synced: Boolean(row.is_synced),
-        extracted_data: typeof row.extracted_data === 'string' ? JSON.parse(row.extracted_data || '{}') : (row.extracted_data || {}),
-        status_validacao: row.status_validacao || 'VALIDADA',
-        imagem_base64: null
-      }));
     }
 
-    return formatted;
+    if (filters.status_alocacao) {
+      query = query.eq('status_alocacao', filters.status_alocacao);
+    }
+
+    if (filters.search && filters.search.trim()) {
+      const s = filters.search.trim();
+      if (!isNaN(Number(s))) {
+        query = query.or(`id.eq.${Number(s)},nome_aluno.ilike.%${s}%,turma_aluno.ilike.%${s}%`);
+      } else {
+        query = query.or(`nome_aluno.ilike.%${s}%,turma_aluno.ilike.%${s}%`);
+      }
+    }
+
+    query = query
+      .order('data_captura', { ascending: false })
+      .range(offset, offset + limit - 1);
+
+    const { data, count, error } = await query;
+
+    if (error) {
+      console.warn('[redacaoRepository.findPaginated Error]:', error.message);
+      return { redacoes: [], total: 0 };
+    }
+
+    const formatted = (data || []).map(r => ({
+      ...r,
+      nome_detectado: Boolean(r.nome_detectado),
+      is_synced: Boolean(r.is_synced),
+      extracted_data: typeof r.extracted_data === 'string' ? JSON.parse(r.extracted_data || '{}') : (r.extracted_data || {}),
+      status_validacao: r.status_validacao || 'VALIDADA',
+      versao_concorrencia: r.versao_concorrencia || 1
+    }));
+
+    return {
+      redacoes: formatted,
+      total: count || 0
+    };
   },
 
   /**
-   * Busca pontual e leve apenas de redações com erro para reprocessamento, sem sobrecarregar o banco
+   * Mantido para compatibilidade, com limite de segurança para não explodir a memória
    */
-  async findPendingRetries(limit = 5) {
-    let pending = [];
-
-    if (isSupabaseConfigured) {
-      try {
-        const { data, error } = await supabase
-          .from('redacoes')
-          .select('id, user_id, nome_aluno, turma_aluno, data_captura, tipo_input, imagem_base64, texto_digitado, extracted_data')
-          .eq('status_validacao', 'ERRO_PROCESSAMENTO')
-          .order('data_captura', { ascending: true })
-          .limit(limit);
-
-        if (!error && data && data.length > 0) {
-          pending = data.map(r => ({
-            ...r,
-            extracted_data: typeof r.extracted_data === 'string' ? JSON.parse(r.extracted_data || '{}') : (r.extracted_data || {})
-          }));
-          return pending;
-        }
-      } catch (err) {
-        console.warn('[redacaoRepository.findPendingRetries Supabase Exception]:', err.message);
-      }
-    }
-
-    if (db) {
-      try {
-        const rows = db.prepare(`
-          SELECT id, user_id, nome_aluno, turma_aluno, data_captura, tipo_input, imagem_base64, texto_digitado, extracted_data
-          FROM redacoes
-          WHERE status_validacao = 'ERRO_PROCESSAMENTO'
-          ORDER BY data_captura ASC
-          LIMIT ?
-        `).all(limit);
-
-        pending = rows.map(r => ({
-          ...r,
-          extracted_data: typeof r.extracted_data === 'string' ? JSON.parse(r.extracted_data || '{}') : (r.extracted_data || {})
-        }));
-      } catch (err) {
-        console.warn('[redacaoRepository.findPendingRetries SQLite Exception]:', err.message);
-      }
-    }
-
-    return pending;
+  async findAll({ user, includeImage = false }) {
+    const result = await this.findPaginated({
+      user,
+      offset: 0,
+      limit: 100 // Limite defensivo para chamadas legadas
+    });
+    return result.redacoes;
   },
 
+  /**
+   * Busca redação por ID
+   */
   async findById(id) {
-    let redacao = null;
+    if (!id || !isSupabaseConfigured) return null;
 
-    if (isSupabaseConfigured) {
-      try {
-        const { data, error } = await supabase
-          .from('redacoes')
-          .select('*')
-          .eq('id', id)
-          .maybeSingle();
+    try {
+      const { data, error } = await supabase
+        .from('redacoes')
+        .select('*')
+        .eq('id', id)
+        .maybeSingle();
 
-        if (!error && data) {
-          redacao = {
-            ...data,
-            nome_detectado: Boolean(data.nome_detectado),
-            is_synced: Boolean(data.is_synced),
-            extracted_data: typeof data.extracted_data === 'string' ? JSON.parse(data.extracted_data || '{}') : (data.extracted_data || {}),
-            status_validacao: data.status_validacao || 'VALIDADA'
-          };
-        }
-      } catch (err) {
-        console.warn('[redacaoRepository.findById Supabase Exception]:', err.message);
-      }
+      if (error || !data) return null;
+
+      return {
+        ...data,
+        nome_detectado: Boolean(data.nome_detectado),
+        is_synced: Boolean(data.is_synced),
+        extracted_data: typeof data.extracted_data === 'string' ? JSON.parse(data.extracted_data || '{}') : (data.extracted_data || {}),
+        status_validacao: data.status_validacao || 'VALIDADA',
+        versao_concorrencia: data.versao_concorrencia || 1
+      };
+    } catch (err) {
+      console.warn('[redacaoRepository.findById Exception]:', err.message);
+      return null;
     }
-
-    if (!redacao && db) {
-      const row = db.prepare(`
-        SELECT r.*, u.email as user_email, v.nome as nome_validador
-        FROM redacoes r
-        LEFT JOIN users u ON r.user_id = u.id
-        LEFT JOIN users v ON r.validado_por = v.id
-        WHERE r.id = ?
-      `).get(id);
-
-      if (row) {
-        redacao = {
-          ...row,
-          nome_detectado: Boolean(row.nome_detectado),
-          is_synced: Boolean(row.is_synced),
-          extracted_data: typeof row.extracted_data === 'string' ? JSON.parse(row.extracted_data || '{}') : (row.extracted_data || {}),
-          status_validacao: row.status_validacao || 'VALIDADA'
-        };
-      }
-    }
-
-    return redacao;
   },
 
+  /**
+   * Busca e consolida o ranking oficial (Critérios ENEM C1, C4, C3, C2, C5)
+   */
   async findRanking() {
-    const now = Date.now();
-    if (rankingCache.data && (now - rankingCache.timestamp < RANKING_CACHE_TTL_MS)) {
-      return rankingCache.data;
-    }
+    if (!isSupabaseConfigured) return [];
 
-    let formatted = [];
+    try {
+      const { data, error } = await supabase
+        .from('redacoes')
+        .select('id, user_id, nome_aluno, turma_aluno, nota_final, data_captura, status_validacao, extracted_data, is_synced')
+        .eq('status_validacao', 'VALIDADA')
+        .order('nota_final', { ascending: false })
+        .limit(200);
 
-    if (isSupabaseConfigured) {
-      try {
-        const { data, error } = await supabase
-          .from('redacoes')
-          .select('id, user_id, nome_aluno, turma_aluno, nota_final, data_captura, status_validacao, extracted_data, is_synced')
-          .eq('status_validacao', 'VALIDADA')
-          .order('nota_final', { ascending: false });
+      if (error || !data) return [];
 
-        if (!error && data && data.length > 0) {
-          formatted = data.map(r => ({
-            ...r,
-            extracted_data: typeof r.extracted_data === 'string' ? JSON.parse(r.extracted_data || '{}') : (r.extracted_data || {}),
-            is_synced: true
-          }));
-        } else if (error) {
-          console.warn('[redacaoRepository.findRanking Supabase Warning]:', error.message);
-        }
-      } catch (err) {
-        console.warn('[redacaoRepository.findRanking Supabase Exception]:', err.message);
-      }
-    }
-
-    if (formatted.length === 0 && db) {
-      const rows = db.prepare(`
-        SELECT id, user_id, nome_aluno, turma_aluno, nota_final, data_captura, status_validacao, extracted_data, is_synced
-        FROM redacoes
-        WHERE status_validacao = 'VALIDADA'
-        ORDER BY nota_final DESC
-      `).all();
-
-      formatted = rows.map(r => ({
+      const formatted = data.map(r => ({
         ...r,
         extracted_data: typeof r.extracted_data === 'string' ? JSON.parse(r.extracted_data || '{}') : (r.extracted_data || {}),
         is_synced: true
       }));
+
+      // Critérios oficiais de desempate ENEM
+      formatted.sort((a, b) => {
+        if ((b.nota_final || 0) !== (a.nota_final || 0)) {
+          return (b.nota_final || 0) - (a.nota_final || 0);
+        }
+        const getComp = (item, key) => item.extracted_data?.avaliacoes?.enem?.[key]?.nota || 0;
+        const bC1 = getComp(b, 'competencia_1');
+        const aC1 = getComp(a, 'competencia_1');
+        if (bC1 !== aC1) return bC1 - aC1;
+
+        const bC4 = getComp(b, 'competencia_4');
+        const aC4 = getComp(a, 'competencia_4');
+        if (bC4 !== aC4) return bC4 - aC4;
+
+        const bC3 = getComp(b, 'competencia_3');
+        const aC3 = getComp(a, 'competencia_3');
+        if (bC3 !== aC3) return bC3 - aC3;
+
+        const bC2 = getComp(b, 'competencia_2');
+        const aC2 = getComp(a, 'competencia_2');
+        if (bC2 !== aC2) return bC2 - aC2;
+
+        const bC5 = getComp(b, 'competencia_5');
+        const aC5 = getComp(a, 'competencia_5');
+        if (bC5 !== aC5) return bC5 - aC5;
+
+        const aName = (a.nome_aluno || '').trim().toLowerCase();
+        const bName = (b.nome_aluno || '').trim().toLowerCase();
+        return aName.localeCompare(bName);
+      });
+
+      return formatted;
+    } catch (err) {
+      console.warn('[redacaoRepository.findRanking Exception]:', err.message);
+      return [];
+    }
+  },
+
+  /**
+   * Persiste uma nova redação no Supabase utilizando BIGSERIAL nativo (sem geração manual de ID)
+   * Se imagem em base64 for fornecida, sobe automaticamente para o Supabase Storage.
+   */
+  async create(data) {
+    if (!isSupabaseConfigured) throw new Error('Supabase não configurado para gravação de redação.');
+
+    let imagemUrl = data.imagem_url || null;
+
+    // Se a imagem veio em base64, salva no Supabase Storage para poupar a tabela
+    if (!imagemUrl && data.imagem_base64 && data.imagem_base64.length > 500) {
+      try {
+        imagemUrl = await uploadEssayImageToStorage(data.imagem_base64, data.nome_aluno);
+      } catch (uploadErr) {
+        console.warn('[redacaoRepository.create Storage Warning]:', uploadErr.message);
+      }
     }
 
-    // Critérios oficiais de desempate ENEM (C1, C4, C3, C2, C5, Alfabética)
-    formatted.sort((a, b) => {
-      if ((b.nota_final || 0) !== (a.nota_final || 0)) {
-        return (b.nota_final || 0) - (a.nota_final || 0);
-      }
-      const getComp = (item, key) => {
-        const ext = item.extracted_data || {};
-        return ext?.avaliacoes?.enem?.[key]?.nota || 0;
-      };
-      const bC1 = getComp(b, 'competencia_1');
-      const aC1 = getComp(a, 'competencia_1');
-      if (bC1 !== aC1) return bC1 - aC1;
-
-      const bC4 = getComp(b, 'competencia_4');
-      const aC4 = getComp(a, 'competencia_4');
-      if (bC4 !== aC4) return bC4 - aC4;
-
-      const bC3 = getComp(b, 'competencia_3');
-      const aC3 = getComp(a, 'competencia_3');
-      if (bC3 !== aC3) return bC3 - aC3;
-
-      const bC2 = getComp(b, 'competencia_2');
-      const aC2 = getComp(a, 'competencia_2');
-      if (bC2 !== aC2) return bC2 - aC2;
-
-      const bC5 = getComp(b, 'competencia_5');
-      const aC5 = getComp(a, 'competencia_5');
-      if (bC5 !== aC5) return bC5 - aC5;
-
-      const aName = (a.nome_aluno || '').trim().toLowerCase();
-      const bName = (b.nome_aluno || '').trim().toLowerCase();
-      return aName.localeCompare(bName);
-    });
-
-    rankingCache = {
-      data: formatted,
-      timestamp: now
+    const payload = {
+      user_id: data.user_id || null,
+      nome_aluno: data.nome_aluno || 'Não identificado',
+      turma_aluno: data.turma_aluno || null,
+      nome_detectado: data.nome_detectado ?? 1,
+      data_captura: data.data_captura || new Date().toISOString(),
+      tipo_input: data.tipo_input || 'imagem',
+      imagem_url: imagemUrl,
+      imagens_urls: Array.isArray(data.imagens_urls) && data.imagens_urls.length > 0 ? data.imagens_urls : (imagemUrl ? [imagemUrl] : []),
+      imagem_base64: imagemUrl ? null : (data.imagem_base64 || null), // Oprime base64 no banco se já temos a URL do Storage
+      texto_digitado: data.texto_digitado || null,
+      is_synced: 1,
+      extracted_data: data.extracted_data || {},
+      nota_final: data.nota_final || 0,
+      status_validacao: data.status_validacao || 'PENDENTE_VALIDACAO',
+      validado_por: data.validado_por || null,
+      data_validacao: data.data_validacao || null,
+      corretor_id: data.corretor_id || null,
+      status_alocacao: data.status_alocacao || 'DISPONIVEL',
+      alocado_em: data.alocado_em || null,
+      versao_concorrencia: 1
     };
 
-    return formatted;
-  },
+    const { data: inserted, error } = await supabase
+      .from('redacoes')
+      .insert(payload)
+      .select('id')
+      .single();
 
-  async getNextAvailableId() {
-    if (isSupabaseConfigured) {
-      try {
-        const { data, error } = await supabase
-          .from('redacoes')
-          .select('id')
-          .order('id', { ascending: false })
-          .limit(1)
-          .maybeSingle();
-
-        if (!error && data && data.id) {
-          return Number(data.id) + 1;
-        }
-      } catch (err) {
-        console.warn('[redacaoRepository] Falha ao consultar MAX(id):', err.message);
-      }
-    }
-    return 1;
-  },
-
-  async create(data) {
-    let savedId = null;
-
-    if (isSupabaseConfigured) {
-      const payload = {
-        user_id: data.user_id,
-        nome_aluno: data.nome_aluno,
-        turma_aluno: data.turma_aluno,
-        nome_detectado: data.nome_detectado ?? 1,
-        data_captura: data.data_captura || new Date().toISOString(),
-        tipo_input: data.tipo_input || 'imagem',
-        imagem_base64: data.imagem_base64 || null,
-        texto_digitado: data.texto_digitado || null,
-        is_synced: 1,
-        extracted_data: data.extracted_data || {},
-        nota_final: data.nota_final || 0,
-        status_validacao: data.status_validacao || 'VALIDADA',
-        validado_por: data.validado_por || null,
-        data_validacao: data.data_validacao || null
-      };
-
-      // 1. Primeira tentativa: inserção padrão usando a sequence do PostgreSQL
-      let { data: inserted, error } = await supabase
-        .from('redacoes')
-        .insert(payload)
-        .select('id')
-        .single();
-
-      // 2. Fallback de sequence desincronizada: se houver conflito de redacoes_pkey, calcula MAX(id) + 1 e insere com ID explícito
-      if (error && (error.code === '23505' || String(error.message).includes('redacoes_pkey'))) {
-        console.warn('[redacaoRepository.create] Conflito de redacoes_pkey detectado. Recuperando sequence com MAX(id) + 1...');
-        
-        let attempts = 0;
-        let success = false;
-        
-        while (attempts < 3 && !success) {
-          attempts++;
-          const nextId = await this.getNextAvailableId() + (attempts - 1);
-          const retryRes = await supabase
-            .from('redacoes')
-            .insert({ ...payload, id: nextId })
-            .select('id')
-            .single();
-
-          if (!retryRes.error && retryRes.data) {
-            inserted = retryRes.data;
-            error = null;
-            success = true;
-            break;
-          } else {
-            error = retryRes.error;
-          }
-        }
-      }
-
-      if (error) {
-        console.error('[redacaoRepository.create] Erro ao inserir no Supabase:', error);
-        throw new Error(error.message || 'Erro ao persistir redação no Supabase');
-      }
-
-      if (inserted) {
-        savedId = inserted.id;
-      }
+    if (error) {
+      console.error('[redacaoRepository.create Error]:', error.message);
+      throw new Error(error.message || 'Erro ao persistir redação no Supabase.');
     }
 
-    if (db) {
-      try {
-        let sqliteUserId = data.user_id ? Number(data.user_id) : null;
-        let sqliteValidadoPor = data.validado_por ? Number(data.validado_por) : null;
-
-        // Verifica integridade referencial no SQLite antes de inserir para evitar 'FOREIGN KEY constraint failed'
-        if (sqliteUserId) {
-          const userRow = db.prepare('SELECT id FROM users WHERE id = ?').get(sqliteUserId);
-          if (!userRow) sqliteUserId = null;
-        }
-
-        if (sqliteValidadoPor) {
-          const valRow = db.prepare('SELECT id FROM users WHERE id = ?').get(sqliteValidadoPor);
-          if (!valRow) sqliteValidadoPor = null;
-        }
-
-        const extractedDataStr = typeof data.extracted_data === 'string'
-          ? data.extracted_data
-          : JSON.stringify(data.extracted_data || {});
-
-        const result = db.prepare(`
-          INSERT INTO redacoes (
-            user_id, nome_aluno, turma_aluno, nome_detectado, data_captura,
-            tipo_input, imagem_base64, texto_digitado, is_synced, extracted_data, nota_final,
-            status_validacao, validado_por, data_validacao
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?, ?, ?, ?)
-        `).run(
-          sqliteUserId,
-          data.nome_aluno,
-          data.turma_aluno,
-          data.nome_detectado ?? 1,
-          data.data_captura || new Date().toISOString(),
-          data.tipo_input || 'imagem',
-          data.imagem_base64 || null,
-          data.texto_digitado || null,
-          extractedDataStr,
-          data.nota_final || 0,
-          data.status_validacao || 'VALIDADA',
-          sqliteValidadoPor,
-          data.data_validacao || null
-        );
-
-        if (!savedId) savedId = result.lastInsertRowid;
-      } catch (sqliteErr) {
-        console.warn('[redacaoRepository.create SQLite Warning]:', sqliteErr.message);
-        if (!savedId && !isSupabaseConfigured) {
-          throw sqliteErr;
-        }
-      }
-    }
-
-    invalidateRankingCache();
-    return savedId;
+    return inserted?.id;
   },
 
+  /**
+   * Atualização com Lock Otimista (versao_concorrencia) para impedir sobrescrita de correções
+   */
+  async updateWithLock(id, expectedVersion, updates) {
+    if (!isSupabaseConfigured) throw new Error('Supabase não configurado.');
+
+    const newVersion = (expectedVersion || 1) + 1;
+    const updatePayload = {
+      ...updates,
+      versao_concorrencia: newVersion
+    };
+
+    let query = supabase
+      .from('redacoes')
+      .update(updatePayload)
+      .eq('id', id);
+
+    // Se uma versão esperada foi informada, aplica a verificação de concorrência
+    if (expectedVersion !== undefined && expectedVersion !== null) {
+      query = query.eq('versao_concorrencia', expectedVersion);
+    }
+
+    const { data, error } = await query.select('id, versao_concorrencia');
+
+    if (error) {
+      console.error('[redacaoRepository.updateWithLock Error]:', error.message);
+      throw new Error(error.message);
+    }
+
+    // Se nenhuma linha foi atualizada, outro professor salvou antes!
+    if (!data || data.length === 0) {
+      return { success: false, conflict: true };
+    }
+
+    return { success: true, newVersion };
+  },
+
+  /**
+   * Atualização simples
+   */
   async update(id, updates) {
-    if (isSupabaseConfigured) {
-      const { error } = await supabase.from('redacoes').update(updates).eq('id', id);
-      if (error) console.error('[redacaoRepository.update Supabase Error]:', error.message);
-    }
+    if (!isSupabaseConfigured) return;
 
-    if (db) {
-      try {
-        const fields = [];
-        const values = [];
-        for (const [k, v] of Object.entries(updates)) {
-          fields.push(`${k} = ?`);
-          values.push(typeof v === 'object' && v !== null ? JSON.stringify(v) : v);
-        }
-        values.push(id);
-        db.prepare(`UPDATE redacoes SET ${fields.join(', ')} WHERE id = ?`).run(...values);
-      } catch (err) {
-        console.warn('[redacaoRepository.update SQLite Warning]:', err.message);
+    const { error } = await supabase
+      .from('redacoes')
+      .update(updates)
+      .eq('id', id);
+
+    if (error) console.error('[redacaoRepository.update Error]:', error.message);
+  },
+
+  /**
+   * Solicita um lote de redações disponíveis e aloca atomicamente para o professor
+   */
+  async solicitarLote(professorId, tamanhoLote = 10) {
+    if (!isSupabaseConfigured) throw new Error('Supabase não configurado.');
+
+    // 1. Limpa leases expirados (> 90 minutos)
+    await this.limparLeasesExpirados(90);
+
+    // 2. Busca redações que o professor já tem alocadas em aberto
+    const { data: existentes } = await supabase
+      .from('redacoes')
+      .select('id, user_id, nome_aluno, turma_aluno, data_captura, tipo_input, nota_final, status_validacao, alocado_em, versao_concorrencia')
+      .eq('corretor_id', professorId)
+      .eq('status_alocacao', 'EM_CORRECAO')
+      .order('data_captura', { ascending: true });
+
+    const jaAlocadas = existentes || [];
+    const vagas = tamanhoLote - jaAlocadas.length;
+
+    if (vagas > 0) {
+      // 3. Busca redações pendentes disponíveis
+      const { data: disponiveis } = await supabase
+        .from('redacoes')
+        .select('id')
+        .eq('status_alocacao', 'DISPONIVEL')
+        .neq('status_validacao', 'VALIDADA')
+        .order('data_captura', { ascending: true })
+        .limit(vagas);
+
+      if (disponiveis && disponiveis.length > 0) {
+        const ids = disponiveis.map(d => d.id);
+        const agora = new Date().toISOString();
+
+        await supabase
+          .from('redacoes')
+          .update({
+            corretor_id: professorId,
+            status_alocacao: 'EM_CORRECAO',
+            alocado_em: agora
+          })
+          .in('id', ids)
+          .eq('status_alocacao', 'DISPONIVEL');
       }
     }
 
-    invalidateRankingCache();
+    // Retorna o lote completo atual do professor
+    const { data: loteFinal } = await supabase
+      .from('redacoes')
+      .select('id, user_id, nome_aluno, turma_aluno, data_captura, tipo_input, imagem_url, nota_final, status_validacao, alocado_em, versao_concorrencia')
+      .eq('corretor_id', professorId)
+      .eq('status_alocacao', 'EM_CORRECAO')
+      .order('data_captura', { ascending: true });
+
+    return loteFinal || [];
   },
 
+  /**
+   * Devolve uma redação alocada de volta para a fila geral disponível
+   */
+  async devolverRedacao(id, professorId) {
+    if (!isSupabaseConfigured) return false;
+
+    const { error } = await supabase
+      .from('redacoes')
+      .update({
+        corretor_id: null,
+        status_alocacao: 'DISPONIVEL',
+        alocado_em: null
+      })
+      .eq('id', id)
+      .eq('corretor_id', professorId);
+
+    return !error;
+  },
+
+  /**
+   * Limpa leases expirados (> maxMinutes) liberando redações de volta para a fila
+   */
+  async limparLeasesExpirados(maxMinutes = 90) {
+    if (!isSupabaseConfigured) return 0;
+
+    const limiteExpiracao = new Date(Date.now() - maxMinutes * 60 * 1000).toISOString();
+
+    const { data, error } = await supabase
+      .from('redacoes')
+      .update({
+        corretor_id: null,
+        status_alocacao: 'DISPONIVEL',
+        alocado_em: null
+      })
+      .eq('status_alocacao', 'EM_CORRECAO')
+      .lt('alocado_em', limiteExpiracao)
+      .select('id');
+
+    if (error) {
+      console.warn('[redacaoRepository.limparLeasesExpirados Error]:', error.message);
+      return 0;
+    }
+
+    return (data || []).length;
+  },
+
+  /**
+   * Métricas de alocação para o painel administrativo
+   */
+  async getMetricasAlocacao() {
+    if (!isSupabaseConfigured) return null;
+
+    const [disponiveisRes, emCorrecaoRes, concluidasRes, totalRes] = await Promise.all([
+      supabase.from('redacoes').select('id', { count: 'exact', head: true }).eq('status_alocacao', 'DISPONIVEL'),
+      supabase.from('redacoes').select('id', { count: 'exact', head: true }).eq('status_alocacao', 'EM_CORRECAO'),
+      supabase.from('redacoes').select('id', { count: 'exact', head: true }).eq('status_validacao', 'VALIDADA'),
+      supabase.from('redacoes').select('id', { count: 'exact', head: true })
+    ]);
+
+    // Redações travadas há mais de 2 horas
+    const limite2h = new Date(Date.now() - 120 * 60 * 1000).toISOString();
+    const { count: travadasCount } = await supabase
+      .from('redacoes')
+      .select('id', { count: 'exact', head: true })
+      .eq('status_alocacao', 'EM_CORRECAO')
+      .lt('alocado_em', limite2h);
+
+    return {
+      total: totalRes.count || 0,
+      disponiveis: disponiveisRes.count || 0,
+      emCorrecao: emCorrecaoRes.count || 0,
+      concluidas: concluidasRes.count || 0,
+      travadas2h: travadasCount || 0
+    };
+  },
+
+  /**
+   * Exclusão de redação
+   */
   async deleteById(id) {
-    if (isSupabaseConfigured) {
-      const { error } = await supabase.from('redacoes').delete().eq('id', id);
-      if (error) throw error;
-    }
-
-    if (db) {
-      db.prepare('DELETE FROM redacoes WHERE id = ?').run(id);
-    }
-
-    invalidateRankingCache();
+    if (!isSupabaseConfigured) return;
+    const { error } = await supabase.from('redacoes').delete().eq('id', id);
+    if (error) throw error;
   },
 
   async deleteAll() {
-    if (isSupabaseConfigured) {
-      const { error } = await supabase.from('redacoes').delete().neq('id', 0);
-      if (error) throw error;
-    }
-
-    if (db) {
-      db.prepare('DELETE FROM redacoes').run();
-    }
-
-    invalidateRankingCache();
+    if (!isSupabaseConfigured) return;
+    const { error } = await supabase.from('redacoes').delete().neq('id', 0);
+    if (error) throw error;
   },
 
+  /**
+   * Exportação integral para backup administrativo
+   */
   async exportAll() {
-    if (isSupabaseConfigured) {
-      const { data } = await supabase.from('redacoes').select('*');
-      return (data || []).map(r => ({
-        ...r,
-        extracted_data: typeof r.extracted_data === 'string' ? JSON.parse(r.extracted_data || '{}') : (r.extracted_data || {})
-      }));
-    }
-    if (db) {
-      const rows = db.prepare('SELECT * FROM redacoes').all();
-      return rows.map(r => ({
-        ...r,
-        extracted_data: typeof r.extracted_data === 'string' ? JSON.parse(r.extracted_data || '{}') : (r.extracted_data || {})
-      }));
-    }
-    return [];
+    if (!isSupabaseConfigured) return [];
+    const { data } = await supabase.from('redacoes').select('*').order('id', { ascending: true });
+    return (data || []).map(r => ({
+      ...r,
+      extracted_data: typeof r.extracted_data === 'string' ? JSON.parse(r.extracted_data || '{}') : (r.extracted_data || {})
+    }));
   }
 };
 

@@ -29,6 +29,11 @@ build/
 backend/data/
 agora-db-backup.json
 backup*.json
+*.db
+*.db-*
+*.sqlite
+*.sqlite3
+agora.db
 *.json
 !frontend/package.json
 !frontend/package-lock.json

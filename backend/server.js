@@ -4,7 +4,6 @@ import dotenv from 'dotenv';
 import apiRoutes from './src/routes/apiRoutes.js';
 import { generalLimiter } from './src/middleware/rateLimitMiddleware.js';
 import { securityHeadersMiddleware } from './src/middleware/securityHeadersMiddleware.js';
-import db from './src/config/db.js';
 
 dotenv.config();
 
@@ -73,12 +72,6 @@ if (!process.env.VERCEL && process.env.NODE_ENV !== 'test') {
   const shutdown = (signal) => {
     console.log(`\n[Process] Recebido sinal ${signal}. Encerrando conexões com segurança...`);
     server.close(() => {
-      if (db && typeof db.close === 'function') {
-        try {
-          db.close();
-          console.log('[SQLite DB] Conexão com banco local fechada.');
-        } catch (e) {}
-      }
       console.log('[Process] Servidor encerrado com sucesso.');
       process.exit(0);
     });

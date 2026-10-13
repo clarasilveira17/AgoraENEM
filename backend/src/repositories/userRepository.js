@@ -1,267 +1,345 @@
-import db from '../config/db.js';
 import { supabase, isSupabaseConfigured } from '../config/supabaseClient.js';
 
 export const userRepository = {
+  /**
+   * Busca usuário por e-mail para exibição segura (SEM expor senha_hash)
+   */
   async findByEmail(email) {
-    let cleanEmail = String(email).trim().toLowerCase();
+    if (!email || !isSupabaseConfigured) return null;
+    const cleanEmail = String(email).trim().toLowerCase();
 
-    // 1. Consulta o SQLite local primeiro (resposta instantânea em 0ms)
-    if (db) {
-      try {
-        let user = db.prepare('SELECT * FROM users WHERE LOWER(email) = LOWER(?)').get(cleanEmail);
-        if (!user && !cleanEmail.includes('@')) {
-          user = db.prepare('SELECT * FROM users WHERE LOWER(email) LIKE LOWER(?) OR LOWER(nome) = LOWER(?)').get(`${cleanEmail}@%`, cleanEmail);
-        }
-        if (user) return user;
-      } catch (err) {
-        console.warn('[userRepository.findByEmail SQLite Warning]:', err.message);
-      }
-    }
-
-    // 2. Consulta o Supabase se configurado
-    if (isSupabaseConfigured) {
-      try {
-        const { data, error } = await supabase
-          .from('users')
-          .select('*')
-          .ilike('email', cleanEmail)
-          .maybeSingle();
-
-        if (error) {
-          console.warn(`[userRepository.findByEmail Supabase Warning]: ${error.message}`);
-        } else if (data) {
-          return data;
-        }
-      } catch (sbErr) {
-        console.warn(`[userRepository.findByEmail Supabase Exception]: ${sbErr.message}`);
-      }
-    }
-
-    return null;
-  },
-
-  async findById(id) {
-    if (!id) return null;
-
-    if (isSupabaseConfigured) {
+    try {
       const { data, error } = await supabase
         .from('users')
-        .select('id, nome, email, role, turma')
+        .select('id, nome, email, role, turma, avatar_url, is_ativo, created_at')
+        .ilike('email', cleanEmail)
+        .maybeSingle();
+
+      if (error) {
+        console.warn(`[userRepository.findByEmail Supabase Error]: ${error.message}`);
+        return null;
+      }
+      return data;
+    } catch (sbErr) {
+      console.warn(`[userRepository.findByEmail Exception]: ${sbErr.message}`);
+      return null;
+    }
+  },
+
+  /**
+   * Busca usuário por e-mail COM senha_hash EXCLUSIVAMENTE para conferência de login
+   */
+  async findByEmailWithPassword(email) {
+    if (!email || !isSupabaseConfigured) return null;
+    const cleanEmail = String(email).trim().toLowerCase();
+
+    try {
+      const { data, error } = await supabase
+        .from('users')
+        .select('id, nome, email, senha_hash, role, turma, avatar_url, is_ativo')
+        .ilike('email', cleanEmail)
+        .maybeSingle();
+
+      if (error) {
+        console.warn(`[userRepository.findByEmailWithPassword Error]: ${error.message}`);
+        return null;
+      }
+      return data;
+    } catch (err) {
+      console.warn(`[userRepository.findByEmailWithPassword Exception]: ${err.message}`);
+      return null;
+    }
+  },
+
+  /**
+   * Busca usuário por ID (SEM expor senha_hash)
+   */
+  async findById(id) {
+    if (!id || !isSupabaseConfigured) return null;
+
+    try {
+      const { data, error } = await supabase
+        .from('users')
+        .select('id, nome, email, role, turma, avatar_url, is_ativo, created_at')
         .eq('id', id)
         .maybeSingle();
 
       if (!error && data) return data;
+      return null;
+    } catch (err) {
+      console.warn(`[userRepository.findById Exception]: ${err.message}`);
+      return null;
     }
-
-    if (db) {
-      try {
-        return db.prepare('SELECT id, nome, email, role, turma FROM users WHERE id = ?').get(id) || null;
-      } catch (err) {
-        console.warn('[userRepository.findById SQLite Warning]:', err.message);
-      }
-    }
-
-    return null;
   },
 
-  async findStudents() {
-    let estudantes = [];
+  /**
+   * Busca usuário por ID com hash da senha exclusivamente para checagem em alteração de senha
+   */
+  async findByIdWithPassword(id) {
+    if (!id || !isSupabaseConfigured) return null;
 
-    if (isSupabaseConfigured) {
+    try {
       const { data, error } = await supabase
         .from('users')
-        .select('id, nome, email, turma, created_at')
+        .select('id, nome, email, senha_hash, role, turma, is_ativo')
+        .eq('id', id)
+        .maybeSingle();
+
+      if (!error && data) return data;
+      return null;
+    } catch (err) {
+      return null;
+    }
+  },
+
+  /**
+   * Lista todos os estudantes ativos cadastrados
+   */
+  async findStudents() {
+    if (!isSupabaseConfigured) return [];
+
+    try {
+      const { data, error } = await supabase
+        .from('users')
+        .select('id, nome, email, turma, created_at, is_ativo')
         .eq('role', 'ESTUDANTE')
+        .eq('is_ativo', true)
         .order('nome', { ascending: true });
 
-      if (!error && data) estudantes = data;
+      if (!error && data) return data;
+      return [];
+    } catch (err) {
+      return [];
     }
-
-    if (estudantes.length === 0 && db) {
-      try {
-        estudantes = db.prepare(`
-          SELECT id, nome, email, turma, created_at 
-          FROM users 
-          WHERE role = 'ESTUDANTE' 
-          ORDER BY nome ASC
-        `).all() || [];
-      } catch (err) {
-        console.warn('[userRepository.findStudents SQLite Warning]:', err.message);
-      }
-    }
-
-    return estudantes;
   },
 
-  async getNextAvailableId() {
-    if (isSupabaseConfigured) {
-      try {
-        const { data, error } = await supabase
-          .from('users')
-          .select('id')
-          .order('id', { ascending: false })
-          .limit(1)
-          .maybeSingle();
+  /**
+   * Cria novo usuário no banco Supabase utilizando a sequence nativa do Postgres (BIGSERIAL)
+   */
+  async createUser({ nome, email, senhaHash, role = 'ESTUDANTE', turma = '', avatarUrl = null }) {
+    if (!isSupabaseConfigured) throw new Error('Supabase não configurado para criação de usuário.');
 
-        if (!error && data && data.id) {
-          return Number(data.id) + 1;
-        }
-      } catch (err) {
-        console.warn('[userRepository] Falha ao consultar MAX(id):', err.message);
-      }
-    }
-    return 1;
-  },
-
-  async createUser({ nome, email, senhaHash, role = 'ESTUDANTE', turma = '' }) {
     const cleanEmail = String(email).trim().toLowerCase();
     const cleanNome = String(nome).trim();
     const cleanTurma = String(turma).trim();
 
-    if (isSupabaseConfigured) {
-      try {
-        let payload = {
-          nome: cleanNome,
-          email: cleanEmail,
-          senha_hash: senhaHash,
-          role,
-          turma: cleanTurma
-        };
+    const payload = {
+      nome: cleanNome,
+      email: cleanEmail,
+      senha_hash: senhaHash,
+      role,
+      turma: cleanTurma,
+      avatar_url: avatarUrl,
+      is_ativo: true
+    };
 
-        let { data, error } = await supabase
-          .from('users')
-          .insert(payload)
-          .select('id, nome, email, role, turma')
-          .single();
+    const { data, error } = await supabase
+      .from('users')
+      .insert(payload)
+      .select('id, nome, email, role, turma, avatar_url, is_ativo, created_at')
+      .single();
 
-        // Fallback de sequence desincronizada do Postgres
-        if (error && (error.code === '23505' || String(error.message).includes('users_pkey'))) {
-          console.warn('[userRepository.createUser] Conflito de users_pkey detectado. Recuperando com MAX(id) + 1...');
-          let attempts = 0;
-          while (attempts < 3) {
-            attempts++;
-            const nextId = await this.getNextAvailableId() + (attempts - 1);
-            const retryRes = await supabase
-              .from('users')
-              .insert({ ...payload, id: nextId })
-              .select('id, nome, email, role, turma')
-              .single();
-
-            if (!retryRes.error && retryRes.data) {
-              data = retryRes.data;
-              error = null;
-              break;
-            } else {
-              error = retryRes.error;
-            }
-          }
-        }
-
-        if (!error && data) return data;
-        if (error) console.warn(`[userRepository.createUser Supabase Error]: ${error.message} - tentando fallback SQLite.`);
-      } catch (sbErr) {
-        console.warn(`[userRepository.createUser Supabase Exception]: ${sbErr.message} - tentando fallback SQLite.`);
-      }
+    if (error) {
+      console.error('[userRepository.createUser Supabase Error]:', error.message);
+      throw new Error(error.message || 'Erro ao persistir novo usuário no Supabase.');
     }
 
-    if (db) {
-      const result = db.prepare(`
-        INSERT INTO users (nome, email, senha_hash, role, turma)
-        VALUES (?, ?, ?, ?, ?)
-      `).run(cleanNome, cleanEmail, senhaHash, role, cleanTurma);
-
-      return {
-        id: result.lastInsertRowid,
-        nome: cleanNome,
-        email: cleanEmail,
-        role,
-        turma: cleanTurma
-      };
-    }
-
-    throw new Error('Nenhum banco de dados disponível para criação de usuário.');
+    return data;
   },
 
+  /**
+   * Atualização ou criação de estudante pela coordenação
+   */
   async upsertStudent({ nome, email, turma, senhaHash }) {
+    if (!isSupabaseConfigured) throw new Error('Supabase não configurado.');
+
     const cleanEmail = String(email).trim().toLowerCase();
     const cleanNome = String(nome).trim();
     const cleanTurma = String(turma || 'Geral').trim();
 
-    if (isSupabaseConfigured) {
-      try {
-        const { data: existing } = await supabase
-          .from('users')
-          .select('id')
-          .ilike('email', cleanEmail)
-          .maybeSingle();
+    const existing = await this.findByEmail(cleanEmail);
+    if (existing) {
+      const { data, error } = await supabase
+        .from('users')
+        .update({
+          nome: cleanNome,
+          turma: cleanTurma,
+          senha_hash: senhaHash,
+          is_ativo: true
+        })
+        .eq('id', existing.id)
+        .select('id, nome, email, turma, role, avatar_url, is_ativo')
+        .single();
 
-        if (existing) {
-          const { data, error } = await supabase
-            .from('users')
-            .update({
-              nome: cleanNome,
-              turma: cleanTurma,
-              senha_hash: senhaHash
-            })
-            .eq('id', existing.id)
-            .select('id, nome, email, turma, role')
-            .single();
-
-          if (!error && data) return data;
-        } else {
-          return await this.createUser({
-            nome: cleanNome,
-            email: cleanEmail,
-            turma: cleanTurma,
-            role: 'ESTUDANTE',
-            senhaHash
-          });
-        }
-      } catch (sbErr) {
-        console.warn(`[userRepository.upsertStudent Supabase Exception]: ${sbErr.message} - tentando fallback SQLite.`);
-      }
+      if (error) throw new Error(error.message);
+      return data;
     }
 
-    if (db) {
-      const existing = db.prepare('SELECT id FROM users WHERE LOWER(email) = LOWER(?)').get(cleanEmail);
-      if (existing) {
-        db.prepare('UPDATE users SET nome = ?, turma = ?, senha_hash = ? WHERE id = ?')
-          .run(cleanNome, cleanTurma, senhaHash, existing.id);
-        return {
-          id: existing.id,
-          nome: cleanNome,
-          email: cleanEmail,
-          turma: cleanTurma,
-          role: 'ESTUDANTE'
-        };
-      } else {
-        const info = db.prepare(`
-          INSERT INTO users (nome, email, senha_hash, role, turma)
-          VALUES (?, ?, ?, 'ESTUDANTE', ?)
-        `).run(cleanNome, cleanEmail, senhaHash, cleanTurma);
-
-        return {
-          id: info.lastInsertRowid,
-          nome: cleanNome,
-          email: cleanEmail,
-          turma: cleanTurma,
-          role: 'ESTUDANTE'
-        };
-      }
-    }
-
-    throw new Error('Nenhum banco de dados disponível.');
+    return await this.createUser({
+      nome: cleanNome,
+      email: cleanEmail,
+      senhaHash,
+      role: 'ESTUDANTE',
+      turma: cleanTurma
+    });
   },
 
+  /**
+   * Atualiza a senha de um usuário
+   */
+  async updatePassword(userId, novaSenhaHash) {
+    if (!isSupabaseConfigured) throw new Error('Supabase não configurado.');
+
+    const { error } = await supabase
+      .from('users')
+      .update({
+        senha_hash: novaSenhaHash,
+        reset_token_hash: null,
+        reset_token_expires: null
+      })
+      .eq('id', userId);
+
+    if (error) throw new Error(error.message);
+    return true;
+  },
+
+  /**
+   * Atualiza informações do próprio perfil (Nome e Avatar)
+   */
+  async updateProfile(userId, { nome, avatar_url }) {
+    if (!isSupabaseConfigured) throw new Error('Supabase não configurado.');
+
+    const updates = {};
+    if (nome) updates.nome = String(nome).trim();
+    if (avatar_url !== undefined) updates.avatar_url = avatar_url;
+
+    const { data, error } = await supabase
+      .from('users')
+      .update(updates)
+      .eq('id', userId)
+      .select('id, nome, email, role, turma, avatar_url, is_ativo, created_at')
+      .single();
+
+    if (error) throw new Error(error.message);
+    return data;
+  },
+
+  /**
+   * Salva token de redefinição de senha com validade
+   */
+  async setResetToken(userId, tokenHash, expiresAt) {
+    if (!isSupabaseConfigured) throw new Error('Supabase não configurado.');
+
+    const { error } = await supabase
+      .from('users')
+      .update({
+        reset_token_hash: tokenHash,
+        reset_token_expires: expiresAt
+      })
+      .eq('id', userId);
+
+    if (error) throw new Error(error.message);
+    return true;
+  },
+
+  /**
+   * Busca usuário por token de reset válido
+   */
+  async findByResetToken(tokenHash) {
+    if (!isSupabaseConfigured || !tokenHash) return null;
+
+    const { data, error } = await supabase
+      .from('users')
+      .select('id, nome, email, reset_token_expires')
+      .eq('reset_token_hash', tokenHash)
+      .gt('reset_token_expires', new Date().toISOString())
+      .maybeSingle();
+
+    if (error || !data) return null;
+    return data;
+  },
+
+  /**
+   * Desativação suave de conta (soft-delete)
+   */
+  async deactivateUser(userId) {
+    if (!isSupabaseConfigured) throw new Error('Supabase não configurado.');
+
+    const { error } = await supabase
+      .from('users')
+      .update({ is_ativo: false })
+      .eq('id', userId);
+
+    if (error) throw new Error(error.message);
+    return true;
+  },
+
+  /**
+   * Atualização administrativa de usuário (papel, ativação, turma)
+   */
+  async updateUserAdmin(userId, updates) {
+    if (!isSupabaseConfigured) throw new Error('Supabase não configurado.');
+
+    const allowed = {};
+    if (updates.role) allowed.role = updates.role;
+    if (updates.turma !== undefined) allowed.turma = updates.turma;
+    if (updates.is_ativo !== undefined) allowed.is_ativo = Boolean(updates.is_ativo);
+    if (updates.nome) allowed.nome = updates.nome.trim();
+
+    const { data, error } = await supabase
+      .from('users')
+      .update(allowed)
+      .eq('id', userId)
+      .select('id, nome, email, role, turma, avatar_url, is_ativo, created_at')
+      .single();
+
+    if (error) throw new Error(error.message);
+    return data;
+  },
+
+  /**
+   * Listagem administrativa de usuários paginada
+   */
+  async listUsersAdmin({ role = null, is_ativo = null, search = null, page = 1, limit = 20 }) {
+    if (!isSupabaseConfigured) return { users: [], total: 0 };
+
+    const offset = (page - 1) * limit;
+    let query = supabase
+      .from('users')
+      .select('id, nome, email, role, turma, avatar_url, is_ativo, created_at', { count: 'exact' });
+
+    if (role) query = query.eq('role', role);
+    if (is_ativo !== null && is_ativo !== undefined) query = query.eq('is_ativo', Boolean(is_ativo));
+    if (search) {
+      query = query.or(`nome.ilike.%${search}%,email.ilike.%${search}%,turma.ilike.%${search}%`);
+    }
+
+    query = query.order('created_at', { ascending: false }).range(offset, offset + limit - 1);
+
+    const { data, count, error } = await query;
+    if (error) {
+      console.error('[userRepository.listUsersAdmin Error]:', error.message);
+      return { users: [], total: 0 };
+    }
+
+    return {
+      users: data || [],
+      total: count || 0
+    };
+  },
+
+  /**
+   * Exportação segura para backup do Administrador (NUNCA exporta senha_hash)
+   */
   async exportAll() {
-    if (isSupabaseConfigured) {
-      const { data } = await supabase.from('users').select('id, nome, email, role, turma, created_at');
-      return data || [];
-    }
-    if (db) {
-      return db.prepare('SELECT id, nome, email, role, turma, created_at FROM users').all() || [];
-    }
-    return [];
+    if (!isSupabaseConfigured) return [];
+
+    const { data } = await supabase
+      .from('users')
+      .select('id, nome, email, role, turma, avatar_url, is_ativo, created_at')
+      .order('id', { ascending: true });
+
+    return data || [];
   }
 };
 

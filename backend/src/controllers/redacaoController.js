@@ -1,91 +1,47 @@
 import { resolveStudent } from '../utils/turmasUtils.js';
 import redacaoRepository from '../repositories/redacaoRepository.js';
 import userRepository from '../repositories/userRepository.js';
+import { supabase } from '../config/supabaseClient.js';
 import logger from '../utils/logger.js';
-
-// POST /api/redacoes/sync-legacy
-export const syncLegacyRedacoes = async (req, res) => {
-  try {
-    const { redacoes } = req.body;
-    if (!Array.isArray(redacoes) || redacoes.length === 0) {
-      return res.status(400).json({ error: 'Nenhuma redação fornecida para sincronização.' });
-    }
-
-    let insertedCount = 0;
-    let skippedCount = 0;
-
-    for (const item of redacoes) {
-      const rawNome = item.nome_aluno || item.nomeAluno || 'Aluno Não Identificado';
-      const rawTurma = item.turma_aluno || item.turmaAluno || 'Turma Geral';
-      const dataCaptura = item.data_captura || item.dataCaptura || new Date().toISOString();
-
-      let extractedDataObj = {};
-      if (typeof item.extracted_data === 'string') {
-        try { extractedDataObj = JSON.parse(item.extracted_data || '{}'); } catch(e) {}
-      } else {
-        extractedDataObj = item.extracted_data || item.resultado || {};
-      }
-
-      const notaFinal = item.nota_final || item.notaFinal || (extractedDataObj?.avaliacoes?.enem?.nota_total_enem) || (extractedDataObj?.pontuacao_geral) || 0;
-      const imagemBase64 = item.imagem_base64 || item.imagemBase64 || null;
-      const textoDigitado = item.texto_digitado || item.textoDigitado || null;
-      const tipoInput = item.tipo_input || item.tipoInput || 'imagem';
-      const statusValidacao = item.status_validacao || 'VALIDADA';
-      const validadoPor = req.user?.id || 1;
-      const dataValidacao = item.data_validacao || new Date().toISOString();
-
-      const resolved = await resolveStudent(item.user_id, rawNome, rawTurma);
-
-      const savedId = await redacaoRepository.create({
-        user_id: resolved.user_id,
-        nome_aluno: resolved.nome_aluno,
-        turma_aluno: resolved.turma_aluno,
-        nome_detectado: 1,
-        data_captura: dataCaptura,
-        tipo_input: tipoInput,
-        imagem_base64: imagemBase64,
-        texto_digitado: textoDigitado,
-        extracted_data: extractedDataObj,
-        nota_final: notaFinal,
-        status_validacao: statusValidacao,
-        validado_por: validadoPor,
-        data_validacao: dataValidacao
-      });
-
-      if (savedId) {
-        insertedCount++;
-      } else {
-        skippedCount++;
-      }
-    }
-
-    logger.info(`Sincronização de redações concluída: ${insertedCount} salvas, ${skippedCount} ignoradas`, { requestId: req.id });
-
-    res.status(200).json({
-      message: `${insertedCount} correções locais sincronizadas e disponibilizadas com sucesso! (${skippedCount} já existiam)`,
-      insertedCount,
-      skippedCount
-    });
-  } catch (error) {
-    logger.error('Falha ao sincronizar correções com a nuvem', { requestId: req.id, error });
-    res.status(500).json({ error: 'Falha ao sincronizar correções com a nuvem.' });
-  }
-};
 
 // GET /api/redacoes
 export const getRedacoes = async (req, res) => {
   try {
     const user = req.user;
-    const includeImage = req.query.include_image === 'true';
-
     if (!user) {
-      return res.status(200).json({ redacoes: [] });
+      return res.status(200).json({ redacoes: [], pagination: { page: 1, limit: 25, total: 0, totalPages: 0 } });
     }
+
+    const page = Math.max(1, parseInt(req.query.page, 10) || 1);
+    // Se explicitamente solicitado lote maior via limit ou all=true (máximo de 1000 por requisição)
+    const limit = Math.min(1000, Math.max(1, parseInt(req.query.limit, 10) || (req.query.all === 'true' ? 1000 : 25)));
+    const offset = (page - 1) * limit;
+
+    const filters = {
+      turma: req.query.turma || null,
+      status: req.query.status || null,
+      search: req.query.search ? req.query.search.trim() : null,
+      minhas_alocadas: req.query.minhas_alocadas === 'true'
+    };
 
     res.setHeader('Cache-Control', 'public, s-maxage=5, stale-while-revalidate=30');
 
-    const formatted = await redacaoRepository.findAll({ user, includeImage });
-    res.status(200).json({ redacoes: formatted });
+    const { redacoes, total } = await redacaoRepository.findPaginated({
+      user,
+      offset,
+      limit,
+      filters
+    });
+
+    res.status(200).json({
+      redacoes,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit)
+      }
+    });
   } catch (error) {
     logger.error('Erro ao buscar redações', { requestId: req.id, error });
     res.status(500).json({ error: 'Erro ao buscar redações.' });
@@ -113,6 +69,7 @@ export const createRedacao = async (req, res) => {
       turma_aluno,
       tipo_input,
       imagem_base64,
+      imagem_url,
       texto_digitado,
       extracted_data,
       nota_final,
@@ -120,7 +77,7 @@ export const createRedacao = async (req, res) => {
     } = req.body;
 
     const initialStatus = status_validacao || (req.user?.role === 'ADMIN' ? 'VALIDADA' : 'PENDENTE_VALIDACAO');
-    const validadoPor = initialStatus === 'VALIDADA' ? (req.user?.id || 1) : null;
+    const validadoPor = initialStatus === 'VALIDADA' ? (req.user?.id || null) : null;
     const dataValidacao = initialStatus === 'VALIDADA' ? new Date().toISOString() : null;
 
     const resolved = await resolveStudent(user_id, nome_aluno, turma_aluno);
@@ -132,6 +89,7 @@ export const createRedacao = async (req, res) => {
       nome_detectado: 1,
       tipo_input: tipo_input || 'imagem',
       imagem_base64: imagem_base64 || null,
+      imagem_url: imagem_url || null,
       texto_digitado: texto_digitado || null,
       extracted_data: extracted_data || {},
       nota_final: nota_final || (extracted_data?.pontuacao_geral) || 0,
@@ -163,7 +121,7 @@ export const vincularAlunoRedacao = async (req, res) => {
     const { user_id, nome_aluno, turma_aluno } = req.body;
 
     const resolved = await resolveStudent(user_id, nome_aluno, turma_aluno);
-    const validadoPor = req.user?.id || 1;
+    const validadoPor = req.user?.id || null;
     const dataValidacao = new Date().toISOString();
 
     const redacao = await redacaoRepository.findById(id);
@@ -198,11 +156,11 @@ export const vincularAlunoRedacao = async (req, res) => {
   }
 };
 
-// PATCH /api/redacoes/:id/validar
+// PATCH /api/redacoes/:id/validar (Com Lock Otimista via versao_concorrencia)
 export const validarRedacao = async (req, res) => {
   try {
     const { id } = req.params;
-    const { nota_final, extracted_data, parecer_professor } = req.body;
+    const { nota_final, extracted_data, parecer_professor, versao_concorrencia } = req.body;
 
     const current = await redacaoRepository.findById(id);
     if (!current) {
@@ -222,23 +180,99 @@ export const validarRedacao = async (req, res) => {
 
     const finalNota = typeof nota_final === 'number' ? nota_final : current.nota_final;
 
-    await redacaoRepository.update(id, {
+    const updatePayload = {
       status_validacao: 'VALIDADA',
+      status_alocacao: 'CONCLUIDA',
       validado_por: req.user.id,
       data_validacao: new Date().toISOString(),
       nota_final: finalNota,
       extracted_data: updatedExtractedData
-    });
+    };
+
+    // Lock Otimista: se uma versão foi informada pelo cliente, confere
+    if (versao_concorrencia !== undefined && versao_concorrencia !== null) {
+      const lockResult = await redacaoRepository.updateWithLock(id, Number(versao_concorrencia), updatePayload);
+      if (lockResult.conflict) {
+        return res.status(409).json({
+          error: 'Conflito de concorrência detectado: outro professor ou administrador validou ou modificou esta redação enquanto você a editava. Por favor, atualize a página para obter a versão mais recente e evitar perda de trabalho.'
+        });
+      }
+    } else {
+      await redacaoRepository.update(id, updatePayload);
+    }
+
+    // Registra no Audit Log
+    if (supabase) {
+      try {
+        await supabase.from('audit_log').insert({
+          user_id: req.user.id,
+          acao: 'VALIDAR_REDACAO',
+          entidade: 'redacoes',
+          entidade_id: Number(id),
+          metadata: { nota_final: finalNota, aluno: current.nome_aluno }
+        });
+      } catch (auditErr) {}
+    }
 
     logger.info(`Redação ID #${id} validada pelo professor ID ${req.user.id}`, { requestId: req.id, redacaoId: id });
 
     return res.status(200).json({
       message: 'Correção validada com sucesso pelo professor! Liberada para o aluno.',
-      status_validacao: 'VALIDADA'
+      status_validacao: 'VALIDADA',
+      status_alocacao: 'CONCLUIDA'
     });
   } catch (error) {
     logger.error('Erro ao validar redação', { requestId: req.id, error });
     res.status(500).json({ error: 'Erro ao validar redação.' });
+  }
+};
+
+// POST /api/redacoes/solicitar-lote (Alocação com Lease Lock para Professores)
+export const solicitarLoteRedacoes = async (req, res) => {
+  try {
+    const professorId = req.user.id;
+    const limite = Math.min(25, Math.max(1, parseInt(req.query.limite, 10) || 10));
+
+    const lote = await redacaoRepository.solicitarLote(professorId, limite);
+
+    return res.status(200).json({
+      message: `${lote.length} redação(ões) sob sua responsabilidade de correção.`,
+      redacoes: lote,
+      total: lote.length
+    });
+  } catch (error) {
+    logger.error('Erro ao solicitar lote de redações', { requestId: req.id, error });
+    return res.status(500).json({ error: 'Falha ao solicitar lote de redações para correção.' });
+  }
+};
+
+// POST /api/redacoes/:id/devolver (Devolve redação alocada de volta para a fila)
+export const devolverRedacao = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const professorId = req.user.id;
+
+    const liberada = await redacaoRepository.devolverRedacao(id, professorId);
+
+    if (!liberada) {
+      return res.status(400).json({ error: 'Não foi possível devolver esta redação (ela pode não estar atribuída a você).' });
+    }
+
+    return res.status(200).json({ message: 'Redação devolvida com sucesso para a fila geral!' });
+  } catch (error) {
+    logger.error('Erro ao devolver redação', { requestId: req.id, error });
+    return res.status(500).json({ error: 'Falha ao devolver redação.' });
+  }
+};
+
+// GET /api/redacoes/metricas-alocacao (Admin Only)
+export const getMetricasAlocacao = async (req, res) => {
+  try {
+    const metricas = await redacaoRepository.getMetricasAlocacao();
+    return res.status(200).json({ metricas });
+  } catch (error) {
+    logger.error('Erro ao obter métricas de alocação', { requestId: req.id, error });
+    return res.status(500).json({ error: 'Falha ao obter métricas de alocação.' });
   }
 };
 
@@ -260,7 +294,7 @@ export const deleteRedacao = async (req, res) => {
     const { id } = req.params;
 
     if (!req.user) {
-      return res.status(401).json({ error: 'Acesso não autorizado. Autenticação necessária.' });
+      return res.status(401).json({ error: 'Acesso não autorizado.' });
     }
 
     if (req.user.role !== 'ADMIN' && req.user.role !== 'PROFESSOR') {
@@ -268,7 +302,7 @@ export const deleteRedacao = async (req, res) => {
     }
 
     await redacaoRepository.deleteById(id);
-    logger.info(`Redação ID #${id} excluída pelo usuário ID ${req.user.id} (${req.user.role})`, { requestId: req.id, redacaoId: id });
+    logger.info(`Redação ID #${id} excluída pelo usuário ID ${req.user.id}`, { requestId: req.id, redacaoId: id });
 
     return res.status(200).json({ message: 'Redação excluída com sucesso do banco de dados.' });
   } catch (error) {
@@ -277,22 +311,12 @@ export const deleteRedacao = async (req, res) => {
   }
 };
 
-// GET /api/export-db or /api/redacoes/export-db
+// GET /api/export-db
 export const exportDatabase = async (req, res) => {
   try {
-    if (!req.user) {
-      return res.status(401).json({ error: 'Acesso não autorizado.' });
-    }
-    if (req.user.role !== 'ADMIN') {
+    if (!req.user || req.user.role !== 'ADMIN') {
       return res.status(403).json({ error: 'Apenas administradores podem exportar o banco de dados.' });
     }
-
-    logger.audit(`Exportação integral da base solicitada por Administrador ID ${req.user.id} (${req.user.email}) - IP: ${req.ip || 'N/A'}`, {
-      requestId: req.id,
-      adminId: req.user.id,
-      adminEmail: req.user.email,
-      ip: req.ip
-    });
 
     const users = await userRepository.exportAll();
     const redacoes = await redacaoRepository.exportAll();
@@ -338,18 +362,12 @@ export const getRedacaoById = async (req, res) => {
       const cleanStudentName = (user.nome || '').trim().toLowerCase();
       const alunoNome = (redacao.nome_aluno || '').trim().toLowerCase();
       const isOwner = (redacao.user_id && Number(redacao.user_id) === Number(user.id)) || (alunoNome && alunoNome === cleanStudentName);
-      
+
       if (!isOwner) {
-        // Permite visualização se for redação modelo do Top 3
-        try {
-          const topRanking = await redacaoRepository.findRanking();
-          const isTop3 = Array.isArray(topRanking) && topRanking.slice(0, 3).some(r => Number(r.id) === Number(id));
-          if (!isTop3) {
-            return res.status(403).json({ error: 'Você só tem permissão para visualizar suas próprias redações ou as redações modelo do Top 3.' });
-          }
-        } catch (rankingErr) {
-          logger.warn('Falha ao verificar Top 3 no ranking para permissao:', rankingErr.message);
-          return res.status(403).json({ error: 'Você só tem permissão para visualizar suas próprias redações.' });
+        const topRanking = await redacaoRepository.findRanking();
+        const isTop3 = Array.isArray(topRanking) && topRanking.slice(0, 3).some(r => Number(r.id) === Number(id));
+        if (!isTop3) {
+          return res.status(403).json({ error: 'Você só tem permissão para visualizar suas próprias redações ou modelos do Top 3.' });
         }
       }
     }

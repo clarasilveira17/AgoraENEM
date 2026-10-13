@@ -105,7 +105,7 @@ export default function CorrecaoDetalheView({
   onNavigateToRedacao, 
   onRedacaoUpdated 
 }) {
-  const { user, isAdmin, isEstudante } = useAuth();
+  const { user, isAdmin, isTeacherOrAdmin, isEstudante } = useAuth();
   
   const [activeTab, setActiveTab] = useState('enem'); // 'enem' | 'texto_folha' | 'sisedu' | 'pdf_preview'
   const [manualName, setManualName] = useState(redacao?.nome_aluno || '');
@@ -170,14 +170,14 @@ export default function CorrecaoDetalheView({
   // Carrega lista de estudantes para o professor
   useEffect(() => {
     let isMounted = true;
-    if (isAdmin) {
+    if (isTeacherOrAdmin) {
       const fetchFn = authService.fetchEstudantes ? authService.fetchEstudantes.bind(authService) : authService.getEstudantes.bind(authService);
       fetchFn().then(list => {
         if (isMounted && Array.isArray(list)) setEstudantesList(list);
       }).catch(() => {});
     }
     return () => { isMounted = false; };
-  }, [isAdmin]);
+  }, [isTeacherOrAdmin]);
 
   // Navegação sequencial (Próxima / Anterior)
   const currentIndex = useMemo(() => {
@@ -308,18 +308,22 @@ export default function CorrecaoDetalheView({
     }
   };
 
-  // Validar redação pelo professor
+  // Validar redação pelo professor com Lock Otimista
   const handleValidarRedacao = async () => {
     setIsValidating(true);
     try {
-      await authService.validarRedacao(redacao.id);
+      await authService.validarRedacao(redacao.id, {
+        versao_concorrencia: redacao.versao_concorrencia || 1
+      });
       setStatusValidacao('VALIDADA');
       if (onRedacaoUpdated) {
         onRedacaoUpdated({
           ...redacao,
           status_validacao: 'VALIDADA',
+          status_alocacao: 'CONCLUIDA',
           data_validacao: new Date().toISOString(),
-          validado_por: 1
+          validado_por: user?.id || 1,
+          versao_concorrencia: (redacao.versao_concorrencia || 1) + 1
         });
       }
     } catch (err) {

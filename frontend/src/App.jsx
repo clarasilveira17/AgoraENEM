@@ -7,7 +7,7 @@ import ViewLoadingFallback from './components/ViewLoadingFallback';
 import { clearAllLocalRedacoes } from './db/db';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { authService } from './services/authService';
-import { X, Award, Loader2, Menu } from 'lucide-react';
+import { X, Award, Loader2, Menu, User } from 'lucide-react';
 
 // Code-splitting via React.lazy() para otimizacao de performance e Core Web Vitals (Fase 3)
 const DashboardView = lazy(() => import('./components/DashboardView'));
@@ -18,6 +18,9 @@ const RankingView = lazy(() => import('./components/RankingView'));
 const ValidacaoRapidaView = lazy(() => import('./components/ValidacaoRapidaView'));
 const CorrecaoDetalheView = lazy(() => import('./components/CorrecaoDetalheView'));
 const ProjetoAgoraLandingView = lazy(() => import('./components/ProjetoAgoraLandingView'));
+const PerfilView = lazy(() => import('./components/PerfilView'));
+const AdminUsuariosView = lazy(() => import('./components/AdminUsuariosView'));
+const AdminAlocacaoView = lazy(() => import('./components/AdminAlocacaoView'));
 
 function AppContent() {
   const { user, isAuthenticated, isAdmin, isProfessor, isTeacherOrAdmin, isEstudante, loading: authLoading } = useAuth();
@@ -29,7 +32,7 @@ function AppContent() {
       const parts = raw.split('/');
       return { view: 'correcao', id: parts[1] || null };
     }
-    const validViews = ['dashboard', 'diagnostico', 'ranking', 'novo', 'validacao', 'tabela', 'sem_nome', 'config'];
+    const validViews = ['dashboard', 'diagnostico', 'ranking', 'novo', 'validacao', 'tabela', 'sem_nome', 'config', 'perfil', 'usuarios', 'alocacao'];
     return { view: validViews.includes(raw) ? raw : 'dashboard', id: null };
   };
 
@@ -56,10 +59,15 @@ function AppContent() {
   });
 
   const handleSetActiveView = (view) => {
-    // Redireciona alunos que tentarem acessar a aba de diagnóstico ou validação para o dashboard
-    if (!isTeacherOrAdmin && (view === 'diagnostico' || view === 'validacao' || view === 'config')) {
+    // Validação estrita de permissões por papel
+    if (view === 'usuarios' && !isAdmin) {
+      view = 'dashboard';
+    } else if (view === 'config' && !isAdmin) {
+      view = 'dashboard';
+    } else if ((view === 'diagnostico' || view === 'validacao' || view === 'alocacao') && !isTeacherOrAdmin) {
       view = 'dashboard';
     }
+
     if (activeView !== 'correcao') {
       setPreviousView(activeView);
     }
@@ -84,7 +92,11 @@ function AppContent() {
     const handleHashChange = () => {
       const route = parseHash();
       let targetView = route.view;
-      if (!isTeacherOrAdmin && (targetView === 'diagnostico' || targetView === 'validacao' || targetView === 'config')) {
+      if (targetView === 'usuarios' && !isAdmin) {
+        targetView = 'dashboard';
+      } else if (targetView === 'config' && !isAdmin) {
+        targetView = 'dashboard';
+      } else if ((targetView === 'diagnostico' || targetView === 'validacao' || targetView === 'alocacao') && !isTeacherOrAdmin) {
         targetView = 'dashboard';
       }
       setActiveView(targetView);
@@ -92,7 +104,7 @@ function AppContent() {
     };
     window.addEventListener('hashchange', handleHashChange);
     return () => window.removeEventListener('hashchange', handleHashChange);
-  }, [isTeacherOrAdmin]);
+  }, [isTeacherOrAdmin, isAdmin]);
 
   // Limpa silenciosamente o cache antigo do IndexedDB do navegador para evitar conflitos
   useEffect(() => {
@@ -108,8 +120,12 @@ function AppContent() {
         authService.fetchRankingRedacoes()
       ]);
 
-      const cloudDocs = Array.isArray(cloudDocsRes) ? cloudDocsRes : [];
-      const rankingDocs = Array.isArray(rankingDocsRes) ? rankingDocsRes : [];
+      const cloudDocs = Array.isArray(cloudDocsRes) 
+        ? cloudDocsRes 
+        : (Array.isArray(cloudDocsRes?.redacoes) ? cloudDocsRes.redacoes : []);
+      const rankingDocs = Array.isArray(rankingDocsRes) 
+        ? rankingDocsRes 
+        : (Array.isArray(rankingDocsRes?.ranking) ? rankingDocsRes.ranking : (Array.isArray(rankingDocsRes?.redacoes) ? rankingDocsRes.redacoes : []));
 
       if (!isTeacherOrAdmin && user && user.role === 'ESTUDANTE') {
         // Para Estudante: Mostrar apenas as redações validadas do próprio estudante logado
@@ -261,7 +277,20 @@ function AppContent() {
               <Menu className="w-4 h-4 text-[#f54e00]" aria-hidden="true" />
               <span>Menu</span>
             </button>
-            <span className="text-xs font-semibold text-[#26251e] font-mono">Ágora ENEM</span>
+            <div 
+              onClick={() => setActiveView('perfil')}
+              className="flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity"
+              title="Meu Perfil"
+            >
+              <span className="text-xs font-semibold text-[#26251e] truncate max-w-[120px]">{user?.nome}</span>
+              <div className="w-7 h-7 rounded-full bg-[#ffffff] border border-[#e6e5e0] overflow-hidden flex items-center justify-center shrink-0">
+                {user?.avatar_url ? (
+                  <img src={user.avatar_url} alt={user.nome} className="w-full h-full object-cover" />
+                ) : (
+                  <User className="w-3.5 h-3.5 text-[#807d72]" />
+                )}
+              </div>
+            </div>
           </div>
         )}
 
@@ -372,6 +401,18 @@ function AppContent() {
                   onNavigateToRedacao={handleSelectRedacao}
                   onRedacaoUpdated={handleRedacaoUpdated}
                 />
+              )}
+
+              {activeView === 'perfil' && (
+                <PerfilView onToast={showToast} />
+              )}
+
+              {activeView === 'usuarios' && isAdmin && (
+                <AdminUsuariosView onToast={showToast} />
+              )}
+
+              {activeView === 'alocacao' && isTeacherOrAdmin && (
+                <AdminAlocacaoView onToast={showToast} />
               )}
 
               {activeView === 'config' && isAdmin && (

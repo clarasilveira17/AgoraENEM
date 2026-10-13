@@ -4,8 +4,10 @@ import userRepository from '../repositories/userRepository.js';
 const getJwtSecret = () => {
   const secret = process.env.JWT_SECRET || process.env.SUPABASE_SECRET_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!secret) {
-    console.warn('[Segurança Alerta] JWT_SECRET não configurado nas variáveis de ambiente. Usando chave de fallback segura.');
-    return 'agora-enem-jwt-secret-key-2026-ce';
+    if (process.env.NODE_ENV === 'test') {
+      return 'test-secret-key-vitest-only';
+    }
+    throw new Error('[Segurança Crítica] Variável de ambiente JWT_SECRET obrigatória não configurada. O boot do servidor foi interrompido.');
   }
   return secret;
 };
@@ -24,7 +26,11 @@ export const authenticate = async (req, res, next) => {
     const user = await userRepository.findById(decoded.id);
 
     if (!user) {
-      return res.status(401).json({ error: 'Usuário não encontrado ou inativo.' });
+      return res.status(401).json({ error: 'Usuário não encontrado.' });
+    }
+
+    if (user.is_ativo === false) {
+      return res.status(401).json({ error: 'Esta conta foi desativada. Entre em contato com a coordenação.' });
     }
 
     req.user = user;
@@ -58,7 +64,7 @@ export const optionalAuthenticate = async (req, res, next) => {
   try {
     const decoded = jwt.verify(token, JWT_SECRET);
     const user = await userRepository.findById(decoded.id);
-    if (user) {
+    if (user && user.is_ativo !== false) {
       req.user = user;
     }
   } catch (err) {

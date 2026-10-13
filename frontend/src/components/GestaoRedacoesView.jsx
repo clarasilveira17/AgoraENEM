@@ -2,7 +2,7 @@ import React, { useState, useRef, useMemo, useEffect } from 'react';
 import { 
   Upload, Database, FileText, CheckCircle2, AlertCircle, 
   Loader2, Image as ImageIcon, Plus, Trash2, Edit3, User, 
-  GraduationCap, Sparkles, Filter, X, ChevronRight, AlertTriangle, 
+  GraduationCap, Sparkles, Filter, X, ChevronRight, ChevronLeft, AlertTriangle, 
   UserX, Search, CheckCircle, Check, Clock, RefreshCw, BarChart2, Award,
   Copy, Layers, FileSearch, Eye
 } from 'lucide-react';
@@ -460,6 +460,9 @@ export default function GestaoRedacoesView({
       const isConferida = Boolean(item.data_validacao || item.validado_por);
       const hasName = Boolean(item.user_id && item.nome_aluno);
 
+      if (filterTab === 'minhas_alocadas') {
+        return (item.corretor_id && Number(item.corretor_id) === Number(user?.id)) && item.status_alocacao === 'EM_CORRECAO';
+      }
       if (filterTab === 'identificadas') return hasName;
       if (filterTab === 'sem_nome') return !hasName;
       if (filterTab === 'conferidas') return isConferida;
@@ -470,13 +473,52 @@ export default function GestaoRedacoesView({
 
       return true;
     });
-  }, [redacoes, selectedTurma, localSearch, filterTab, duplicateItemIds]);
+  }, [redacoes, selectedTurma, localSearch, filterTab, duplicateItemIds, user]);
+
+  // Paginação escalável (evita renderizar 800+ itens no DOM)
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 25;
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [selectedTurma, localSearch, filterTab]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredRedacoes.length / pageSize));
+  const paginatedRedacoes = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return filteredRedacoes.slice(start, start + pageSize);
+  }, [filteredRedacoes, currentPage, pageSize]);
+
+  // Solicitação de lote de redações para o professor
+  const [isRequestingBatch, setIsRequestingBatch] = useState(false);
+
+  const handleSolicitarLote = async () => {
+    if (isRequestingBatch) return;
+    setIsRequestingBatch(true);
+    try {
+      const res = await authService.solicitarLote(10);
+      setFeedback({
+        type: 'success',
+        message: res.message || `${res.alocadas || 0} novas redações alocadas para você!`
+      });
+      if (onRedacaoSaved) onRedacaoSaved();
+      setFilterTab('minhas_alocadas');
+    } catch (err) {
+      setFeedback({
+        type: 'error',
+        message: err.message || 'Erro ao solicitar lote de redações.'
+      });
+    } finally {
+      setIsRequestingBatch(false);
+    }
+  };
 
   // Métricas rápidas
   const totalBanco = redacoes.length;
   const semNomeCount = redacoes.filter(r => !r.nome_aluno || !r.user_id).length;
   const comNomeCount = totalBanco - semNomeCount;
   const conferidasCount = redacoes.filter(r => Boolean(r.data_validacao || r.validado_por)).length;
+  const minhasAlocadasCount = redacoes.filter(r => (r.corretor_id && Number(r.corretor_id) === Number(user?.id)) && r.status_alocacao === 'EM_CORRECAO').length;
   const totalDuplicatasCount = duplicateItemIds.size;
   
   const mediaNotas = useMemo(() => {
@@ -911,30 +953,50 @@ export default function GestaoRedacoesView({
               </p>
             </div>
 
-            {/* Dropdown de Turma */}
-            {turmasList.length > 0 && (
-              <div className="flex items-center gap-1.5 bg-[#fafaf7] border border-[#e6e5e0] px-2.5 py-1.5 rounded-lg text-xs font-mono">
-                <Filter className="w-3.5 h-3.5 text-[#807d72]" />
-                <select
-                  value={selectedTurma}
-                  onChange={(e) => setSelectedTurma(e.target.value)}
-                  className="bg-transparent border-none text-xs text-[#26251e] font-medium focus:outline-none cursor-pointer"
+            {/* Ações do Repositório (Alocação de Lote & Filtro de Turma) */}
+            <div className="flex items-center gap-2 flex-wrap">
+              {isTeacherOrAdmin && (
+                <button
+                  type="button"
+                  disabled={isRequestingBatch}
+                  onClick={handleSolicitarLote}
+                  className="px-2.5 py-1.5 rounded-lg bg-[#f54e00] hover:bg-[#d04200] text-white text-xs font-mono font-medium flex items-center gap-1.5 shadow-xs transition-colors cursor-pointer disabled:opacity-50"
+                  title="Pegar um lote de até 10 redações disponíveis para você corrigir"
                 >
-                  <option value="todas">Todas as Turmas ({turmasList.length})</option>
-                  {turmasList.map(t => (
-                    <option key={t} value={t}>{t}</option>
-                  ))}
-                </select>
-                {selectedTurma !== 'todas' && (
-                  <button
-                    onClick={() => setSelectedTurma('todas')}
-                    className="text-[#807d72] hover:text-[#26251e] cursor-pointer ml-1"
+                  {isRequestingBatch ? (
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  ) : (
+                    <Layers className="w-3.5 h-3.5" />
+                  )}
+                  <span>Pegar Lote (+10)</span>
+                </button>
+              )}
+
+              {/* Dropdown de Turma */}
+              {turmasList.length > 0 && (
+                <div className="flex items-center gap-1.5 bg-[#fafaf7] border border-[#e6e5e0] px-2.5 py-1.5 rounded-lg text-xs font-mono">
+                  <Filter className="w-3.5 h-3.5 text-[#807d72]" />
+                  <select
+                    value={selectedTurma}
+                    onChange={(e) => setSelectedTurma(e.target.value)}
+                    className="bg-transparent border-none text-xs text-[#26251e] font-medium focus:outline-none cursor-pointer"
                   >
-                    <X className="w-3 h-3" />
-                  </button>
-                )}
-              </div>
-            )}
+                    <option value="todas">Todas as Turmas ({turmasList.length})</option>
+                    {turmasList.map(t => (
+                      <option key={t} value={t}>{t}</option>
+                    ))}
+                  </select>
+                  {selectedTurma !== 'todas' && (
+                    <button
+                      onClick={() => setSelectedTurma('todas')}
+                      className="text-[#807d72] hover:text-[#26251e] cursor-pointer ml-1"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Barra de Pesquisa + Pills de Filtro */}
@@ -967,6 +1029,21 @@ export default function GestaoRedacoesView({
               >
                 Todas ({redacoes.length})
               </button>
+
+              {isTeacherOrAdmin && (
+                <button
+                  type="button"
+                  onClick={() => setFilterTab('minhas_alocadas')}
+                  className={`px-2.5 py-1 rounded-md transition-colors cursor-pointer flex items-center gap-1 ${
+                    filterTab === 'minhas_alocadas'
+                      ? 'bg-[#f54e00]/20 text-[#f54e00] border border-[#f54e00] font-bold'
+                      : 'bg-[#fafaf7] border border-[#e6e5e0] text-[#807d72] hover:text-[#26251e]'
+                  }`}
+                >
+                  <Layers className="w-3 h-3" />
+                  <span>Minhas Alocadas ({minhasAlocadasCount})</span>
+                </button>
+              )}
 
               {isAdmin && (
                 <>
@@ -1219,7 +1296,7 @@ export default function GestaoRedacoesView({
               /* ======================================================= */
               /* MODO: LISTAGEM PADRÃO DO BANCO COM BADGES               */
               /* ======================================================= */
-              filteredRedacoes.map((item) => {
+              paginatedRedacoes.map((item) => {
                 const isIdentified = item.nome_detectado && item.nome_aluno;
                 const isConferida = Boolean(item.data_validacao || item.validado_por);
                 const score = Number(item.nota_final ?? 0);
@@ -1260,6 +1337,13 @@ export default function GestaoRedacoesView({
                         ) : (
                           <span className="text-[9.5px] font-mono font-bold px-1.5 py-0.2 rounded bg-[#f54e00]/10 text-[#f54e00] border border-[#f54e00]/20">
                             Pendente
+                          </span>
+                        )}
+
+                        {/* Badge de Alocação de Correção */}
+                        {item.status_alocacao === 'EM_CORRECAO' && (
+                          <span className="text-[9.5px] font-mono font-bold px-1.5 py-0.2 rounded bg-amber-100 text-amber-900 border border-amber-300 inline-flex items-center gap-0.5">
+                            <Clock className="w-2.5 h-2.5" /> {Number(item.corretor_id) === Number(user?.id) ? 'Alocada a você' : 'Em Correção'}
                           </span>
                         )}
 
@@ -1322,6 +1406,43 @@ export default function GestaoRedacoesView({
               })
             )}
           </div>
+
+          {/* Barra de Paginação para Suportar 800+ Redações sem gargalo */}
+          {filteredRedacoes.length > pageSize && (
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-2.5 pt-3 border-t border-[#e6e5e0] text-xs font-mono">
+              <span className="text-[11px] text-[#807d72]">
+                Mostrando <strong>{(currentPage - 1) * pageSize + 1}</strong> a <strong>{Math.min(currentPage * pageSize, filteredRedacoes.length)}</strong> de <strong>{filteredRedacoes.length}</strong> redações
+              </span>
+
+              <div className="flex items-center gap-1.5">
+                <button
+                  type="button"
+                  disabled={currentPage <= 1}
+                  onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                  className="px-2.5 py-1 rounded-md bg-[#fafaf7] hover:bg-[#e6e5e0] border border-[#e6e5e0] text-[#26251e] transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1"
+                  title="Página anterior"
+                >
+                  <ChevronLeft className="w-3.5 h-3.5" />
+                  <span>Anterior</span>
+                </button>
+
+                <span className="px-2.5 py-1 text-[#26251e] font-semibold bg-[#ffffff] border border-[#e6e5e0] rounded-md">
+                  {currentPage} / {totalPages}
+                </span>
+
+                <button
+                  type="button"
+                  disabled={currentPage >= totalPages}
+                  onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                  className="px-2.5 py-1 rounded-md bg-[#fafaf7] hover:bg-[#e6e5e0] border border-[#e6e5e0] text-[#26251e] transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1"
+                  title="Próxima página"
+                >
+                  <span>Próxima</span>
+                  <ChevronRight className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            </div>
+          )}
 
         </div>
 

@@ -1,5 +1,3 @@
-import { db } from '../db/db';
-
 const API_BASE = '/api';
 
 export const authService = {
@@ -70,6 +68,91 @@ export const authService = {
     this.setToken(null);
   },
 
+  async alterarSenha(senhaAtual, novaSenha) {
+    const token = this.getToken();
+    if (!token) throw new Error('Autenticação necessária.');
+
+    const response = await fetch(`${API_BASE}/auth/alterar-senha`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify({ senhaAtual, novaSenha })
+    });
+
+    const data = await response.json();
+    if (!response.ok) {
+      throw new Error(data.error || 'Falha ao alterar senha.');
+    }
+    return data;
+  },
+
+  async atualizarPerfil(nome, avatar_url) {
+    const token = this.getToken();
+    if (!token) throw new Error('Autenticação necessária.');
+
+    const response = await fetch(`${API_BASE}/auth/perfil`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify({ nome, avatar_url })
+    });
+
+    const data = await response.json();
+    if (!response.ok) {
+      throw new Error(data.error || 'Falha ao atualizar perfil.');
+    }
+    return data.user;
+  },
+
+  async esqueciSenha(email) {
+    const response = await fetch(`${API_BASE}/auth/esqueci-senha`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email })
+    });
+
+    const data = await response.json();
+    if (!response.ok) {
+      throw new Error(data.error || 'Falha ao solicitar redefinição.');
+    }
+    return data;
+  },
+
+  async redefinirSenha(token, novaSenha) {
+    const response = await fetch(`${API_BASE}/auth/redefinir-senha`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token, novaSenha })
+    });
+
+    const data = await response.json();
+    if (!response.ok) {
+      throw new Error(data.error || 'Falha ao redefinir senha.');
+    }
+    return data;
+  },
+
+  async desativarConta() {
+    const token = this.getToken();
+    if (!token) throw new Error('Autenticação necessária.');
+
+    const response = await fetch(`${API_BASE}/auth/desativar-conta`, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+
+    const data = await response.json();
+    if (!response.ok) {
+      throw new Error(data.error || 'Falha ao desativar conta.');
+    }
+    this.logout();
+    return data;
+  },
+
   async getEstudantes() {
     const token = this.getToken();
     if (!token) return [];
@@ -89,7 +172,7 @@ export const authService = {
 
   async createEstudante(studentData) {
     const token = this.getToken();
-    if (!token) throw new Error('É necessário estar autenticado como Admin.');
+    if (!token) throw new Error('É necessário estar autenticado.');
 
     const response = await fetch(`${API_BASE}/auth/estudantes`, {
       method: 'POST',
@@ -107,67 +190,108 @@ export const authService = {
     return data.estudante;
   },
 
-  async syncLegacyToCloud(onProgress) {
+  // Gestão de Usuários (Admin)
+  async fetchUsuariosAdmin({ role = '', is_ativo = '', search = '', page = 1, limit = 20 } = {}) {
     const token = this.getToken();
-    if (!token) throw new Error('É necessário estar autenticado como Admin para subir as correções.');
+    if (!token) throw new Error('Acesso restrito ao Administrador.');
 
-    // Fetch all local IndexedDB redações
-    const localRedacoes = await db.redacoes.toArray();
-    if (localRedacoes.length === 0) {
-      return { insertedCount: 0, message: 'Nenhuma correção local no IndexedDB encontrada.' };
+    const params = new URLSearchParams();
+    if (role) params.set('role', role);
+    if (is_ativo !== '') params.set('is_ativo', is_ativo);
+    if (search) params.set('search', search);
+    params.set('page', page);
+    params.set('limit', limit);
+
+    const response = await fetch(`${API_BASE}/auth/usuarios?${params.toString()}`, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({}));
+      throw new Error(err.error || 'Falha ao listar usuários.');
     }
-
-    let totalInserted = 0;
-    let totalSkipped = 0;
-    const total = localRedacoes.length;
-
-    // Sincroniza item a item para evitar estourar o limite de 4.5MB de payload por requisição da Vercel (FUNCTION_PAYLOAD_TOO_LARGE)
-    for (let i = 0; i < total; i++) {
-      const item = localRedacoes[i];
-      if (onProgress) {
-        onProgress(i + 1, total);
-      }
-
-      // Failsafe de payload: se a imagem base64 de um único item for absurdamente grande (>3.5MB), omite a imagem para não estourar o limite da Vercel
-      let itemToSend = item;
-      const jsonStr = JSON.stringify({ redacoes: [itemToSend] });
-      if (jsonStr.length > 3.5 * 1024 * 1024) {
-        itemToSend = { ...item, imagem_base64: null };
-      }
-
-      const response = await fetch(`${API_BASE}/redacoes/sync-legacy`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({ redacoes: [itemToSend] })
-      });
-
-      let data;
-      try {
-        const text = await response.text();
-        data = JSON.parse(text);
-      } catch (e) {
-        throw new Error(`Erro na sincronização (redação ${i + 1} de ${total}): o backend retornou uma página inválida em vez de dados (provavelmente está offline ou o servidor caiu).`);
-      }
-
-      if (!response.ok) {
-        throw new Error(data.error || `Erro ao sincronizar a redação ${i + 1} de ${total}.`);
-      }
-
-      totalInserted += (data.insertedCount || 0);
-      totalSkipped += (data.skippedCount || 0);
-    }
-
-    return {
-      insertedCount: totalInserted,
-      skippedCount: totalSkipped,
-      message: `${totalInserted} correções locais sincronizadas e disponibilizadas com sucesso! (${totalSkipped} já existiam)`
-    };
+    return await response.json();
   },
 
-  async fetchCloudRedacoes() {
+  async atualizarUsuarioAdmin(userId, updates) {
+    const token = this.getToken();
+    if (!token) throw new Error('Acesso restrito ao Administrador.');
+
+    const response = await fetch(`${API_BASE}/auth/usuarios/${userId}`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify(updates)
+    });
+
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error || 'Falha ao atualizar usuário.');
+    return data;
+  },
+
+  async resetarSenhaUsuarioAdmin(userId, novaSenha) {
+    const token = this.getToken();
+    if (!token) throw new Error('Acesso restrito ao Administrador.');
+
+    const response = await fetch(`${API_BASE}/auth/usuarios/${userId}/resetar-senha`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify({ novaSenha })
+    });
+
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error || 'Falha ao resetar senha.');
+    return data;
+  },
+
+  // Alocação de Redações
+  async solicitarLote(limite = 10) {
+    const token = this.getToken();
+    if (!token) throw new Error('Apenas professores autenticados podem solicitar lotes.');
+
+    const response = await fetch(`${API_BASE}/redacoes/solicitar-lote?limite=${limite}`, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error || 'Falha ao solicitar lote de redações.');
+    return data;
+  },
+
+  async devolverRedacao(id) {
+    const token = this.getToken();
+    if (!token) throw new Error('Autenticação necessária.');
+
+    const response = await fetch(`${API_BASE}/redacoes/${id}/devolver`, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error || 'Falha ao devolver redação.');
+    return data;
+  },
+
+  async fetchMetricasAlocacao() {
+    const token = this.getToken();
+    if (!token) return null;
+
+    const response = await fetch(`${API_BASE}/redacoes/metricas-alocacao`, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+
+    if (!response.ok) return null;
+    const data = await response.json();
+    return data.metricas;
+  },
+
+  async fetchCloudRedacoes(options = {}) {
     const token = this.getToken();
     const headers = {
       'Cache-Control': 'no-cache',
@@ -175,14 +299,26 @@ export const authService = {
       ...(token ? { 'Authorization': `Bearer ${token}` } : {})
     };
 
+    const params = new URLSearchParams();
+    if (options.page) params.set('page', options.page);
+    params.set('limit', options.limit || 1000);
+    if (options.all !== false) params.set('all', 'true');
+    if (options.turma && options.turma !== 'todas') params.set('turma', options.turma);
+    if (options.status && options.status !== 'todas') params.set('status', options.status);
+    if (options.search) params.set('search', options.search);
+    if (options.minhas_alocadas) params.set('minhas_alocadas', 'true');
+    params.set('_t', Date.now());
+
     try {
-      const response = await fetch(`${API_BASE}/redacoes?_t=${Date.now()}`, { headers });
-      if (!response.ok) return null;
+      const response = await fetch(`${API_BASE}/redacoes?${params.toString()}`, { headers });
+      if (!response.ok) return [];
       const data = await response.json();
-      return data.redacoes || [];
+      const list = Array.isArray(data) ? data : (data.redacoes || []);
+      if (data.pagination) list.pagination = data.pagination;
+      return list;
     } catch (err) {
       console.warn('Erro ao buscar redações na nuvem:', err);
-      return null;
+      return [];
     }
   },
 
@@ -236,6 +372,9 @@ export const authService = {
 
     const data = await response.json();
     if (!response.ok) {
+      if (response.status === 409) {
+        throw new Error(data.error || 'Conflito de concorrência: esta redação foi alterada por outro usuário.');
+      }
       throw new Error(data.error || 'Erro ao validar redação.');
     }
 
@@ -282,7 +421,7 @@ export const authService = {
 
   async clearAllRedacoes() {
     const token = this.getToken();
-    if (!token) throw new Error('Apenas professores autenticados podem apagar redações.');
+    if (!token) throw new Error('Apenas administradores podem apagar redações.');
 
     const response = await fetch(`${API_BASE}/redacoes/clear-all`, {
       method: 'DELETE',
@@ -297,4 +436,3 @@ export const authService = {
     return data;
   }
 };
-

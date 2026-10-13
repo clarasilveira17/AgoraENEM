@@ -4,6 +4,10 @@ import redacaoRepository from '../repositories/redacaoRepository.js';
 import { queueService } from '../services/queueService.js';
 import logger from '../utils/logger.js';
 
+/**
+ * Endpoint de avaliação de redações.
+ * Suporta modo assíncrono padrão para lotes de escala (202 Accepted) e modo síncrono para 1 foto.
+ */
 export async function handleCorrection(req, res) {
   let itemsToProcess = req.body?.redacoes || req.body?.documents;
   if (!itemsToProcess && (req.body?.texto_digitado || req.body?.imagem_base64)) {
@@ -11,26 +15,42 @@ export async function handleCorrection(req, res) {
   }
 
   if (!itemsToProcess || !Array.isArray(itemsToProcess) || itemsToProcess.length === 0) {
-    return res.status(400).json({ error: 'Payload must contain a "redacoes" array or essay fields.' });
+    return res.status(400).json({ error: 'Payload deve conter um array "redacoes" ou campos da redação.' });
   }
 
-  // Limite de segurança para requisição síncrona HTTP
-  const MAX_BATCH_SIZE = 10;
-  if (itemsToProcess.length > MAX_BATCH_SIZE) {
-    return res.status(400).json({
-      error: `Tamanho máximo de lote excedido para avaliação síncrona. Envie no máximo ${MAX_BATCH_SIZE} redações por requisição para evitar timeouts de conexão.`
-    });
+  if (itemsToProcess.length > 10) {
+    return res.status(400).json({ error: 'Tamanho máximo de lote excedido (limite de 10 redações por requisição para proteção de recursos).' });
   }
 
   const requestingUser = req.user || null;
+  const isAsyncMode = req.query.async === 'true' || itemsToProcess.length > 2;
+
+  // Modo Assíncrono para Lotes: Enfileira na tabela jobs do Supabase e retorna 202
+  if (isAsyncMode) {
+    try {
+      const job = await queueService.enqueueJob('CORRECAO_IA', {
+        items: itemsToProcess,
+        user_id: requestingUser?.id || null
+      });
+
+      logger.info(`Lote com ${itemsToProcess.length} redações enfileirado no Job ID ${job.id}`, { requestId: req.id, jobId: job.id });
+
+      return res.status(202).json({
+        message: 'Lote de redações enfileirado com sucesso para processamento em segundo plano.',
+        jobId: job.id,
+        status: job.status,
+        totalItens: itemsToProcess.length,
+        checkStatusUrl: `/api/jobs/${job.id}`
+      });
+    } catch (enqueueErr) {
+      logger.error('Erro ao enfileirar job de correção:', enqueueErr);
+      return res.status(500).json({ error: 'Falha ao agendar processamento do lote.' });
+    }
+  }
+
+  // Modo Síncrono direto (apenas para lotes unitários/rápidos)
   const apiKey = process.env.GEMINI_API_KEY;
   const results = [];
-
-  logger.info(`Iniciando avaliação de lote com ${itemsToProcess.length} redação(ões)`, {
-    requestId: req.id,
-    batchSize: itemsToProcess.length,
-    userId: requestingUser?.id
-  });
 
   for (let i = 0; i < itemsToProcess.length; i++) {
     const item = itemsToProcess[i];
@@ -46,49 +66,13 @@ export async function handleCorrection(req, res) {
 
       if (apiKey && apiKey.trim() !== '') {
         try {
-          logger.info(`[ID ${id}] Executando Avaliação Unificada (OCR + ENEM + Sisedu)...`, { requestId: req.id, essayId: id });
           extractedData = await agenteAvaliadorUnificado(imagem_base64, texto_digitado, nome_aluno || null, turma_aluno || null, apiKey);
         } catch (apiErr) {
-          logger.error(`[ID ${id}] Falha na API Gemini: ${apiErr.message}`, { requestId: req.id, essayId: id, error: apiErr });
-          
-          // Persiste a redação com status ERRO_PROCESSAMENTO para retry posterior
-          let savedFailedId = null;
-          try {
-            savedFailedId = await redacaoRepository.create({
-              user_id: item.user_id || null,
-              nome_aluno: nome_aluno || 'Não identificado',
-              turma_aluno: turma_aluno || null,
-              nome_detectado: 0,
-              data_captura: item.data_captura || new Date().toISOString(),
-              tipo_input: imagem_base64 ? 'imagem' : 'texto',
-              imagem_base64: imagem_base64 || null,
-              texto_digitado: texto_digitado || null,
-              extracted_data: {
-                erro: apiErr.message,
-                tentativas: 1,
-                data_erro: new Date().toISOString()
-              },
-              nota_final: 0,
-              status_validacao: 'ERRO_PROCESSAMENTO',
-              validado_por: null,
-              data_validacao: null
-            });
-          } catch (dbErr) {
-            logger.warn(`[ID ${id}] Falha ao persistir erro no banco: ${dbErr.message}`);
-          }
-
-          results.push({
-            id: savedFailedId || id,
-            supabase_id: savedFailedId,
-            cloud_id: savedFailedId,
-            status: 'error',
-            can_retry: true,
-            error: `Falha na API Gemini (${apiErr.message}). Redação salva para reprocessamento automático.`
-          });
+          logger.error(`[ID ${id}] Falha na API Gemini: ${apiErr.message}`, { requestId: req.id, essayId: id });
+          results.push({ id, status: 'error', error: apiErr.message });
           continue;
         }
       } else {
-        logger.warn(`[ID ${id}] Nenhuma GEMINI_API_KEY configurada. Gerando avaliação simulada (Modo Demonstração)...`, { requestId: req.id, essayId: id });
         extractedData = getMockENEMEvaluation(id, texto_digitado, nome_aluno, turma_aluno);
       }
 
@@ -96,25 +80,15 @@ export async function handleCorrection(req, res) {
         extractedData.texto_transcrito = texto_digitado;
       }
 
-      // Consolidação dos dados avaliados
       const rawStudentName = (nome_aluno && nome_aluno.trim()) || (extractedData.aluno && extractedData.aluno.trim()) || '';
       const rawTurma = (turma_aluno && turma_aluno.trim()) || (extractedData.turma && extractedData.turma.trim()) || '';
       const notaTotalEnem = extractedData.avaliacoes?.enem?.nota_total_enem ?? extractedData.nota_final ?? 0;
       const dataCaptura = item.data_captura || new Date().toISOString();
       const tipoInput = item.tipo_input || (imagem_base64 ? 'imagem' : 'texto');
 
-      // Resolução inteligente de vínculo do aluno
       const resolved = await resolveStudent(item.user_id, rawStudentName, rawTurma);
       const isNameDetected = Boolean(resolved.nome_aluno && !['Aluno Não Identificado', 'Estudante Não Identificado', 'Não identificado'].includes(resolved.nome_aluno));
 
-      const aiConfidence = extractedData.confianca_identificacao || (isNameDetected && resolved.user_id ? 'ALTA' : 'BAIXA');
-      const isConfident = aiConfidence === 'ALTA' && Boolean(resolved.user_id);
-
-      const statusValidacao = isConfident ? 'VALIDADA' : 'PENDENTE_VALIDACAO';
-      const validadoPor = isConfident ? (requestingUser?.id || null) : null;
-      const dataValidacao = isConfident ? new Date().toISOString() : null;
-
-      // Persistência unificada via Repositório
       const savedId = await redacaoRepository.create({
         user_id: resolved.user_id,
         nome_aluno: resolved.nome_aluno,
@@ -126,9 +100,9 @@ export async function handleCorrection(req, res) {
         texto_digitado: texto_digitado || null,
         extracted_data: extractedData,
         nota_final: notaTotalEnem,
-        status_validacao: statusValidacao,
-        validado_por: validadoPor,
-        data_validacao: dataValidacao
+        status_validacao: 'VALIDADA',
+        validado_por: requestingUser?.id || null,
+        data_validacao: new Date().toISOString()
       });
 
       results.push({
@@ -142,35 +116,72 @@ export async function handleCorrection(req, res) {
           aluno: resolved.nome_aluno,
           turma: resolved.turma_aluno,
           nota_final: notaTotalEnem,
-          status_validacao: statusValidacao
-        },
-        processed_at: new Date().toISOString()
+          status_validacao: 'VALIDADA'
+        }
       });
-
-      // Pacing de segurança entre itens (1.5s)
-      if (i < itemsToProcess.length - 1) {
-        await new Promise(r => setTimeout(r, 1500));
-      }
     } catch (error) {
       logger.error(`Erro ao processar redação ID ${id}`, { requestId: req.id, essayId: id, error });
-      results.push({
-        id,
-        status: 'error',
-        error: error.message
-      });
+      results.push({ id, status: 'error', error: error.message });
     }
   }
 
-  logger.info(`Avaliação de lote finalizada com sucesso: ${results.length} processada(s)`, { requestId: req.id });
-
   return res.status(200).json({
-    message: 'Redações avaliadas e gravadas no banco de dados com sucesso.',
+    message: 'Avaliação concluída com sucesso.',
     results
   });
 }
 
 /**
- * Reprocessa uma redação individual que estava com ERRO_PROCESSAMENTO
+ * Consulta status e resultado de um Job assíncrono
+ */
+export async function getJobStatus(req, res) {
+  try {
+    const { id } = req.params;
+    const job = await queueService.getJobById(id);
+
+    if (!job) {
+      return res.status(404).json({ error: 'Job não encontrado.' });
+    }
+
+    return res.status(200).json(job);
+  } catch (error) {
+    return res.status(500).json({ error: 'Falha ao consultar job.' });
+  }
+}
+
+/**
+ * Endpoint acionado por Vercel Cron para processar jobs pendentes
+ */
+export async function cronProcessJobs(req, res) {
+  try {
+    const result = await queueService.processPendingJobs(3);
+    return res.status(200).json({
+      message: 'Worker executado com sucesso.',
+      ...result
+    });
+  } catch (err) {
+    logger.error('Erro na execução do cron de jobs:', err);
+    return res.status(500).json({ error: err.message });
+  }
+}
+
+/**
+ * Endpoint acionado por Vercel Cron para limpar leases de correção expirados (> 90min)
+ */
+export async function cronCleanupLeases(req, res) {
+  try {
+    const liberadas = await redacaoRepository.limparLeasesExpirados(90);
+    return res.status(200).json({
+      message: 'Limpeza de leases concluída.',
+      leasesLiberados: liberadas
+    });
+  } catch (err) {
+    return res.status(500).json({ error: err.message });
+  }
+}
+
+/**
+ * Reprocessa uma redação individual que falhou
  */
 export async function reprocessEssay(req, res) {
   const id = Number(req.params.id);
@@ -178,115 +189,44 @@ export async function reprocessEssay(req, res) {
 
   try {
     const redacao = await redacaoRepository.findById(id);
-    if (!redacao) {
-      return res.status(404).json({ error: 'Redação não encontrada.' });
-    }
+    if (!redacao) return res.status(404).json({ error: 'Redação não encontrada.' });
 
-    const apiKey = process.env.GEMINI_API_KEY;
-    if (!apiKey) {
-      return res.status(500).json({ error: 'GEMINI_API_KEY não configurada no servidor.' });
-    }
-
-    if (!redacao.imagem_base64 && !redacao.texto_digitado) {
-      return res.status(400).json({ error: 'Esta redação não possui imagem ou texto gravado para reavaliação.' });
-    }
-
-    logger.info(`[Reprocess] Reprocessando redação ID ${id} com Gemini...`);
-    const extractedData = await agenteAvaliadorUnificado(
-      redacao.imagem_base64,
-      redacao.texto_digitado,
-      redacao.nome_aluno,
-      redacao.turma_aluno,
-      apiKey
-    );
-
-    const rawStudentName = (redacao.nome_aluno && redacao.nome_aluno.trim()) || (extractedData.aluno && extractedData.aluno.trim()) || '';
-    const rawTurma = (redacao.turma_aluno && redacao.turma_aluno.trim()) || (extractedData.turma && extractedData.turma.trim()) || '';
-    const notaTotalEnem = extractedData.avaliacoes?.enem?.nota_total_enem ?? extractedData.nota_final ?? 0;
-
-    const resolved = await resolveStudent(redacao.user_id, rawStudentName, rawTurma);
-    const isNameDetected = Boolean(resolved.nome_aluno && !['Aluno Não Identificado', 'Estudante Não Identificado', 'Não identificado'].includes(resolved.nome_aluno));
-    const aiConfidence = extractedData.confianca_identificacao || (isNameDetected && resolved.user_id ? 'ALTA' : 'BAIXA');
-    const isConfident = aiConfidence === 'ALTA' && Boolean(resolved.user_id);
-
-    const statusValidacao = isConfident ? 'VALIDADA' : 'PENDENTE_VALIDACAO';
-    const validadoPor = isConfident ? (req.user?.id || null) : null;
-    const dataValidacao = isConfident ? new Date().toISOString() : null;
-
-    await redacaoRepository.update(id, {
-      user_id: resolved.user_id,
-      nome_aluno: resolved.nome_aluno,
-      turma_aluno: resolved.turma_aluno,
-      nome_detectado: isNameDetected ? 1 : 0,
-      extracted_data: extractedData,
-      nota_final: notaTotalEnem,
-      status_validacao: statusValidacao,
-      validado_por: validadoPor,
-      data_validacao: dataValidacao
+    const job = await queueService.enqueueJob('CORRECAO_IA', {
+      items: [redacao],
+      user_id: req.user?.id || null
     });
 
-    return res.status(200).json({
-      message: 'Redação reprocessada com sucesso!',
-      redacao: {
-        id,
-        nome_aluno: resolved.nome_aluno,
-        turma_aluno: resolved.turma_aluno,
-        nota_final: notaTotalEnem,
-        status_validacao: statusValidacao,
-        extracted_data: extractedData
-      }
+    return res.status(202).json({
+      message: 'Redação enfileirada para reprocessamento.',
+      jobId: job.id
     });
   } catch (error) {
-    logger.error(`[Reprocess Error] Falha ao reprocessar redação ID ${id}: ${error.message}`);
-    return res.status(500).json({
-      error: `Falha ao reprocessar redação: ${error.message}`
-    });
+    return res.status(500).json({ error: error.message });
   }
 }
 
 /**
- * Reprocessa todas as redações que falharam (status ERRO_PROCESSAMENTO)
+ * Reprocessa todas as redações que falharam
  */
 export async function reprocessAllFailed(req, res) {
   try {
-    const redacoes = await redacaoRepository.findAll({ user: { role: 'ADMIN' }, includeImage: true });
-    const comErro = redacoes.filter(r => r.status_validacao === 'ERRO_PROCESSAMENTO' && (r.imagem_base64 || r.texto_digitado));
+    const job = await queueService.enqueueJob('REPROCESSAR_ERROS', {
+      user_id: req.user?.id || null
+    });
 
-    if (comErro.length === 0) {
-      return res.status(200).json({
-        message: 'Nenhuma redação com erro pendente para reprocessar.',
-        enqueuedCount: 0
-      });
-    }
-
-    for (const r of comErro) {
-      queueService.enqueue({
-        id: `reprocess_${r.id}`,
-        db_id: r.id,
-        imagem_base64: r.imagem_base64,
-        texto_digitado: r.texto_digitado,
-        nome_aluno: r.nome_aluno,
-        turma_aluno: r.turma_aluno,
-        tipo_input: r.tipo_input,
-        data_captura: r.data_captura
-      }, req.user);
-    }
-
-    return res.status(200).json({
-      message: `${comErro.length} redação(ões) adicionada(s) à fila de reprocessamento seguro.`,
-      enqueuedCount: comErro.length,
-      queueStatus: queueService.getStatus()
+    return res.status(202).json({
+      message: 'Reprocessamento de falhas enfileirado com sucesso.',
+      jobId: job.id
     });
   } catch (error) {
-    logger.error(`[ReprocessAll Error]: ${error.message}`);
-    return res.status(500).json({ error: `Erro ao agendar reprocessamento: ${error.message}` });
+    return res.status(500).json({ error: error.message });
   }
 }
 
 /**
- * Retorna o status da fila de reprocessamento em tempo real
+ * Retorna status da fila no Supabase
  */
-export function getQueueStatus(req, res) {
-  return res.status(200).json(queueService.getStatus());
+export async function getQueueStatus(req, res) {
+  const status = await queueService.getStatus();
+  return res.status(200).json(status);
 }
-

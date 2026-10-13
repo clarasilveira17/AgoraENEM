@@ -1,4 +1,3 @@
-import db from '../config/db.js';
 import { supabase, isSupabaseConfigured } from '../config/supabaseClient.js';
 
 /**
@@ -113,17 +112,11 @@ async function getRegisteredStudents() {
   let students = [];
   if (isSupabaseConfigured) {
     try {
-      const { data } = await supabase.from('users').select('id, nome, turma').eq('role', 'ESTUDANTE');
+      const { data } = await supabase.from('users').select('id, nome, turma').eq('role', 'ESTUDANTE').eq('is_ativo', true);
       students = data || [];
     } catch (e) {
       console.warn('[TurmasUtils] Falha ao consultar estudantes do Supabase:', e.message);
     }
-  }
-
-  if (students.length === 0 && db) {
-    try {
-      students = db.prepare("SELECT id, nome, turma FROM users WHERE role = 'ESTUDANTE'").all() || [];
-    } catch (e) {}
   }
 
   studentCache = {
@@ -143,25 +136,14 @@ export async function resolveStudent(userId, rawNome, rawTurma) {
   let finalTurma = normalizeTurma(rawTurma || '');
 
   // 1. Se user_id já foi passado, busca dados oficiais
-  if (finalUserId) {
-    if (isSupabaseConfigured) {
-      const { data: u } = await supabase.from('users').select('id, nome, turma').eq('id', finalUserId).maybeSingle();
-      if (u) {
-        return {
-          user_id: u.id,
-          nome_aluno: u.nome,
-          turma_aluno: normalizeTurma(u.turma || finalTurma)
-        };
-      }
-    } else if (db) {
-      const u = db.prepare('SELECT id, nome, turma FROM users WHERE id = ?').get(finalUserId);
-      if (u) {
-        return {
-          user_id: u.id,
-          nome_aluno: u.nome,
-          turma_aluno: normalizeTurma(u.turma || finalTurma)
-        };
-      }
+  if (finalUserId && isSupabaseConfigured) {
+    const { data: u } = await supabase.from('users').select('id, nome, turma').eq('id', finalUserId).maybeSingle();
+    if (u) {
+      return {
+        user_id: u.id,
+        nome_aluno: u.nome,
+        turma_aluno: normalizeTurma(u.turma || finalTurma)
+      };
     }
   }
 
@@ -179,7 +161,7 @@ export async function resolveStudent(userId, rawNome, rawTurma) {
     };
   }
 
-  // 3. Match inteligente contra cache de alunos cadastrados
+  // 3. Match inteligente contra estudantes cadastrados
   const users = await getRegisteredStudents();
   if (users && users.length > 0) {
     let matched = users.find(u => normalizeStr(u.nome) === normTarget);

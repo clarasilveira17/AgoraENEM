@@ -98,6 +98,36 @@ export default function ValidacaoRapidaView({
   // Redação atual na esteira
   const currentRedacao = filteredRedacoes[currentIndex] || null;
 
+  // Folhas da redação (suporta 1 folha padrão ou múltiplas páginas/folhas anexadas)
+  const [currentFolhaIndex, setCurrentFolhaIndex] = useState(0);
+
+  const folhas = useMemo(() => {
+    if (!currentRedacao) return [];
+    const list = [];
+
+    // 1. Se possui array de páginas/fotos registradas
+    if (Array.isArray(currentRedacao.imagens_urls) && currentRedacao.imagens_urls.length > 0) {
+      list.push(...currentRedacao.imagens_urls.filter(Boolean));
+    } else if (Array.isArray(currentRedacao.extracted_data?.imagens) && currentRedacao.extracted_data.imagens.length > 0) {
+      list.push(...currentRedacao.extracted_data.imagens.filter(Boolean));
+    } else if (Array.isArray(currentRedacao.extracted_data?.fotos) && currentRedacao.extracted_data.fotos.length > 0) {
+      list.push(...currentRedacao.extracted_data.fotos.filter(Boolean));
+    }
+
+    // 2. Imagem principal (do cache de busca, de imagem_url ou imagem_base64)
+    const mainImg = (currentRedacao && imagesCache[currentRedacao.id])
+      || currentRedacao?.imagem_url
+      || currentRedacao?.imagem_base64;
+
+    if (mainImg && !list.includes(mainImg)) {
+      list.unshift(mainImg);
+    }
+
+    return list;
+  }, [currentRedacao, imagesCache]);
+
+  const currentImage = folhas[currentFolhaIndex] || folhas[0] || null;
+
   // Sincronizar campos e carregar imagem da redação atual
   useEffect(() => {
     if (currentRedacao) {
@@ -107,6 +137,7 @@ export default function ValidacaoRapidaView({
       setStudentSearch('');
       setZoomLevel(1);
       setRotation(0);
+      setCurrentFolhaIndex(0);
 
       // Scroll para o topo da folha para focar no cabeçalho
       if (imageContainerRef.current) {
@@ -120,6 +151,13 @@ export default function ValidacaoRapidaView({
         async function fetchImage() {
           setIsLoadingImage(true);
           try {
+            // Se já veio com URL do Supabase Storage
+            if (currentRedacao.imagem_url) {
+              setImagesCache(prev => ({ ...prev, [redacaoId]: currentRedacao.imagem_url }));
+              setIsLoadingImage(false);
+              return;
+            }
+
             // 1. Tenta carregar do IndexedDB local primeiro (0ms)
             if (db && db.redacoes) {
               const local = await db.redacoes.get(Number(redacaoId));
@@ -132,8 +170,9 @@ export default function ValidacaoRapidaView({
 
             // 2. Se não estiver local ou veio da nuvem, busca via API
             const fullData = await authService.fetchRedacaoById(redacaoId);
-            if (isMounted && fullData?.imagem_base64) {
-              setImagesCache(prev => ({ ...prev, [redacaoId]: fullData.imagem_base64 }));
+            const foundImg = fullData?.imagem_url || fullData?.imagem_base64;
+            if (isMounted && foundImg) {
+              setImagesCache(prev => ({ ...prev, [redacaoId]: foundImg }));
             }
           } catch (err) {
             console.warn(`Erro ao carregar imagem para redação #${redacaoId}:`, err);
@@ -151,11 +190,17 @@ export default function ValidacaoRapidaView({
   useEffect(() => {
     const nextItem = filteredRedacoes[currentIndex + 1];
     if (nextItem && !imagesCache[nextItem.id]) {
-      authService.fetchRedacaoById(nextItem.id).then(data => {
-        if (data?.imagem_base64) {
-          setImagesCache(prev => ({ ...prev, [nextItem.id]: data.imagem_base64 }));
-        }
-      }).catch(() => { });
+      const directImg = nextItem.imagem_url || nextItem.imagem_base64;
+      if (directImg) {
+        setImagesCache(prev => ({ ...prev, [nextItem.id]: directImg }));
+      } else {
+        authService.fetchRedacaoById(nextItem.id).then(data => {
+          const imgFound = data?.imagem_url || data?.imagem_base64;
+          if (imgFound) {
+            setImagesCache(prev => ({ ...prev, [nextItem.id]: imgFound }));
+          }
+        }).catch(() => { });
+      }
     }
   }, [currentIndex, filteredRedacoes, imagesCache]);
 
@@ -547,60 +592,94 @@ export default function ValidacaoRapidaView({
               <div className="lg:col-span-7 bg-[#ffffff] border border-[#e6e5e0] rounded-xl p-4 sm:p-5 space-y-3 shadow-xs">
 
                 {/* Barra de Controles da Imagem */}
-                <div className="flex items-center justify-between pb-2 border-b border-[#e6e5e0] text-xs">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-2 border-b border-[#e6e5e0] gap-2 text-xs">
                   <div className="flex items-center gap-2 font-mono font-medium text-[#26251e]">
                     <ImageIcon className="w-4 h-4 text-[#f54e00]" />
                     <span className="font-semibold">Folha Manuscrita Original</span>
+                    {folhas.length > 1 && (
+                      <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#f54e00]/15 text-[#f54e00] border border-[#f54e00]/30">
+                        {folhas.length} Folhas
+                      </span>
+                    )}
                   </div>
 
-                  {/* Controles de Zoom & Visualização */}
-                  <div className="flex items-center gap-1 bg-[#fafaf7] border border-[#e6e5e0] p-1 rounded-md text-xs font-mono">
-                    <button
-                      type="button"
-                      onClick={() => setZoomLevel(prev => Math.min(prev + 0.25, 2.5))}
-                      className="p-1 text-[#807d72] hover:text-[#26251e] rounded hover:bg-[#e6e5e0] cursor-pointer"
-                      title="Aumentar Zoom (+)"
-                    >
-                      <ZoomIn className="w-3.5 h-3.5" />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setZoomLevel(prev => Math.max(prev - 0.25, 0.75))}
-                      className="p-1 text-[#807d72] hover:text-[#26251e] rounded hover:bg-[#e6e5e0] cursor-pointer"
-                      title="Diminuir Zoom (-)"
-                    >
-                      <ZoomOut className="w-3.5 h-3.5" />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setRotation(prev => (prev + 90) % 360)}
-                      className="p-1 text-[#807d72] hover:text-[#26251e] rounded hover:bg-[#e6e5e0] cursor-pointer"
-                      title="Girar 90°"
-                    >
-                      <RotateCw className="w-3.5 h-3.5" />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setZoomLevel(1);
-                        setRotation(0);
-                        if (imageContainerRef.current) imageContainerRef.current.scrollTop = 0;
-                      }}
-                      className="px-2 py-0.5 text-[10px] text-[#807d72] hover:text-[#26251e] rounded hover:bg-[#e6e5e0] cursor-pointer"
-                      title="Resetar Zoom e Posição"
-                    >
-                      100%
-                    </button>
-                    <div className="h-4 w-px bg-[#e6e5e0] mx-0.5" />
-                    <button
-                      type="button"
-                      onClick={() => setIsFullscreen(true)}
-                      className="p-1 text-[#807d72] hover:text-[#26251e] rounded hover:bg-[#e6e5e0] cursor-pointer flex items-center gap-1 text-[11px]"
-                      title="Abrir em Tela Cheia"
-                    >
-                      <Maximize2 className="w-3.5 h-3.5" />
-                      <span className="hidden sm:inline">Expandir</span>
-                    </button>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    {/* Seletor de Múltiplas Folhas */}
+                    {folhas.length > 1 && (
+                      <div className="flex items-center gap-1 bg-[#fafaf7] border border-[#e6e5e0] p-1 rounded-md text-xs font-mono">
+                        <button
+                          type="button"
+                          disabled={currentFolhaIndex === 0}
+                          onClick={() => setCurrentFolhaIndex(prev => Math.max(0, prev - 1))}
+                          className="px-1.5 py-0.5 rounded hover:bg-[#e6e5e0] text-[#26251e] disabled:opacity-40 cursor-pointer font-bold"
+                          title="Folha Anterior"
+                        >
+                          ‹
+                        </button>
+                        <span className="px-1 text-[11px] font-bold text-[#26251e]">
+                          Folha {currentFolhaIndex + 1}/{folhas.length}
+                        </span>
+                        <button
+                          type="button"
+                          disabled={currentFolhaIndex >= folhas.length - 1}
+                          onClick={() => setCurrentFolhaIndex(prev => Math.min(folhas.length - 1, prev + 1))}
+                          className="px-1.5 py-0.5 rounded hover:bg-[#e6e5e0] text-[#26251e] disabled:opacity-40 cursor-pointer font-bold"
+                          title="Próxima Folha"
+                        >
+                          ›
+                        </button>
+                      </div>
+                    )}
+
+                    {/* Controles de Zoom & Visualização */}
+                    <div className="flex items-center gap-1 bg-[#fafaf7] border border-[#e6e5e0] p-1 rounded-md text-xs font-mono">
+                      <button
+                        type="button"
+                        onClick={() => setZoomLevel(prev => Math.min(prev + 0.25, 2.5))}
+                        className="p-1 text-[#807d72] hover:text-[#26251e] rounded hover:bg-[#e6e5e0] cursor-pointer"
+                        title="Aumentar Zoom (+)"
+                      >
+                        <ZoomIn className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setZoomLevel(prev => Math.max(prev - 0.25, 0.75))}
+                        className="p-1 text-[#807d72] hover:text-[#26251e] rounded hover:bg-[#e6e5e0] cursor-pointer"
+                        title="Diminuir Zoom (-)"
+                      >
+                        <ZoomOut className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setRotation(prev => (prev + 90) % 360)}
+                        className="p-1 text-[#807d72] hover:text-[#26251e] rounded hover:bg-[#e6e5e0] cursor-pointer"
+                        title="Girar 90°"
+                      >
+                        <RotateCw className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setZoomLevel(1);
+                          setRotation(0);
+                          if (imageContainerRef.current) imageContainerRef.current.scrollTop = 0;
+                        }}
+                        className="px-2 py-0.5 text-[10px] text-[#807d72] hover:text-[#26251e] rounded hover:bg-[#e6e5e0] cursor-pointer"
+                        title="Resetar Zoom e Posição"
+                      >
+                        100%
+                      </button>
+                      <div className="h-4 w-px bg-[#e6e5e0] mx-0.5" />
+                      <button
+                        type="button"
+                        onClick={() => setIsFullscreen(true)}
+                        className="p-1 text-[#807d72] hover:text-[#26251e] rounded hover:bg-[#e6e5e0] cursor-pointer flex items-center gap-1 text-[11px]"
+                        title="Abrir em Tela Cheia"
+                      >
+                        <Maximize2 className="w-3.5 h-3.5" />
+                        <span className="hidden sm:inline">Expandir</span>
+                      </button>
+                    </div>
                   </div>
                 </div>
 
@@ -614,7 +693,7 @@ export default function ValidacaoRapidaView({
                       <Loader2 className="w-8 h-8 animate-spin text-[#f54e00]" />
                       <span>Carregando folha original em alta resolução...</span>
                     </div>
-                  ) : currentImageBase64 ? (
+                  ) : currentImage ? (
                     <div
                       className="w-full transition-transform duration-200 origin-top flex flex-col items-center"
                       style={{
@@ -624,8 +703,8 @@ export default function ValidacaoRapidaView({
                     >
                       {/* Imagem em tamanho completo com sombra de papel */}
                       <img
-                        src={currentImageBase64}
-                        alt={`Folha da Redação #${currentRedacao.id}`}
+                        src={currentImage}
+                        alt={`Folha da Redação #${currentRedacao.id} - Página ${currentFolhaIndex + 1}`}
                         className="w-full h-auto max-w-none rounded shadow-2xl select-none bg-white"
                         style={{ display: 'block' }}
                       />
@@ -1054,7 +1133,7 @@ export default function ValidacaoRapidaView({
 
           {/* Área de Visualização Fullscreen */}
           <div className="flex-1 overflow-auto custom-scrollbar p-6 flex items-start justify-center">
-            {currentImageBase64 ? (
+            {currentImage ? (
               <div
                 className="transition-transform duration-200 origin-top flex justify-center"
                 style={{
@@ -1063,8 +1142,8 @@ export default function ValidacaoRapidaView({
                 }}
               >
                 <img
-                  src={currentImageBase64}
-                  alt={`Folha #${currentRedacao.id}`}
+                  src={currentImage}
+                  alt={`Folha #${currentRedacao.id} - Página ${currentFolhaIndex + 1}`}
                   className="max-w-4xl w-full rounded shadow-2xl bg-white"
                 />
               </div>

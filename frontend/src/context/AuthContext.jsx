@@ -62,6 +62,10 @@ export const AuthProvider = ({ children }) => {
     return await authService.syncLegacyToCloud(onProgress);
   };
 
+  const updateUser = (updatedData) => {
+    setUser((prev) => (prev ? { ...prev, ...updatedData } : updatedData));
+  };
+
   const value = {
     user,
     token,
@@ -70,6 +74,8 @@ export const AuthProvider = ({ children }) => {
     register: handleRegister,
     logout: handleLogout,
     syncLegacyToCloud,
+    setUser,
+    updateUser,
     isAuthenticated: !!user,
     isAdmin: user?.role === 'ADMIN',
     isProfessor: user?.role === 'PROFESSOR',
