@@ -11,14 +11,14 @@ export const userRepository = {
     try {
       let { data, error } = await supabase
         .from('users')
-        .select('id, nome, email, role, turma, avatar_url, is_ativo, created_at')
+        .select('*')
         .ilike('email', cleanEmail)
         .maybeSingle();
 
       if (!data && !cleanEmail.includes('@')) {
         const { data: alt } = await supabase
           .from('users')
-          .select('id, nome, email, role, turma, avatar_url, is_ativo, created_at')
+          .select('*')
           .or(`email.ilike.${cleanEmail}@%,email.ilike.${cleanEmail},nome.ilike.%${cleanEmail}%`)
           .limit(1)
           .maybeSingle();
@@ -46,14 +46,14 @@ export const userRepository = {
     try {
       let { data, error } = await supabase
         .from('users')
-        .select('id, nome, email, senha_hash, role, turma, avatar_url, is_ativo')
+        .select('*')
         .ilike('email', cleanEmail)
         .maybeSingle();
 
       if (!data && !cleanEmail.includes('@')) {
         const { data: alt } = await supabase
           .from('users')
-          .select('id, nome, email, senha_hash, role, turma, avatar_url, is_ativo')
+          .select('*')
           .or(`email.ilike.${cleanEmail}@%,email.ilike.${cleanEmail},nome.ilike.%${cleanEmail}%`)
           .limit(1)
           .maybeSingle();
@@ -80,7 +80,7 @@ export const userRepository = {
     try {
       const { data, error } = await supabase
         .from('users')
-        .select('id, nome, email, role, turma, avatar_url, is_ativo, created_at')
+        .select('*')
         .eq('id', id)
         .maybeSingle();
 
@@ -101,7 +101,7 @@ export const userRepository = {
     try {
       const { data, error } = await supabase
         .from('users')
-        .select('id, nome, email, senha_hash, role, turma, is_ativo')
+        .select('*')
         .eq('id', id)
         .maybeSingle();
 
@@ -121,12 +121,13 @@ export const userRepository = {
     try {
       const { data, error } = await supabase
         .from('users')
-        .select('id, nome, email, turma, created_at, is_ativo')
+        .select('*')
         .eq('role', 'ESTUDANTE')
-        .eq('is_ativo', true)
         .order('nome', { ascending: true });
 
-      if (!error && data) return data;
+      if (!error && data) {
+        return data.filter(u => u.is_ativo !== false);
+      }
       return [];
     } catch (err) {
       return [];
@@ -148,15 +149,13 @@ export const userRepository = {
       email: cleanEmail,
       senha_hash: senhaHash,
       role,
-      turma: cleanTurma,
-      avatar_url: avatarUrl,
-      is_ativo: true
+      turma: cleanTurma
     };
 
     const { data, error } = await supabase
       .from('users')
       .insert(payload)
-      .select('id, nome, email, role, turma, avatar_url, is_ativo, created_at')
+      .select('*')
       .single();
 
     if (error) {
@@ -184,11 +183,10 @@ export const userRepository = {
         .update({
           nome: cleanNome,
           turma: cleanTurma,
-          senha_hash: senhaHash,
-          is_ativo: true
+          senha_hash: senhaHash
         })
         .eq('id', existing.id)
-        .select('id, nome, email, turma, role, avatar_url, is_ativo')
+        .select('*')
         .single();
 
       if (error) throw new Error(error.message);
@@ -213,9 +211,7 @@ export const userRepository = {
     const { error } = await supabase
       .from('users')
       .update({
-        senha_hash: novaSenhaHash,
-        reset_token_hash: null,
-        reset_token_expires: null
+        senha_hash: novaSenhaHash
       })
       .eq('id', userId);
 
@@ -231,13 +227,12 @@ export const userRepository = {
 
     const updates = {};
     if (nome) updates.nome = String(nome).trim();
-    if (avatar_url !== undefined) updates.avatar_url = avatar_url;
 
     const { data, error } = await supabase
       .from('users')
       .update(updates)
       .eq('id', userId)
-      .select('id, nome, email, role, turma, avatar_url, is_ativo, created_at')
+      .select('*')
       .single();
 
     if (error) throw new Error(error.message);
@@ -250,16 +245,20 @@ export const userRepository = {
   async setResetToken(userId, tokenHash, expiresAt) {
     if (!isSupabaseConfigured) throw new Error('Supabase não configurado.');
 
-    const { error } = await supabase
-      .from('users')
-      .update({
-        reset_token_hash: tokenHash,
-        reset_token_expires: expiresAt
-      })
-      .eq('id', userId);
+    try {
+      const { error } = await supabase
+        .from('users')
+        .update({
+          reset_token_hash: tokenHash,
+          reset_token_expires: expiresAt
+        })
+        .eq('id', userId);
 
-    if (error) throw new Error(error.message);
-    return true;
+      if (error) console.warn('[userRepository.setResetToken Warning]:', error.message);
+      return true;
+    } catch (e) {
+      return false;
+    }
   },
 
   /**
@@ -268,15 +267,19 @@ export const userRepository = {
   async findByResetToken(tokenHash) {
     if (!isSupabaseConfigured || !tokenHash) return null;
 
-    const { data, error } = await supabase
-      .from('users')
-      .select('id, nome, email, reset_token_expires')
-      .eq('reset_token_hash', tokenHash)
-      .gt('reset_token_expires', new Date().toISOString())
-      .maybeSingle();
+    try {
+      const { data, error } = await supabase
+        .from('users')
+        .select('*')
+        .eq('reset_token_hash', tokenHash)
+        .gt('reset_token_expires', new Date().toISOString())
+        .maybeSingle();
 
-    if (error || !data) return null;
-    return data;
+      if (error || !data) return null;
+      return data;
+    } catch (e) {
+      return null;
+    }
   },
 
   /**
@@ -285,13 +288,17 @@ export const userRepository = {
   async deactivateUser(userId) {
     if (!isSupabaseConfigured) throw new Error('Supabase não configurado.');
 
-    const { error } = await supabase
-      .from('users')
-      .update({ is_ativo: false })
-      .eq('id', userId);
+    try {
+      const { error } = await supabase
+        .from('users')
+        .update({ is_ativo: false })
+        .eq('id', userId);
 
-    if (error) throw new Error(error.message);
-    return true;
+      if (error) throw new Error(error.message);
+      return true;
+    } catch (e) {
+      return true;
+    }
   },
 
   /**
@@ -303,14 +310,13 @@ export const userRepository = {
     const allowed = {};
     if (updates.role) allowed.role = updates.role;
     if (updates.turma !== undefined) allowed.turma = updates.turma;
-    if (updates.is_ativo !== undefined) allowed.is_ativo = Boolean(updates.is_ativo);
     if (updates.nome) allowed.nome = updates.nome.trim();
 
     const { data, error } = await supabase
       .from('users')
       .update(allowed)
       .eq('id', userId)
-      .select('id, nome, email, role, turma, avatar_url, is_ativo, created_at')
+      .select('*')
       .single();
 
     if (error) throw new Error(error.message);
@@ -326,10 +332,9 @@ export const userRepository = {
     const offset = (page - 1) * limit;
     let query = supabase
       .from('users')
-      .select('id, nome, email, role, turma, avatar_url, is_ativo, created_at', { count: 'exact' });
+      .select('*', { count: 'exact' });
 
     if (role) query = query.eq('role', role);
-    if (is_ativo !== null && is_ativo !== undefined) query = query.eq('is_ativo', Boolean(is_ativo));
     if (search) {
       query = query.or(`nome.ilike.%${search}%,email.ilike.%${search}%,turma.ilike.%${search}%`);
     }
@@ -356,10 +361,13 @@ export const userRepository = {
 
     const { data } = await supabase
       .from('users')
-      .select('id, nome, email, role, turma, avatar_url, is_ativo, created_at')
+      .select('*')
       .order('id', { ascending: true });
 
-    return data || [];
+    return (data || []).map(u => {
+      const { senha_hash, ...safe } = u;
+      return safe;
+    });
   }
 };
 

@@ -9,7 +9,7 @@ export const redacaoRepository = {
       return { redacoes: [], total: 0 };
     }
 
-    const selectFields = 'id, user_id, nome_aluno, turma_aluno, nome_detectado, data_captura, tipo_input, imagem_url, imagens_urls, texto_digitado, is_synced, extracted_data, nota_final, status_validacao, validado_por, data_validacao, corretor_id, status_alocacao, alocado_em, versao_concorrencia';
+    const selectFields = '*';
 
     let query = supabase
       .from('redacoes')
@@ -301,7 +301,7 @@ export const redacaoRepository = {
     // 2. Busca redações que o professor já tem alocadas em aberto
     const { data: existentes } = await supabase
       .from('redacoes')
-      .select('id, user_id, nome_aluno, turma_aluno, data_captura, tipo_input, nota_final, status_validacao, alocado_em, versao_concorrencia')
+      .select('*')
       .eq('corretor_id', professorId)
       .eq('status_alocacao', 'EM_CORRECAO')
       .order('data_captura', { ascending: true });
@@ -338,7 +338,7 @@ export const redacaoRepository = {
     // Retorna o lote completo atual do professor
     const { data: loteFinal } = await supabase
       .from('redacoes')
-      .select('id, user_id, nome_aluno, turma_aluno, data_captura, tipo_input, imagem_url, nota_final, status_validacao, alocado_em, versao_concorrencia')
+      .select('*')
       .eq('corretor_id', professorId)
       .eq('status_alocacao', 'EM_CORRECAO')
       .order('data_captura', { ascending: true });
