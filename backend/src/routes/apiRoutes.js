@@ -43,4 +43,22 @@ router.post('/redacoes/:id/reprocessar', aiCorrectionLimiter, authenticate, requ
 // AI Correction endpoint (Enfileira ou avalia)
 router.post(['/corrigir', '/sync'], aiCorrectionLimiter, authenticate, requireTeacherOrAdmin, handleCorrection);
 
+// Migração Administrativa sob demanda (Vercel Deploy / Setup)
+import('../config/migrate.js').then(({ runMigrations }) => {
+  router.all('/admin/run-migration', async (req, res) => {
+    const secret = req.query.secret || req.headers['x-admin-key'] || req.body?.secret;
+    const expectedSecret = process.env.PROFESSOR_SECRET_KEY || 'AGORA2026';
+
+    if (!secret || String(secret).trim() !== String(expectedSecret).trim()) {
+      return res.status(403).json({
+        error: 'Acesso não autorizado. Informe a chave secreta (?secret=AGORA2026).'
+      });
+    }
+
+    const customDbUrl = req.query.db_url || req.body?.db_url || null;
+    const result = await runMigrations(customDbUrl);
+    return res.status(result.success ? 200 : (result.skipped ? 200 : 500)).json(result);
+  });
+});
+
 export default router;

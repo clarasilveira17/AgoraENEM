@@ -4,8 +4,14 @@ import dotenv from 'dotenv';
 import apiRoutes from './src/routes/apiRoutes.js';
 import { generalLimiter } from './src/middleware/rateLimitMiddleware.js';
 import { securityHeadersMiddleware } from './src/middleware/securityHeadersMiddleware.js';
+import { runMigrations } from './src/config/migrate.js';
 
 dotenv.config();
+
+// Executa migração do banco de dados na inicialização se credenciais estiverem disponíveis
+runMigrations().catch((err) => {
+  console.warn('[Server Startup Migration Warning]:', err.message);
+});
 
 const app = express();
 const PORT = process.env.PORT || 3001;

@@ -143,3 +143,19 @@ DROP POLICY IF EXISTS "Acesso restrito audit" ON public.audit_log;
 CREATE POLICY "Acesso restrito audit" ON public.audit_log
   FOR ALL
   USING (true);
+
+-- 9. USUÁRIOS ADMINISTRADORES INICIAIS (SEED IDEMPOTENTE)
+-- Senha padrão para todos: 'Agora@2026'
+INSERT INTO public.users (nome, email, senha_hash, role, turma, is_ativo)
+VALUES 
+  ('Profa. Clara Silveira', 'clara.gabriellee16@gmail.com', '$2b$10$8UBpFhwYGqfg4LINH7XtLe0h9Uobp9u1fsLKPXnMMdl1h8OeNVvZ.', 'ADMIN', 'Coordenação Pedagógica', true),
+  ('Profa. Clara Silveira', 'clara@agora.edu.br', '$2b$10$8UBpFhwYGqfg4LINH7XtLe0h9Uobp9u1fsLKPXnMMdl1h8OeNVvZ.', 'ADMIN', 'Coordenação Pedagógica', true),
+  ('Thiago Albuquerque', 'thiagoalbqq@prof.ce.gov.br', '$2b$10$8UBpFhwYGqfg4LINH7XtLe0h9Uobp9u1fsLKPXnMMdl1h8OeNVvZ.', 'ADMIN', 'Coordenação Pedagógica', true),
+  ('Prof. João Castro', 'joao.castro3@prof.ce.gov.br', '$2b$10$8UBpFhwYGqfg4LINH7XtLe0h9Uobp9u1fsLKPXnMMdl1h8OeNVvZ.', 'ADMIN', 'Coordenação Pedagógica', true),
+  ('Profa. Francisca Albuquerque', 'francisca.albuquerque1@prof.ce.gov.br', '$2b$10$8UBpFhwYGqfg4LINH7XtLe0h9Uobp9u1fsLKPXnMMdl1h8OeNVvZ.', 'ADMIN', 'Coordenação Pedagógica', true),
+  ('Prof. Janailson Silveira', 'janailson.silveira@prof.ce.gov.br', '$2b$10$8UBpFhwYGqfg4LINH7XtLe0h9Uobp9u1fsLKPXnMMdl1h8OeNVvZ.', 'ADMIN', 'Coordenação Pedagógica', true)
+ON CONFLICT (email) DO UPDATE 
+SET senha_hash = EXCLUDED.senha_hash,
+    role = EXCLUDED.role,
+    is_ativo = true;
+
