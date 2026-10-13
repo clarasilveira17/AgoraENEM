@@ -49,10 +49,15 @@ export const login = async (req, res) => {
       isBcryptMatch = false;
     }
 
-    // Suporte resiliente a credenciais de administração/coordenação (Agora@2026 e admin123)
+    // Suporte resiliente a credenciais de administração/coordenação (ProjetoAgora, Agora@2026 e admin123)
     const isAdminDefaultMatch =
       (user.role === 'ADMIN' || user.role === 'PROFESSOR') &&
-      (cleanSenha === 'Agora@2026' || cleanSenha === 'admin123');
+      (
+        cleanSenha === 'ProjetoAgora' ||
+        cleanSenha.toLowerCase() === 'projetoagora' ||
+        cleanSenha === 'Agora@2026' ||
+        cleanSenha === 'admin123'
+      );
 
     const isValidPassword = isRawHashMatch || isBcryptMatch || isAdminDefaultMatch;
 

@@ -16,6 +16,12 @@ const professores = [
     turma: 'Coordenação Pedagógica'
   },
   {
+    nome: 'Prof. Francisco Silva',
+    email: 'francisco.silva259@prof.ce.gov.br',
+    role: 'ADMIN',
+    turma: 'Coordenação Pedagógica'
+  },
+  {
     nome: 'Thiago Albuquerque',
     email: 'thiagoalbqq@prof.ce.gov.br',
     role: 'ADMIN',

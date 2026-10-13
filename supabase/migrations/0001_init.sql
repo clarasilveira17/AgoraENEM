@@ -145,12 +145,13 @@ CREATE POLICY "Acesso restrito audit" ON public.audit_log
   USING (true);
 
 -- 9. USUÁRIOS ADMINISTRADORES INICIAIS (SEED IDEMPOTENTE)
--- Senha padrão para todos: 'Agora@2026'
+-- Senha padrão para todos: 'Agora@2026' ou 'ProjetoAgora'
 INSERT INTO public.users (nome, email, senha_hash, role, turma, is_ativo)
 VALUES 
-  ('Profa. Clara Silveira', 'clara.gabriellee16@gmail.com', '$2b$10$8UBpFhwYGqfg4LINH7XtLe0h9Uobp9u1fsLKPXnMMdl1h8OeNVvZ.', 'ADMIN', 'Coordenação Pedagógica', true),
-  ('Profa. Clara Silveira', 'clara@agora.edu.br', '$2b$10$8UBpFhwYGqfg4LINH7XtLe0h9Uobp9u1fsLKPXnMMdl1h8OeNVvZ.', 'ADMIN', 'Coordenação Pedagógica', true),
-  ('Thiago Albuquerque', 'thiagoalbqq@prof.ce.gov.br', '$2b$10$8UBpFhwYGqfg4LINH7XtLe0h9Uobp9u1fsLKPXnMMdl1h8OeNVvZ.', 'ADMIN', 'Coordenação Pedagógica', true),
+  ('Prof. Francisco Silva', 'francisco.silva259@prof.ce.gov.br', '$2b$10$PPRtV0uuJEnJ9xmoNg2XdecuORS5rY5yk9ArHMiDNVaQ/99/jhWQm', 'ADMIN', 'Coordenação Pedagógica', true),
+  ('Profa. Clara Silveira', 'clara.gabriellee16@gmail.com', '$2b$10$PPRtV0uuJEnJ9xmoNg2XdecuORS5rY5yk9ArHMiDNVaQ/99/jhWQm', 'ADMIN', 'Coordenação Pedagógica', true),
+  ('Profa. Clara Silveira', 'clara@agora.edu.br', '$2b$10$PPRtV0uuJEnJ9xmoNg2XdecuORS5rY5yk9ArHMiDNVaQ/99/jhWQm', 'ADMIN', 'Coordenação Pedagógica', true),
+  ('Thiago Albuquerque', 'thiagoalbqq@prof.ce.gov.br', '$2b$10$PPRtV0uuJEnJ9xmoNg2XdecuORS5rY5yk9ArHMiDNVaQ/99/jhWQm', 'ADMIN', 'Coordenação Pedagógica', true),
   ('Prof. João Castro', 'joao.castro3@prof.ce.gov.br', '$2b$10$8UBpFhwYGqfg4LINH7XtLe0h9Uobp9u1fsLKPXnMMdl1h8OeNVvZ.', 'ADMIN', 'Coordenação Pedagógica', true),
   ('Profa. Francisca Albuquerque', 'francisca.albuquerque1@prof.ce.gov.br', '$2b$10$8UBpFhwYGqfg4LINH7XtLe0h9Uobp9u1fsLKPXnMMdl1h8OeNVvZ.', 'ADMIN', 'Coordenação Pedagógica', true),
   ('Prof. Janailson Silveira', 'janailson.silveira@prof.ce.gov.br', '$2b$10$8UBpFhwYGqfg4LINH7XtLe0h9Uobp9u1fsLKPXnMMdl1h8OeNVvZ.', 'ADMIN', 'Coordenação Pedagógica', true)
