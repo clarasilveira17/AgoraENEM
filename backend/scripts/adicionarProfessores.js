@@ -4,6 +4,24 @@ import db from '../src/config/db.js';
 
 const professores = [
   {
+    nome: 'Profa. Clara Silveira',
+    email: 'clara.gabriellee16@gmail.com',
+    role: 'ADMIN',
+    turma: 'Coordenação Pedagógica'
+  },
+  {
+    nome: 'Profa. Clara Silveira',
+    email: 'clara@agora.edu.br',
+    role: 'ADMIN',
+    turma: 'Coordenação Pedagógica'
+  },
+  {
+    nome: 'Thiago Albuquerque',
+    email: 'thiagoalbqq@prof.ce.gov.br',
+    role: 'ADMIN',
+    turma: 'Coordenação Pedagógica'
+  },
+  {
     nome: 'Prof. João Castro',
     email: 'joao.castro3@prof.ce.gov.br',
     role: 'ADMIN',

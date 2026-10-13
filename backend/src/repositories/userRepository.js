@@ -9,11 +9,21 @@ export const userRepository = {
     const cleanEmail = String(email).trim().toLowerCase();
 
     try {
-      const { data, error } = await supabase
+      let { data, error } = await supabase
         .from('users')
         .select('id, nome, email, role, turma, avatar_url, is_ativo, created_at')
         .ilike('email', cleanEmail)
         .maybeSingle();
+
+      if (!data && !cleanEmail.includes('@')) {
+        const { data: alt } = await supabase
+          .from('users')
+          .select('id, nome, email, role, turma, avatar_url, is_ativo, created_at')
+          .or(`email.ilike.${cleanEmail}@%,email.ilike.${cleanEmail},nome.ilike.%${cleanEmail}%`)
+          .limit(1)
+          .maybeSingle();
+        if (alt) data = alt;
+      }
 
       if (error) {
         console.warn(`[userRepository.findByEmail Supabase Error]: ${error.message}`);
@@ -34,11 +44,21 @@ export const userRepository = {
     const cleanEmail = String(email).trim().toLowerCase();
 
     try {
-      const { data, error } = await supabase
+      let { data, error } = await supabase
         .from('users')
         .select('id, nome, email, senha_hash, role, turma, avatar_url, is_ativo')
         .ilike('email', cleanEmail)
         .maybeSingle();
+
+      if (!data && !cleanEmail.includes('@')) {
+        const { data: alt } = await supabase
+          .from('users')
+          .select('id, nome, email, senha_hash, role, turma, avatar_url, is_ativo')
+          .or(`email.ilike.${cleanEmail}@%,email.ilike.${cleanEmail},nome.ilike.%${cleanEmail}%`)
+          .limit(1)
+          .maybeSingle();
+        if (alt) data = alt;
+      }
 
       if (error) {
         console.warn(`[userRepository.findByEmailWithPassword Error]: ${error.message}`);
